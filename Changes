@@ -1,5 +1,37 @@
 Revision history for Perl extension SPOPS.
 
+0.72  Fri Dec 20 08:34:44 EST 2002
+
+Overall:
+
+   * Change all references to use new SPOPS website, SF project, etc.
+
+   * Small bugfixes
+
+Individual:
+
+   * SPOPS/DBI.pm:
+
+     - Remove reference to assign_dbi_type_info, since this is done in
+     SPOPS::SQLInterface and SPOPS::DBI::TypeInfo now.
+
+   * SPOPS/DBI/Sybase.pm:
+
+     - Change docs to use 'increment_field' rather than 'syb_identity'
+
+     - Add note about using with DBD::Sybase/FreeTDS/MS SQL Server
+
+   * SPOPS/DBI/TypeInfo.pm:
+
+     - Supress warnings when checking to see if we were passed a fake
+     or DBI type.
+
+   * SPOPS/Exception.pm:
+
+     - Handle a thrown exception object by detecting it as the first
+     argument and rethrowing it.
+
+
 0.71  Thu Oct 10 08:01:48 EDT 2002
 
 Overall:

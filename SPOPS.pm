@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.4 2002/10/10 12:05:27 lachoy Exp $
+# $Id: SPOPS.pm,v 3.5 2002/12/18 21:15:00 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -11,8 +11,8 @@ use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.71';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.72';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -1574,12 +1574,12 @@ it under the same terms as Perl itself.
 Find out more about SPOPS -- current versions, updates, rants, ideas
 -- at:
 
- http://www.openinteract.org/SPOPS/
+ http://spops.sourceforge.net/
 
 CVS access and mailing lists (SPOPS is currently supported by the
 openinteract-dev list) are at:
 
- http://sourceforge.net/projects/openinteract/
+ http://sourceforge.net/projects/spops/
 
 Also see the 'Changes' file in the source distribution for comments
 about how the module has evolved.

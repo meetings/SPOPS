@@ -1,6 +1,6 @@
 package SPOPS::DBI::TypeInfo;
 
-# $Id: TypeInfo.pm,v 1.1 2002/10/10 03:59:26 lachoy Exp $
+# $Id: TypeInfo.pm,v 1.2 2002/12/20 13:35:59 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor );
@@ -77,16 +77,21 @@ sub add_type {
         return $existing_type;
     }
 
-    # Check to see if it's a fake type
+    # Check to see if it's a fake type (suppress warnings since this
+    # use of int() will issue a warning if it's 'char'/'date'/etc.,
+    # which is what we're checking for.
 
-    unless ( int( $type ) ) {
-        my $faked = $FAKE_TYPES{ $type };
-        unless ( $faked ) {
-            spops_error "Type [$type] for [$field] is invalid -- it is  ",
-                        "not a DBI type and not one of the 'fake' types, ",
-                        "which are: ", join( ', ', sort keys %FAKE_TYPES );
+    {
+        no warnings;
+        unless ( int( $type ) ) {
+            my $faked = $FAKE_TYPES{ $type };
+            unless ( $faked ) {
+                spops_error "Type [$type] for [$field] is invalid -- it is  ",
+                            "not a DBI type and not one of the 'fake' types, ",
+                            "which are: ", join( ', ', sort keys %FAKE_TYPES );
+            }
+            $type = $faked;
         }
-        $type = $faked;
     }
 
     # Assign

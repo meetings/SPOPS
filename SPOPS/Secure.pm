@@ -1,13 +1,13 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 3.4 2002/09/16 20:37:14 lachoy Exp $
+# $Id: Secure.pm,v 3.5 2002/12/20 13:26:03 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
 use vars  qw( $EMPTY );
 use Data::Dumper qw( Dumper );
 
-$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 # Stuff for security constants and exporting
 
@@ -89,21 +89,21 @@ require SPOPS::Secure::Util;
 # check_action_security()?
 
 sub check_action_security {
-    my ( $self, $p ) = @_;
+    my ( $item, $p ) = @_;
     DEBUG() && _w( 2, "Trying to check security on: ",
-                      ( ref $self ) ? ref $self : $self,
+                      ( ref $item ) ? ref $item : $item,
                       "with params: ", Dumper( $p ) );
 
     # since the assumption outlined above (only saved objects have ids)
     # might not be true in all cases, provide an escape route for classes
     # that need security and want to handle their ids themselves
 
-    return SEC_LEVEL_WRITE if ( $p->{is_add} ); # or ! $self->is_saved );
+    return SEC_LEVEL_WRITE if ( $p->{is_add} ); # or ! $item->is_saved );
 
     # If the class has told us they're not using security (even tho
     # SPOPS::Secure is in the 'isa', then everyone can do everything
 
-    return SEC_LEVEL_WRITE if ( $self->no_security );
+    return SEC_LEVEL_WRITE if ( $item->no_security );
 
     # This gets filled with the found security level, oddly, the user
     # can pass in a security level if it's already been found
@@ -120,8 +120,8 @@ sub check_action_security {
         # not be checked since SPOPS relies on your application to implement
         # who should and should not create an object.
 
-        $class = ref $self || $self;
-        $id    = ( ref $self ) ? $self->id : $p->{id};
+        $class = ref $item || $item;
+        $id    = ( ref $item ) ? $item->id : $p->{id};
         unless ( $id ) {
             DEBUG() && _w( 1, "ID not found, returning WRITE security" );
             return SEC_LEVEL_WRITE;

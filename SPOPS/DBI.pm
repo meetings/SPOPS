@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.2 2002/10/10 12:06:00 lachoy Exp $
+# $Id: DBI.pm,v 3.3 2002/12/18 21:16:34 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -14,7 +14,7 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -104,18 +104,8 @@ sub class_initialize {
     $C->{table_name}  = ( $C->{table_owner} )
                           ? "$C->{table_owner}.$C->{base_table}" : $C->{base_table};
 
-    # For databases that cannot respond properly to $sth->{TYPE} commands,
-    # users need to specify the type information for their fields
-    #
-    # Types can be: int, num, float, char, date
-    #
-    # Currently known offenders: DBD::SQLite (DBD::ASAny was fixed -- hooray
-    # for open source!)
-
-    if ( ref $C->{dbi_type_info} eq 'HASH' ) {
-        $class->assign_dbi_type_info( $C->{dbi_type_info} );
-    }
-    $class->_class_initialize( $CONFIG ); # allow subclasses to do their own thing
+    # allow subclasses to do their own thing
+    $class->_class_initialize( $CONFIG );
     return 1;
 }
 

@@ -1,6 +1,6 @@
 package SPOPS::Exception;
 
-# $Id: Exception.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: Exception.pm,v 3.1 2002/10/23 03:29:44 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Exporter );
@@ -8,7 +8,7 @@ use overload '""' => \&stringify;
 use Devel::StackTrace;
 use SPOPS::Error;
 
-$SPOPS::Exception::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Exception::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Exception::EXPORT_OK = qw( spops_error );
 
 use constant DEBUG => 0;
@@ -28,6 +28,13 @@ sub spops_error { goto &throw( 'SPOPS::Exception', @_ ) }
 
 sub throw {
     my ( $class, @message ) = @_;
+
+    if ( ref $message[0] ) {
+        my $rethrown = $message[0];
+        if ( UNIVERSAL::isa( $rethrown, __PACKAGE__ ) ) {
+            die $rethrown;
+        }
+    }
 
     my $params = ( ref $message[-1] eq 'HASH' )
                    ? pop( @message ) : {};
@@ -174,6 +181,16 @@ SPOPS::Exception - Base class for exceptions in SPOPS
                           "doesn't say too much.",
                           { action => 'blah' } );
 
+ # Catch an exception, do some cleanup then rethrow it
+
+ my $rv = eval { $object->important_spops_operation };
+ if ( $@ ) {
+     my $exception = $@;
+     close_this_resource();
+     close_that_resource();
+     SPOPS::Exception->throw( $exception );
+ }
+
 =head1 DESCRIPTION
 
 This class is the base for all exceptions in SPOPS. An exception is
@@ -198,18 +215,29 @@ L<SUBCLASSING> below.
 
 B<throw( $message, [ $message...], [ \%params ] )>
 
-This is the main action method and normally the only one you will ever
-use. It creates a new exception object with the message consisting of
-all the parameters concatenated together. The exception is if the
-optional last argument is a hashref -- this argument contains extra
-information to put into the exception if supported by the class.
+B<throw( $exception )>
 
-It then calls C<die> with the object. Before calling C<die> it first
-does the following:
+This is the main action method and normally the only one you will ever
+use. The most common use is to create a new exception object with the
+message consisting of all the parameters concatenated
+together.
+
+More rarely, you can pass another exception object as the first
+argument. If you do we just rethrow it -- the original stack trace and
+all information should be maintained.
+
+Additionally with the common use: if the last argument is a hashref we
+add the additional information from it to the exception, as
+supported. (For instance, you can write a custom exception to accept a
+'module' parameter which declares which of the plugins to your
+accounting system generated the error.)
+
+Once we create the exception we then call C<die> with the
+object. Before calling C<die> we first do the following:
 
 =over 4
 
-=item 1. We check C<\%params> for any parameters matching fieldnames
+=item 1. Check C<\%params> for any parameters matching fieldnames
 returned by C<get_fields()>, and if found set the field in the object
 to the parameter.
 
