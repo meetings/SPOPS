@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.62 Fri Aug  9 23:21:08 EDT 2002
+
+  * Fairly small features added, mostly to SPOPS::DBI
+
+
 0.61 Mon May  6 21:44:57 EDT 2002
 
   * Quick bugfix release
@@ -127,4 +132,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 2.3 2002/05/07 01:09:46 lachoy Exp $
+$Id: RELEASE,v 2.4 2002/08/10 03:24:04 lachoy Exp $

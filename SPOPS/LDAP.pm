@@ -1,6 +1,6 @@
 package SPOPS::LDAP;
 
-# $Id: LDAP.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
+# $Id: LDAP.pm,v 2.2 2002/08/10 02:09:13 lachoy Exp $
 
 use strict;
 use base qw( SPOPS );
@@ -12,7 +12,7 @@ use SPOPS            qw( DEBUG _w );
 use SPOPS::Exception::LDAP;
 use SPOPS::Secure    qw( :level );
 
-$SPOPS::LDAP::VERSION   = substr(q$Revision: 2.0 $, 10);
+$SPOPS::LDAP::VERSION   = substr(q$Revision: 2.2 $, 10);
 
 
 ########################################
@@ -455,9 +455,17 @@ sub _save_insert {
     }
     DEBUG && _w( 1, "Trying to create record with DN: (", $self->dn, ")" );
     my %insert_data = ();
+
+    $p->{no_insert} ||= [];
     my $no_insert = $self->no_insert;
+    map { $no_insert->{ $_ } = 1 } @{ $p->{no_insert} };
+    $p->{skip_undef} ||= [];
+    my $skip_undef = $self->skip_undef;
+    map { $skip_undef->{ $_ } = 1 } @{ $p->{skip_undef} };
+
     foreach my $attr ( @{ $self->field_list } ) {
         next if ( $no_insert->{ $attr } );
+        next if ( $skip_undef->{ $attr } and ! defined $self->{ $attr } );
         $insert_data{ $attr } = $self->{ $attr };
 
         # Trick LDAP to creating object with multivalue property that
@@ -484,12 +492,20 @@ sub _save_update {
     my $entry = $self->_fetch_single_entry({ filter => $self->create_id_filter,
                                              ldap   => $ldap });
     DEBUG && _w( 1, "Loaded entry for update:\n", Dumper( $entry ) );
-    my $no_update = $self->no_update;
+    $p->{no_update} ||= [];
+    my $no_update  = $self->no_update;
+    map { $no_update->{ $_ } = 1 } @{ $p->{no_update} };
+    $p->{skip_undef} ||= [];
+    my $skip_undef = $self->skip_undef;
+    map { $skip_undef->{ $_ } = 1 } @{ $p->{skip_undef} };
+
     my $only_changed = $self->ldap_update_only_changed;
+
 ATTRIB:
     foreach my $attr ( @{ $self->field_list } ) {
         next ATTRIB if ( $no_update->{ $attr } );
         my $object_value = $self->{ $attr };
+        next ATTRIB if ( $skip_undef->{ $attr } and ! defined $object_value );
         if ( $only_changed ) {
             my @existing_values = $entry->get_value( $attr );
             DEBUG && _w( 1, "Toggle for updating only changed values set.",
@@ -858,6 +874,10 @@ B<Renaming of DNs not supported>
 Moving an object from one DN to another is not currently supported.
 
 =head1 TO DO
+
+B<Documentation>
+
+("This is quite straightforward" does not cut it.)
 
 B<More Usage>
 

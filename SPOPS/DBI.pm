@@ -1,19 +1,20 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 2.7 2002/05/06 12:26:32 lachoy Exp $
+# $Id: DBI.pm,v 2.11 2002/08/10 03:13:12 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
 
-use Data::Dumper  qw( Dumper );
-use DBI           ();
-use SPOPS         qw( _wm _w DEBUG );
+use Data::Dumper     qw( Dumper );
+use DBI;
+use SPOPS            qw( _wm _w DEBUG );
+use SPOPS::Exception qw( spops_error );
 use SPOPS::Exception::DBI;
 use SPOPS::Iterator::DBI;
-use SPOPS::Secure qw( :level );
-use SPOPS::Tie    qw( $PREFIX_INTERNAL );
+use SPOPS::Secure    qw( :level );
+use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = substr(q$Revision: 2.7 $, 10);
+$SPOPS::DBI::VERSION = substr(q$Revision: 2.11 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -146,8 +147,8 @@ sub id_clause {
 
     my $db = $p->{db} || $item->global_datasource_handle( $p->{connect_key} );
     unless ( $db ) {
-        my $error = 'Cannot create ID clause because no database handle accessible.';
-        SPOPS::Exception->throw( $error );
+        spops_error 'Cannot create ID clause because no database ',
+                    'handle accessible.';
     }
 
     my $id_field  = $item->id_field;
@@ -185,6 +186,40 @@ sub id_field_select {
 
 
 ########################################
+# UTILITY
+########################################
+
+# Class method
+# - If \%fields -- return a hashref with no private fields and keys
+# translated to mapped fields
+# - If \@fields -- return an arrayref with no private fields and
+# fields translated to mapped fields
+
+sub filter_fields {
+    my ( $class, $fields ) = @_;
+    my $typeof = ref $fields;
+    my $mapped = $class->CONFIG->{field_map};
+    if ( $typeof eq 'HASH' ) {
+        my %new = ();
+        for ( keys %{ $fields } ) {
+            next if ( /^_/ );
+            if ( $mapped->{ $_ } ) {
+                $new{ $mapped->{ $_ } } = $fields->{ $_ };
+            }
+            else {
+                $new{ $_ } = $fields->{ $_ };
+            }
+        }
+        return \%new;
+    }
+    elsif ( $typeof eq 'ARRAY' ) {
+        return [ map { $mapped->{ $_ } || $_ } grep ! /^_/, @{ $fields } ];
+    }
+    spops_error "Argument must be arrayref or hashref.";
+}
+
+
+########################################
 # FETCHING
 ########################################
 
@@ -196,9 +231,8 @@ sub format_select {
     $conf ||= {};
     my $typeof = ref $fields;
     unless ( $typeof eq 'ARRAY' ) {
-        my $error = "Fields passed in for referring to format must be " .
+        spops_error "Fields passed in for referring to format must be ",
                     "an arrayref (Type: $typeof)";
-        SPOPS::Exception->throw( $error );
     }
     my @return_fields;
     my $altered = $class->field_alter() || {};
@@ -523,23 +557,20 @@ sub get_lazy_load_sub {
 
 sub perform_lazy_load {
     my ( $class, $data, $field ) = @_;
-    DEBUG() && _w( 3, "Performing lazy load for $class -> $field" );
     unless ( ref $data eq 'HASH' ) {
-        SPOPS::Exception->throw( 'No object data given -- cannot lazy load!' );
+        spops_error 'No object data given -- cannot lazy load!';
     }
     unless ( $field ) {
-        SPOPS::Exception->throw( 'No field given -- cannot lazy load!' );
+        spops_error 'No field given -- cannot lazy load!';
     }
-    if ( $field =~ /^_/ ) {
+    my $use_field = $class->filter_fields( [ $field ] );
+    if ( scalar @{ $use_field } == 0 || ! $use_field->[0] ) {
         DEBUG && _w( 0, "Cannot lazy load field [$field] -- it begins ",
                         "with a '_' character and is therefore private" );
     }
-    if ( my $actual_field = $class->CONFIG->{field_map}{ $field } ) {
-        DEBUG() && _w( 1, "Lazy loaded field [$field] is mapped to [$actual_field]" );
-        $field = $actual_field;
-    }
+    DEBUG() && _w( 3, "Performing lazy load for $class -> $use_field->[0]" );
     my %args = ( from   => [ $class->table_name ],
-                 select => [ $field ],
+                 select => [ $use_field->[0] ],
                  where  => $class->id_clause( $data->{ $class->id_field } ),
                  return => 'single',
                  DEBUG  => DEBUG );
@@ -547,6 +578,30 @@ sub perform_lazy_load {
     return $row->[0];
 }
 
+sub refetch {
+	my ( $self, $fields, $p ) = @_;
+	
+    # Calling with no fields results in refetching all fields
+	$fields = $self->field_list unless ( $fields );
+
+	# if it's a scalar, make it an arrayref
+	$fields = [ $fields ]	unless ( ref $fields );
+	my $actual_fields = $self->filter_fields( $fields );
+
+	$p->{from}		= [ $self->table_name ];
+	$p->{select}	= $actual_fields;
+	$p->{where}		= $self->id_clause( undef, undef, $p );
+	$p->{return}	= 'single';
+	$p->{DEBUG}		||= DEBUG_FETCH;
+	$p->{db}		||= $self->global_datasource_handle( $p->{connect_key} );
+
+	my $row = $self->db_select( $p );
+
+    for ( 0 .. ( scalar @{ $row } - 1 ) ) {
+        $self->{ $fields->[ $_ ] } = $row->[ $_ ];
+    }
+	return ( scalar @{ $row } == 1 ) ? $row->[0] : @{ $row };
+}
 
 ########################################
 # SAVING
@@ -587,14 +642,28 @@ sub save {
     return undef unless ( $self->pre_save_action({ %{ $p },
                                                    is_add => $is_add }) );
 
-    # Do not include these fields in the insert/update at all
+    # Do not include these fields in the insert/update at all. Allow
+    # user to override.
 
-    my $not_included = ( $is_add ) ? $self->no_insert : $self->no_update;
+    my ( $not_included );
+    if ( $is_add ) {
+        $not_included = $self->no_insert;
+        $p->{no_insert} ||= [];
+        map { $not_included->{ $_ } = 1 } @{ $p->{no_insert} };
+        $p->{no_insert} = $not_included;   # blech
+    }
+    else {
+        $not_included = $self->no_update;
+        $p->{no_update} ||= [];
+        map { $not_included->{ $_ } = 1 } @{ $p->{no_update} };
+    }
 
     # Do not include these fields in the insert/update if they're not defined
     # (note that this includes blank/empty)
 
     my $skip_undef   = $self->skip_undef;
+    $p->{skip_undef} ||= [];
+    map { $skip_undef->{ $_ } = 1 } @{ $p->{skip_undef} };
 
 FIELD:
     foreach my $field ( keys %{ $self->field } ) {
@@ -696,16 +765,19 @@ sub _save_insert {
     # of the object should include a list called 'sql_defaults' that have
     # all the fields defined something like this:
     #   expired    char(3) default 'no'
-    # so that we can match up what's in the db with the object.
+    # so that we can match up what's in the db with the object. We
+    # also use any values specified in the class or object 'no_insert'
 
     unless ( $p->{no_sync} or $self->no_save_sync ) {
-        my $fill_in_fields = $self->CONFIG->{sql_defaults} || [];
-        if ( scalar @{ $fill_in_fields } ) {
+        my %fill_in_uniq = map { $_ => 1 } ( @{ $self->CONFIG->{sql_defaults} },
+                                             keys %{ $p->{no_insert} } );
+        my @fill_in_fields = sort keys %fill_in_uniq;
+        if ( scalar @fill_in_fields ) {
             $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Fetching defaults for fields ",
-                              join( ' // ', @{ $fill_in_fields } ), " after insert." );
+                              join( ' // ', @fill_in_fields ), " after insert." );
             my $row = eval { $self->db_select({
                                  from   => [ $self->table_name ],
-                                 select => $fill_in_fields,
+                                 select => \@fill_in_fields,
                                  where  => $self->id_clause( undef, undef, $p ),
                                  db     => $p->{db},
                                  return => 'single',
@@ -718,9 +790,9 @@ sub _save_insert {
                 _w( 0, "Cannot refetch row: $@" );
             }
             else {
-                for ( my $i = 0; $i < scalar @{ $fill_in_fields }; $i++ ) {
-                    $p->{DEBUG} && _wm( 2, $p->{DEBUG}, "Setting $fill_in_fields->[$i] to $row->[$i]" );
-                    $self->{ $fill_in_fields->[ $i ] } = $row->[ $i ];
+                for ( my $i = 0; $i < scalar @fill_in_fields; $i++ ) {
+                    $p->{DEBUG} && _wm( 2, $p->{DEBUG}, "Setting $fill_in_fields[$i] to $row->[$i]" );
+                    $self->{ $fill_in_fields[ $i ] } = $row->[ $i ];
                 }
             }
         }
@@ -732,6 +804,10 @@ sub _save_insert {
     # TODO: Check this -- should skip_security only mean that we don't
     # want to check security for saving? Should it mean we skip it
     # ENTIRELY, as if it's not there? (I suspect not...)
+    #
+    # NOTE: We say in the docs that we don't check security for
+    # inserts (it's application-specific), so 'skip_security' means we
+    # don't want to set security
 
     unless ( $p->{skip_security} ) {
         $self->create_initial_security({ object_id => scalar $self->id });
@@ -790,6 +866,88 @@ sub _save_update {
         die $@;
     }
     return 1;
+}
+
+
+sub field_update {
+	my ($self, $fields, $p ) = @_;
+
+    unless ( $fields ) {
+        spops_error "You must pass some sort of field to update!";
+    }
+
+	my ( %holding, $old );
+	
+	# convert to hashref ...
+	if ( ref $fields ) {
+		if (ref $fields eq 'ARRAY') {		## ... from arrayref
+            for ( @{ $fields } ) {
+                $holding{ $_ } = $self->{ $_ };
+            }
+		}
+        else {							    ## ... no conversion
+			%holding = %{ $fields };
+		}
+	}
+    else {    								# ... from scalar
+		$holding{ $fields } = $self->{ $fields };
+	}
+
+    # translate field mapping if available, and ensure that no private
+    # fields are used in the update
+
+    my $new = $self->filter_fields( \%holding );
+
+	# set up WHERE clause for 'if_match' option
+
+	if ( $p->{if_match} && ! $p->{where} ) {
+
+        # take match values from $p->{if_match} href
+		if ( ref $p->{if_match} eq 'HASH' ) {
+            for ( keys %{ $p->{if_match} } ) {
+                $old->{ $_ } = $p->{if_match}{ $_ };
+            }
+		}
+
+        # take match values from $self
+        else {
+            for ( keys %{ $new } ) {
+                $old->{ $_ } = $self->{ $_ };
+            }
+		}
+		
+		my @where = ();
+		my $type_info = $self->db_discover_types( $self->table_name, $p );
+		while ( my ( $k, $v ) = each %{ $old } ) {
+			$v = $self->sql_quote( $v, $type_info->{ $k }, $p->{db} );
+			push @where, " $k = $v ";
+		}
+		$p->{where} = join( ' AND ', @where );
+	}
+
+	$p->{where} = ( $p->{where} )
+                    ? join( ' AND ', $self->id_clause( undef, undef, $p ), $p->{where} )
+                    : $self->id_clause( undef, undef, $p );
+    for ( keys %{ $new } ) {
+        push @{ $p->{field} }, $_;
+        push @{ $p->{value} }, $new->{ $_ };
+    }
+	$p->{table}		= $self->table_name;
+	$p->{DEBUG}		||= DEBUG_SAVE;
+	$p->{db}		||= $self->global_datasource_handle( $p->{connect_key} );
+
+	my $rv = $self->db_update( $p );
+    $rv = ( $rv != 0 );                 # ...only if >= 1 row is updated
+
+	# update values in object if db_update was successful and we
+	# passed in new values (vs. from object)
+
+    if ( $rv && ref $fields eq 'HASH' ) {
+        for ( keys %{ $new } ) {
+            $self->{ $_ } = $new->{ $_ };
+        }
+    }
+	return $rv;
 }
 
 
@@ -857,8 +1015,6 @@ sub remove {
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -963,7 +1119,7 @@ instance, your database handle class could look like:
    unless ( ref $DB ) {
      $DB = DBI->connect( DBI_DSN, DBI_USER, DBI_PASS,
                          { RaiseError => 1, LongReadLen => 65536, LongTruncOk => 0 } )
-               || SPOPS::Exception->throw( "Cannot connect! $DBI::errstr" );
+               || spops_error "Cannot connect! $DBI::errstr";
    }
    return $DB;
  }
@@ -980,6 +1136,35 @@ in their 'isa' configuration key:
  };
 
 Now, your objects will have transparent access to a DBI data source.
+
+=head1 CLASS METHODS
+
+B<filter_fields( \%fields | \@fields )>
+
+Ensures that all fields are not private and are translated through the
+field map properly. If C<\%fields>, we return a hashref with no
+private fields and keys translated to mapped fields. If C<\@fields> --
+return an arrayref with no private fields and fields translated to
+mapped fields.
+
+Examples:
+
+ # 'favorite_colour' is mapped to 'favorite_color'
+ my @fields = qw( first_name last_name _current_balance favorite_colour );
+ my $filtered = $class->filter_fields( \@fields );
+ # $filtered = [ 'first_name', 'last_name', 'favorite_color' ]
+
+ my %data = ( first_name       => 'Chris',
+              last_name        => 'Winters',
+              _current_balance => 100000000000,
+              favorite_colour  => 'puce' );
+ my $filtered = $class->filter_fields( \%data );
+ # $filtered = { first_name       => 'Chris',
+ #               last_name        => 'Winters',
+ #               favorite_color   => 'puce' }
+
+Returns: arrayref or hashref of filtered fields, depending on the
+input.
 
 =head1 DATA ACCESS METHODS
 
@@ -1298,18 +1483,44 @@ will add time.
 
 Parameters not used: 'limit'
 
+B<refetch( [ $fields | \@fields ], \%params )>
+
+Refetches the value of the specified field(s) from the data store
+and updates the object in memory. Returns the new value(s). A single
+field name can be specified as a simple scalar value and and multiple
+fields can be specified as an arrayref. Returns a scalar value for
+single fields and a list for multiple fields.
+
+If the first parameter is empty, does a refetch for all fields in the
+object.
+
+E.g.
+
+  $new_val = $obj->refetch( 'field1' );
+  ($new_val1, $new_val2) = $obj->refetch( [ qw/ field1 field2 / ] );
+
+Parameters:
+
+=over 4
+
+=item *
+
+B<DEBUG> (bool) (optional)
+
+=back
+
 B<save( [ \%params ] )>
 
 Object method that saves this object to the data store.  Returns the
-new ID of the object if it is an add; returns the object ID if it is
-an update. As with other methods, any failures trigger an exception
+object if the save was successful. As with other methods, any failures
+trigger an exception
 
 Example:
 
  my $obj = $class->new;
  $obj->{param1} = $value1;
  $obj->{param2} = $value2;
- my $new_id = eval { $obj->save };
+ eval { $obj->save };
  if ( $@ ) {
    print "Error inserting object: $@\n";
  }
@@ -1363,6 +1574,29 @@ SPOPS is generally smart about dealing with auto-generated field
 values on object creation as well. This is done for you in one of the
 C<SPOPS::DBI::> subclasses, or in one of the C<SPOPS::Key::> classes,
 but it is useful to mention it here.
+
+You can also tell SPOPS to skip certain fields from inserting or
+updating. The configuration keys 'no_insert' and 'no_update' provided
+class-wide definitions for this -- frequently you will want to put
+your primary key field(s) in 'no_update' so they will not be
+accidentally changed. You can also provide a definition for this on a
+per-object basis by passing an arrayref with the relevant parameter:
+
+ my $obj = $class->fetch( $id );
+ $object->{foo} = 'bar';
+ $object->{bar} = 'foo';
+ $object->save({ no_update => [ 'foo' ] });
+
+ my $new_obj = $class->fetch( $id );
+ print $new_obj->{foo}; # Prints 'bar'
+
+You can also tell SPOPS not to insert or update fields when they are
+undefined using the 'skip_undef' configuration key. This is very
+useful on inserts when you have defaults defined in your database --
+since no value is inserted for the field, the database will fill in
+the default and SPOPS will re-sync after the insert so that your
+object is in the proper state. (Note that the value must be C<undef>,
+not merely false.)
 
 There are two phases where you can step in and generate or retrieve a
 generated value: C<pre_fetch_id()> and C<post_fetch_id()>. The first
@@ -1456,6 +1690,75 @@ step we call the method in the parent class.
      }
  }
 
+B<field_update( $fields, \%params )>
+
+Conditionally updates the value(s) of the specified field(s) in the data
+store and in the object if successful. If the C<$fields> argument is a
+scalar or arrayref, the values used to update the fields in the data
+store are taken from the object. If the $fields argument is a hashref,
+then it specifies the fields and the new values. In this case, the
+values in the object are also updated if and only if the update to the
+data store was successful.
+
+E.g.
+
+  $obj->{field1} = $new_value1;
+  $obj->field_update( 'field1' );
+
+  $obj->{field1} = $new_value1;
+  $obj->{field2} = $new_value2;
+  $obj->field_update( [ qw/ field1 field2 / ] );
+
+  $obj->field_update( { field1 => $new_value1,
+                        field2 => $new_value2 } );
+
+  $obj->field_update( { field1 => $new_value1,
+                        field2 => $new_value2 },
+                      { if_match => 1 } );
+
+  $obj->field_update( { field1 => $new_value1,
+                        field2 => $new_value2 },
+                      { if_match => { field3 => $val3 } );
+
+  $obj->field_update( { field1 => $new_value1,
+                        field2 => $new_value2 },
+                      { where => 'field3 > $val3' } );
+
+
+Parameters:
+
+=over 4
+
+=item *
+
+B<if_match> (scalar, hashref) (optional)
+
+If the 'if_match' parameter contains a hashref, then it specifies field
+names and corresponding values to be included in the WHERE clause of the
+SQL UPDATE. If it is present and true, but not a hashref then the WHERE
+clause will include the field(s) being updated and the current value(s)
+from the object.
+
+If the update does not modify any rows in the database, then the
+method returns false and does not update the corresponding field
+value(s) in the object.
+
+Note that this rubs against the grain of one object == one update. But
+it is quite useful, and useful things tend to stick around.
+
+=item *
+
+B<where> (scalar) (optional)
+
+If the 'where' parameter is present, it supercedes 'if_match' and
+included in the WHERE clause of the update.
+
+=item *
+
+B<DEBUG> (bool) (optional)
+
+=back
+
 B<remove( [ \%params ] )>
 
 Note that you can only remove a saved object (duh). Also tries to
@@ -1547,5 +1850,3 @@ it under the same terms as Perl itself.
 Chris Winters  <chris@cwinters.com>
 
 See the L<SPOPS|SPOPS> module for the full author list.
-
-=cut

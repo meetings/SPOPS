@@ -1,5 +1,54 @@
 Revision history for Perl extension SPOPS.
 
+0.62  Fri Aug  9 23:21:08 EDT 2002
+
+Overall:
+
+   * A few small but useful changes, mostly to SPOPS::DBI and mostly
+     written by someone else.
+
+Individual:
+
+   * SPOPS/DBI.pm:
+
+     - Added method 'refetch()' to class. This fetches the values for
+     a limited number of fields for a particular object and updates
+     the object. Thanks to Ray Zimmerman for the full implementation
+     and documentation!
+
+     - Added method 'field_update()' to class. This updates the values
+     for a limited number of fields, or performs an update across
+     several objects at once. Thanks to Ray Zimmerman for the full
+     implementation and documentation!
+
+     - Added method 'filter_fields()' to class. This ensures that a
+     list of fields or the keys in a hashref are not private and are
+     translated properly using the field map. (This is likely only to
+     be used within the class or subclasses.)
+
+     - Allow call to 'save()' to pass per-object definitions for
+     'skip_undef', 'no_insert' and 'no_update' and ensure that
+     'no_insert' fields are refetched post-insert just like
+     'sql_defaults' fields are.
+
+   * SPOPS/LDAP.pm:
+
+     - Ensure that 'skip_undef' is implemented for both inserts and
+     updates, and allow call to 'save()' to pass per-object
+     definitions for that and for 'no_insert' and 'no_update'.
+
+   * SPOPS/Tool/CreateOnly.pm:
+
+     - Simple behavior to ensure that objects can only be created, not
+     updated.
+
+   * t/30_dbi.t:
+
+     - Add tests for refetch() and field_update()
+
+     - Add tests for 'no_insert' and 'no_update' passed along with save()
+
+
 0.61  Mon May  6 21:44:57 EDT 2002
 
 Overall:

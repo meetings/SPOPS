@@ -76,6 +76,7 @@ SPOPS/Secure/Hierarchy.pm
 SPOPS/SQLInterface.pm
 SPOPS/Tie.pm
 SPOPS/Tie/StrictField.pm
+SPOPS/Tool/CreateOnly.pm
 SPOPS/Tool/ReadOnly.pm
 SPOPS/Tool/UTFConvert.pm
 SPOPS/Tool/DBI/DiscoverField.pm

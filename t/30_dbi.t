@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 2.4 2002/04/27 19:08:09 lachoy Exp $
+# $Id: 30_dbi.t,v 2.7 2002/08/10 03:11:12 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -9,7 +9,7 @@
 use strict;
 use Data::Dumper qw( Dumper );
 
-use constant NUM_TESTS       => 28;
+use constant NUM_TESTS       => 49;
 use constant TEST_TABLE_NAME => 'spops_test';
 
 my $SPOPS_CLASS = 'DBITest';
@@ -18,13 +18,19 @@ my @ID_LIST     = ( 42, 1792, 1588 );
 my ( $db, $do_end );
 
 END {
-    if ( $do_end ) {
-        cleanup( $db, TEST_TABLE_NAME );
-    }
+    cleanup( $db, TEST_TABLE_NAME ) if ( $do_end );
  }
 
-{
+# Table definition:
+# CREATE TABLE foo (
+#    spops_id    int not null primary key,
+#    spops_name  char(20),
+#    spops_goop  char(20) not null,
+#    spops_num   int default 2
+# )
 
+
+{
     # Grab our DBI routines and be sure we're supposed to run.
 
     do "t/dbi_config.pl";
@@ -178,6 +184,63 @@ END {
         is( $redo_obj->{spops_goop}, "added -- here we go!", 'Insert alter' );
     }
 
+    # Fetch one of the above objects, update by hand one of the values
+    # in the table and then refetch that field to see if it works
+
+    {
+        my $obj = eval { $SPOPS_CLASS->fetch( 42, { db => $db,
+                                                    skip_cache => 1 } ) };
+        my $orig = $obj->{spops_name};
+        my $new_set  = "Changed for refetch";
+        my $sql = 'UPDATE ' . TEST_TABLE_NAME .
+                  '   SET spops_name = ? ' .
+                  ' WHERE ' . $obj->id_clause( undef, undef, { db => $db }) ;
+        my ( $sth );
+        eval {
+            $sth = $db->prepare( $sql );
+            $sth->execute( $new_set );
+        };
+        ok( ! $@, 'Update for refetch' );
+        my $new_return = $obj->refetch( 'spops_name', { db => $db } );
+        is( $obj->{spops_name}, $new_set, 'Refetched field match' );
+        is( $new_return, $new_set, 'Refetched and returned field match' );
+    }
+
+    # Fetch one of the above objects, then update only one field
+
+    {
+        my $obj = eval { $SPOPS_CLASS->fetch( 42, { db => $db,
+                                                    skip_cache => 1 } ) };
+        my $changed = 'One field update';
+        $obj->{spops_name} = $changed;
+        my $rv = eval { $obj->field_update( 'spops_name', { db => $db } ) };
+        warn $@ if ( $@ );
+        ok( $rv && ! $@, 'Field update (single) execution' );
+        is( $obj->{spops_name}, $changed, 'Field update (single) internal match' );
+        my $redo_obj = eval { $SPOPS_CLASS->fetch( 42, { db => $db,
+                                                         skip_cache => 1 } ) };
+        is( $redo_obj->{spops_name}, $obj->{spops_name}, 'Field update (single) external match' );
+    }
+
+    # Now try to do a field update with multiple fields
+    {
+        my $obj = eval { $SPOPS_CLASS->fetch( 42, { db => $db,
+                                                    skip_cache => 1 } ) };
+        my $changed_text = 'Multi field update';
+        my $changed_num  = 1066;
+        my $rv = eval { $obj->field_update({ spops_name => $changed_text,
+                                             spops_num  => $changed_num },
+                                          { db => $db } ) };
+        warn $@ if ( $@ );
+        ok( $rv && ! $@, 'Field update (multiple) execution' );
+        is( $obj->{spops_name}, $changed_text, 'Field update (multiple) internal match' );
+        is( $obj->{spops_num}, $changed_num, 'Field update (multiple) internal match' );
+        my $redo_obj = eval { $SPOPS_CLASS->fetch( 42, { db => $db,
+                                                         skip_cache => 1 } ) };
+        is( $redo_obj->{spops_name}, $obj->{spops_name}, 'Field update (multiple) external match' );
+        is( $redo_obj->{spops_num}, $obj->{spops_num}, 'Field update (multiple) external match' );
+    }
+
     # Fetch the three objects in the db and be sure we got them all
 
     {
@@ -194,7 +257,8 @@ END {
 
     {
         my $obj_count = eval { $SPOPS_CLASS->fetch_count({ db => $db }) };
-        ok( $obj_count == 3, 'Fetch count' );
+        ok( ! $@, 'Fetch count execution' );
+        ok( $obj_count == 3, 'Fetch count value' );
     }
 
     # Create an iterator and run through the objects
@@ -202,6 +266,7 @@ END {
     {
         my $iter = eval { $SPOPS_CLASS->fetch_iterator({ db         => $db,
                                                          skip_cache => 1 }) };
+        ok( ! $@, 'Fetch iterator execution' );
         ok( $iter->isa( 'SPOPS::Iterator::DBI' ), 'Iterator returned (fetch_iterator)' );
         my $count = 0;
         $count++ while ( my $obj = $iter->get_next );
@@ -218,6 +283,36 @@ END {
         my $count = 0;
         $count++ while ( my $obj = $iter->get_next );
         is( $count, 3, 'Iterator fetch count (ID list)' );
+    }
+
+    # Define an object but pass in a per-object 'no_insert' definition
+    {
+        my $obj = $SPOPS_CLASS->new({ spops_id => 4001, spops_name => 'FOO!',
+                                      spops_goop => 'OOF!', spops_num => 4001 });
+        eval { $obj->save({ is_add => 1,
+                            no_insert => [ 'spops_name' ],
+                            db => $db, skip_cache => 1 }) };
+        ok( ! $@, 'Insert object with "no_insert" field specified' );
+        isnt( $obj->{spops_name}, 'FOO!', 'Data reset for no_insert field in object' );
+        my $new_obj = eval { $SPOPS_CLASS->fetch( 4001, { db => $db,
+                                                          skip_cache => 1 }) };
+        ok( ! $@, 'Refetch no_insert object' );
+        isnt( $new_obj->{spops_name}, 'FOO!', 'Fetched data proper data for no_insert field' );
+    }
+
+    {
+        my $obj = eval { $SPOPS_CLASS->fetch( 4001,
+                                              { db => $db, skip_cache => 1 }) };
+        ok( ! $@, "Fetch object for no_update" );
+        my $old_value = $obj->{spops_num};
+        $obj->{spops_num} = 5555;
+        eval { $obj->save({ no_update => [ 'spops_num' ],
+                            db => $db, skip_cache => 1 }) };
+        ok( ! $@, 'Update object with "no_update" field specified' );
+        my $new_obj = eval { $SPOPS_CLASS->fetch( 4001,
+                                                  { db => $db, skip_cache => 1 }) };
+        ok( ! $@, 'Refetch no_update object' );
+        is( $new_obj->{spops_num}, $old_value, 'Old value not overwritten for no_update field' );
     }
 
 # Future testing ideas:

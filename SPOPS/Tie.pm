@@ -1,6 +1,6 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: Tie.pm,v 2.1 2002/08/10 02:17:05 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -12,7 +12,7 @@ use Data::Dumper qw( Dumper );
 @SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_INTERNAL IDX_TEMP  
                              IDX_CHECK_FIELDS IDX_LAZY_LOADED
                              $PREFIX_TEMP $PREFIX_INTERNAL );
-$SPOPS::Tie::VERSION   = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Tie::VERSION   = substr(q$Revision: 2.1 $, 10);
 
 use constant IDX_DATA          => '_dat';
 use constant IDX_CHANGE        => '_chg';
@@ -129,8 +129,8 @@ sub _lazy_load {
     DEBUG() && _w( 1, "Trying to lazy load ($key) since the loaded is:",
                       $self->{ IDX_LAZY_LOADED() }->{ $cmp_key } );
     $self->{ IDX_DATA() }->{ $cmp_key } = 
-                    $self->{ IDX_LAZY_LOAD_SUB() }->( $self->{class}, 
-                                                      $self->{ IDX_DATA() }, 
+                    $self->{ IDX_LAZY_LOAD_SUB() }->( $self->{class},
+                                                      $self->{ IDX_DATA() },
                                                       $key );
     $self->{ IDX_LAZY_LOADED() }->{ $cmp_key }++;
 }
