@@ -1,17 +1,14 @@
 package SPOPS::Import;
 
-# $Id: Import.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
+# $Id: Import.pm,v 3.2 2002/10/10 04:00:35 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Class::Factory );
-use SPOPS::Exception;
+use SPOPS::Exception qw( spops_error );
 
-$SPOPS::Import::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 use constant AKEY => '_attrib';
-
-my %CLASSES = ();
-sub get_factory_map { return \%CLASSES }
 
 my @FIELDS = qw( object_class data DEBUG );
 SPOPS::Import->mk_accessors( @FIELDS );
@@ -19,7 +16,7 @@ SPOPS::Import->mk_accessors( @FIELDS );
 sub new {
     my ( $pkg, $type, $params ) = @_;
     my $class = eval { $pkg->get_factory_class( $type ) };
-    if ( $@ ) { SPOPS::Exception->throw( $@ ) }
+    spops_error $@ if ( $@ );
     my $self = bless( {}, $class );;
     foreach my $field ( $self->get_fields ) {
         $self->$field( $params->{ $field } );
@@ -36,7 +33,10 @@ sub get_fields { return @FIELDS }
 sub get { return $_[0]->{ AKEY() }{ $_[1] } }
 sub set { return $_[0]->{ AKEY() }{ $_[1] } = $_[2] }
 
-sub run { SPOPS::Exception->throw( "SPOPS::Import subclass should implement run()" ) }
+sub run {
+    my $class = ref $_[0] || $_[0];
+    spops_error "SPOPS::Import subclass [$class] must implement run()";
+}
 
 
 ########################################
@@ -50,7 +50,7 @@ sub raw_data_from_file {
     my ( $class, $filename ) = @_;
     my $raw_data = $class->read_perl_file( $filename );
     unless ( ref $raw_data eq 'ARRAY' ) {
-        SPOPS::Exception->throw( "Raw data must be in arrayref format." );
+        spops_error "Raw data must be in arrayref format.";
     }
     return $raw_data;
 }
@@ -61,9 +61,11 @@ sub raw_data_from_fh {
     no strict 'vars';
     my $raw = $class->read_fh( $fh );
     my $data = eval $raw;
-    if ( $@ ) { SPOPS::Exception->throw( "Cannot parse data from filehandle: [$@]" ) }
+    if ( $@ ) {
+        spops_error "Cannot parse data from filehandle: [$@]";
+    }
     unless ( ref $data eq 'ARRAY' ) {
-        SPOPS::Exception->throw( "Data must be in arrayref format" );
+        spops_error "Data must be in arrayref format";
     }
     return $data;
 }
@@ -76,7 +78,9 @@ sub read_perl_file {
     no strict 'vars';
     my $raw  = $class->read_file( $filename );
     my $data = eval $raw;
-    if ( $@ ) { SPOPS::Exception->throw( "Cannot parse data file ($filename): $@" ) }
+    if ( $@ ) {
+        spops_error "Cannot parse data file ($filename): $@";
+    }
     return $data;
 }
 
@@ -86,9 +90,11 @@ sub read_perl_file {
 sub read_file {
     my ( $class, $filename ) = @_;
 
-    unless ( -f $filename ) { SPOPS::Exception->throw( "Cannot read: [$filename] does not exist" ) }
+    unless ( -f $filename ) {
+        spops_error "Cannot read: [$filename] does not exist";
+    }
     open( DF, $filename ) ||
-        SPOPS::Exception->throw( "Cannot read data file: $!" );
+                    spops_error "Cannot read data file: $!";
     local $/ = undef;
     my $raw = <DF>;
     close( DF );
@@ -105,15 +111,11 @@ sub read_fh {
 
 
 ##############################
-# Initialize
+# INITIALIZE
 
-sub class_initialize {
-    SPOPS::Import->add_factory_type( object => 'SPOPS::Import::Object' );
-    SPOPS::Import->add_factory_type( dbdata => 'SPOPS::Import::DBI::Data' );
-    SPOPS::Import->add_factory_type( table  => 'SPOPS::Import::DBI::Table' );
-}
-
-class_initialize();
+__PACKAGE__->register_factory_type( object => 'SPOPS::Import::Object' );
+__PACKAGE__->register_factory_type( dbdata => 'SPOPS::Import::DBI::Data' );
+__PACKAGE__->register_factory_type( table  => 'SPOPS::Import::DBI::Table' );
 
 1;
 

@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 3.1 2002/09/09 12:37:06 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 3.2 2002/10/09 02:22:13 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
-$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 my @PARSE_INTO_HASH = qw( field no_insert no_update skip_undef multivalue );
 
@@ -335,9 +335,13 @@ sub conf_add_rules {
 
     my $ruleset_info = $GENERIC_RULESET_REFER;
     $ruleset_info   =~ s/%%CLASS%%/$class/g;
-    eval $ruleset_info;
-    if ( $@ ) {
-        return ( ERROR, "Could not eval ruleset info into [$class]. Error: $@" );
+
+    {
+        no warnings 'redefine';
+        eval $ruleset_info;
+        if ( $@ ) {
+            return ( ERROR, "Could not eval ruleset info into [$class]. Error: $@" );
+        }
     }
 
     # Now find all the classes that have the method RULESET_METHOD

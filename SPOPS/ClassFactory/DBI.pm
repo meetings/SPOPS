@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: DBI.pm,v 3.1 2002/10/10 03:59:09 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-$SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 
@@ -117,11 +117,12 @@ my $generic_multifield_etc = <<'MFETC';
             SPOPS::Exception->throw( "Cannot create ID clause: no DB handle available" );
         }
 
-        my $type_info = eval { $self->db_discover_types(
-                                             $self->table_name,
-                                             { dbi_type_info => $p->{dbi_type_info},
-                                               db            => $db,
-                                               DEBUG         => $p->{DEBUG} } ) };
+        # let any errors bubble up
+        my $type_info = $self->db_discover_types(
+                                        $self->table_name,
+                                        { dbi_type_info => $p->{dbi_type_info},
+                                          db            => $db,
+                                          DEBUG         => $p->{DEBUG} } );
         if ( $id and ref $id eq 'ARRAY' ) {
             ( %%ID_FIELD_VARIABLE_LIST%% ) = @{ $id };
         }
@@ -140,10 +141,10 @@ my $generic_multifield_etc = <<'MFETC';
             my $use_id_field = ( $opt eq 'noqualify' )
                                  ? $id_field
                                  : join( '.', $table_name, $id_field );
-    	    push @clause, join( ' = ', $use_id_field,
-		                               $self->sql_quote( $val{ $id_field },
-                                                         $type_info->{ lc $id_field },
-                                                         $db ) );
+            my $quoted_value = $self->sql_quote( $val{ $id_field },
+                                                 $type_info->get_type( $id_field ),
+                                                 $db );
+    	    push @clause, join( ' = ', $use_id_field, $quoted_value );
 	    }
         return join( ' AND ', @clause );
     }

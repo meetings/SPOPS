@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 3.1 2002/09/12 17:06:46 lachoy Exp $
+# $Id: Makefile.PL,v 3.2 2002/10/10 04:01:21 lachoy Exp $
 
 # See 'README' for the environment variables we use in builds without
 # intervention.
@@ -103,7 +103,7 @@ sub write_makefile {
                         'Class::Fields'     => 0.14,
                         'Class::Accessor'   => 0.17,
                         'Devel::StackTrace' => 0.90,
-                        'Class::Factory'    => 0.03,
+                        'Class::Factory'    => 1.00,
                         'Time::Piece'       => 1.07,
                         #'Class::Observable' => 0.03,
                         } );

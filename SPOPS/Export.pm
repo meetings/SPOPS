@@ -1,17 +1,14 @@
 package SPOPS::Export;
 
-# $Id: Export.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
+# $Id: Export.pm,v 3.2 2002/10/10 04:00:35 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Class::Factory );
-use SPOPS::Exception;
+use SPOPS::Exception qw( spops_error );
 
-$SPOPS::Export::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Export::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 use constant AKEY => '_attrib';
-
-my %CLASSES = ();
-sub get_factory_map { return \%CLASSES }
 
 my @FIELDS = qw( object_class where value include_id skip_fields DEBUG );
 SPOPS::Export->mk_accessors( @FIELDS );
@@ -19,7 +16,7 @@ SPOPS::Export->mk_accessors( @FIELDS );
 sub new {
     my ( $pkg, $type, $params ) = @_;
     my $class = eval { $pkg->get_factory_class( $type ) };
-    if ( $@ ) { SPOPS::Exception->throw( $@ ) }
+    spops_error $@ if ( $@ );
     my $self = bless( {}, $class );;
     foreach my $field ( $self->get_fields ) {
         $self->$field( $params->{ $field } );
@@ -45,9 +42,9 @@ sub run {
     my ( $self ) = @_;
     my $object_class = $self->object_class;
     unless ( $object_class ) {
-        SPOPS::Exception->throw(
-                    "Cannot export objects without an object class! Please set",
-                    " using\n\$exporter->object_class( \$object_class )" );
+        spops_error "Cannot export objects without an object class! ",
+                    "Please set using\n",
+                    "\$exporter->object_class( \$object_class )";
     }
     my @export_fields = $self->_find_export_fields;
     my @output = ();
@@ -89,17 +86,13 @@ sub _find_export_fields {
 
 
 ########################################
-# Initialize
+# INITIALIZE
 
-sub class_initialize {
-    SPOPS::Export->add_factory_type( object => 'SPOPS::Export::Object' );
-    SPOPS::Export->add_factory_type( xml    => 'SPOPS::Export::XML' );
-    SPOPS::Export->add_factory_type( perl   => 'SPOPS::Export::Perl' );
-    SPOPS::Export->add_factory_type( sql    => 'SPOPS::Export::SQL' );
-    SPOPS::Export->add_factory_type( dbdata => 'SPOPS::Export::DBI::Data' );
-}
-
-class_initialize();
+__PACKAGE__->register_factory_type( object => 'SPOPS::Export::Object' );
+__PACKAGE__->register_factory_type( xml    => 'SPOPS::Export::XML' );
+__PACKAGE__->register_factory_type( perl   => 'SPOPS::Export::Perl' );
+__PACKAGE__->register_factory_type( sql    => 'SPOPS::Export::SQL' );
+__PACKAGE__->register_factory_type( dbdata => 'SPOPS::Export::DBI::Data' );
 
 1;
 

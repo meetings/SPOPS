@@ -1,15 +1,16 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: SQLInterface.pm,v 3.2 2002/10/10 12:13:41 lachoy Exp $
 
 use strict;
 use Data::Dumper          qw( Dumper );
 use DBI;
 use SPOPS                 qw( _w _wm DEBUG );
+use SPOPS::DBI::TypeInfo;
 use SPOPS::Exception      qw( spops_error );
 use SPOPS::Exception::DBI qw( spops_dbi_error );
 
-$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 my ( $DEBUG_SELECT, $DEBUG_INSERT, $DEBUG_UPDATE, $DEBUG_DELETE );
 sub DEBUG_SELECT     { return $DEBUG_SELECT }
@@ -22,14 +23,6 @@ sub DEBUG_DELETE     { return $DEBUG_DELETE }
 sub SET_DEBUG_DELETE { $DEBUG_DELETE = $_[1] }
 
 my %TYPE_INFO = ();
-
-my %FAKE_TYPES = (
-   'int'   => DBI::SQL_INTEGER(),
-   'num'   => DBI::SQL_NUMERIC(),
-   'float' => DBI::SQL_FLOAT(),
-   'char'  => DBI::SQL_VARCHAR(),
-   'date'  => DBI::SQL_DATE(),
-);
 
 sub throw_no_database_handle_error {
     my ( $item ) = @_;
@@ -232,8 +225,6 @@ sub db_insert {
                                    $p->{table},
                                    { dbi_type_info => $p->{dbi_type_info},
                                      db            => $db });
-    $type_info ||= {};
-
     my $sql = $p->{sql};
 
     # If we weren't given SQL, build it.
@@ -261,7 +252,7 @@ sub db_insert {
             my $value = ( $p->{no_quote}{ $field } )
                           ? $p->{value}->[ $count ]
                           : $class->sql_quote( $p->{value}->[ $count ],
-                                               $type_info->{ lc $field }, $db );
+                                               $type_info->get_type( $field ), $db );
             $DEBUG && _wm( 1, $DEBUG, "Trying to add quoted value [$value] ",
                                       "for field [$field]" );
             push @value_list, $value;
@@ -345,14 +336,17 @@ sub db_update {
         my $count  = 0;
         $p->{no_quote} ||= {};
         foreach my $field ( @{ $p->{field} } ) {
-            $DEBUG && _wm( 1, $DEBUG, "Trying to add value ($p->{value}->[$count]) with ",
-                                      "field ($field) and type info ($type_info->{ lc $field })" );
+            $DEBUG && _wm( 1, $DEBUG, "Trying to add value [$p->{value}[$count]] ",
+                                      "with field [$field] and type ",
+                                      "[", $type_info->get_type( $field ), "]" );
 
             # Quote the value unless the user asked us not to
 
             my $value = ( $p->{no_quote}{ $field } )
-                          ? $p->{value}->[ $count ]
-                          : $class->sql_quote( $p->{value}->[ $count ], $type_info->{ lc $field }, $db );
+                          ? $p->{value}[ $count ]
+                          : $class->sql_quote( $p->{value}[ $count ],
+                                               $type_info->get_type( $field ),
+                                               $db );
             push @update, "$field = $value";
             $count++;
         }
@@ -436,72 +430,36 @@ sub db_discover_types {
 
     my $db_name = eval { $db->{Name} } || eval { $db->{name} };
     my $type_idx = join( '-', lc $db_name , lc $table );
-    $DEBUG && _wm( 2, $DEBUG, "Type index used to discover data types: ($type_idx)" );
+    $DEBUG && _wm( 2, $DEBUG, "Type index used to discover data types: [$type_idx]" );
 
     # If we've already discovered the types, get the cached copy
 
     return $TYPE_INFO{ $type_idx } if ( $TYPE_INFO{ $type_idx } );
 
+    my $type_info = SPOPS::DBI::TypeInfo->new({ database => $db_name,
+                                                table    => $table });
+
+    my $conf = eval { $class->CONFIG };
+    my $fake_types = $p->{dbi_type_info} || $conf->{dbi_type_info};
+
     # Certain databases (or more specifically, DBD drivers) do not
     # process $sth->{TYPE} requests properly, so we need the user to
-    # specify the types by hand (see assign_dbi_type_info() below)
+    # specify the types by hand
 
-    my $ti = $p->{dbi_type_info};
-    if ( my $conf = eval { $class->CONFIG } ) {
-        $ti = $conf->{dbi_type_info};
-    }
-
-    if ( $ti ) {
-        DEBUG() && _w( 1, "Class has type information specified" );
-        my ( $dbi_info );
-        unless ( $ti->{_dbi_assigned} ) {
-            $dbi_info = $class->assign_dbi_type_info( $ti );
+    if ( ref $fake_types eq 'HASH' ) {
+        while ( my ( $field, $fake_type ) = each %{ $fake_types } ) {
+            $type_info->add_type( $field, $fake_type );
         }
-        foreach my $field ( keys %{ $dbi_info } ) {
-            DEBUG() && _w( 1, "Set $field: $dbi_info->{ $field }" );
-            $TYPE_INFO{ $type_idx }{ lc $field } = $dbi_info->{ $field };
-        }
-        return $TYPE_INFO{ $type_idx };
     }
 
-    # Other statement necessary to get type info from the db? Let the
-    # class take care of it.
+    # Otherwise, fetch the types from the database
 
-    my $sql = $class->sql_fetch_types( $table );
-    my $sth = eval { $db->prepare( $sql ) };
-    if ( $@ ) {
-        spops_dbi_error $@, { sql => $sql, action => 'prepare' };
+    else {
+        my $sql = $class->sql_fetch_types( $table );
+        $type_info->fetch_types( $db, $sql );
     }
 
-    my $rv = eval { $sth->execute };
-    if ( $@ ) {
-        spops_dbi_error $@, { sql => $sql, action => 'execute' };
-    }
-
-    # Go through the fields and match them up to types; note that
-    # %TYPE_INFO is a lexical scoped for the entire file, so all
-    # routines (db_insert, db_update, etc.) should have access to it.
-
-    my $fields = $sth->{NAME};
-    my $types  = $sth->{TYPE};
-    DEBUG() && _w( 1, "List of fields: ", join( ", ", @{ $fields } ) );
-    for ( my $i = 0; $i < scalar @{ $fields }; $i++ ) {
-        $TYPE_INFO{ $type_idx }{ lc $fields->[ $i ] } = $types->[ $i ];
-    }
-    return $TYPE_INFO{ $type_idx };
-}
-
-
-
-sub assign_dbi_type_info {
-    my ( $class, $user_info ) = @_;
-    my $dbi_info = {};
-    foreach my $field ( keys %{ $user_info } ) {
-        DEBUG() && _w( 1, "Field $field is $user_info->{ $field }" );
-        $dbi_info->{ $field } = $FAKE_TYPES{ $user_info->{ $field } };
-    }
-    $user_info->{_dbi_assigned}++;
-    return $dbi_info;
+    return $TYPE_INFO{ $type_idx } = $type_info
 }
 
 
@@ -922,16 +880,19 @@ Oops, just cleared out the 'users' table. Be careful!
 
 =head2 db_discover_types( $table, \%params )
 
-Basically issue a dummy query to a particular table to get
-its schema. We save the DBI type information in the %TYPE_INFO
-package lexical that all routines here can access.
+Retrieve field type information for C<$table>. Normally we simply
+issue a dummy query to a particular table to get its schema -- field
+names and field types. We cache the information (in a
+L<SPOPS::DBI::TypeInfo|SPOPS::DBI::TypeInfo> object) and then query it
+for the different field types as we need them.
 
-If a DBD driver does not support the C<{TYPE}> attribute of the
+If a DBD driver does not support the C<{TYPE}> attribute of the DBI
 statement handle, you have to specify some simple types in your class
 configuration or provide them somehow. This is still slightly tied to
 SPOPS implementations in OpenInteract, but only slightly.
 
-Return a hashref of fieldnames as keys and DBI types as values.
+Return a L<SPOPS::DBI::TypeInfo|SPOPS::DBI::TypeInfo> object for
+C<$table>.
 
 Parameters:
 
@@ -963,33 +924,8 @@ B<dbi_type_info> (\%) (optional)
 
 If your DBD driver cannot retrieve type information from the database,
 you need to give this module a hint as to what type of datatypes you
-will be working with.
-
-The package lexical C<%FAKE_TYPES> has a mapping of fake-to-DBI type
-information. In a nutshell:
-
- int   -> SQL_INTEGER
- num   -> SQL_NUMERIC
- float -> SQL_FLOAT
- char  -> SQL_VARCHAR
- date  -> SQL_DATE
-
-So your class can define these hints in the C<dbi_type_info> key in
-your object config:
-
-  my $spops = {
-    myobj => {
-      class => 'My::Object',
-      field => [ qw/ obj_id start_date full_count name / ],
-      dbi_type_info => {
-           obj_id     => 'int',  start_date => 'date',
-           full_count => 'int',  name       => 'char'
-      },
-      ...
-    },
-  };
-
-=back
+will be working with. See C<Fake Types> in
+L<SPOPS::DBI::TypeInfo|SPOPS::DBI::TypeInfo> for the types you can use.
 
 =head2 Debugging Methods
 

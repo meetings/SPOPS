@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: 30_dbi.t,v 3.1 2002/10/10 12:07:43 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -223,7 +223,7 @@ END {
         my $changed = 'One field update';
         $obj->{spops_name} = $changed;
         my $rv = eval { $obj->field_update( 'spops_name', { db => $db } ) };
-        warn $@ if ( $@ );
+        diag( "[RV $rv] $@" ) if ( $@ );
         ok( $rv && ! $@, 'Field update (single) execution' );
         is( $obj->{spops_name}, $changed, 'Field update (single) internal match' );
         my $redo_obj = eval { $SPOPS_CLASS->fetch( 42, { db => $db,

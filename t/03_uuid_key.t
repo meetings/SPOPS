@@ -1,19 +1,18 @@
 # -*-perl-*-
 
-# $Id: 03_uuid_key.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: 03_uuid_key.t,v 3.1 2002/10/10 12:07:43 lachoy Exp $
 
 use strict;
 
 {
+    require Test::More;
+
     # Check to see if Data::UUID is installed
     eval { require Data::UUID };
     if ( $@ ) {
-        print "1..0\n";
-        print "Skipping test on this platform\n";
-        exit;
+        Test::More->import( skip_all => 'Data::UUID is not installed' );
     }
 
-    require Test::More;
     Test::More->import( tests => 6 );
 
     my %config = (

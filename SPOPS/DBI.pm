@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: DBI.pm,v 3.2 2002/10/10 12:06:00 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -14,7 +14,7 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -166,15 +166,16 @@ sub id_clause {
     # ID field is a number
 
     if ( $@ ) {
-        $type_info->{ $id_field } = $SPOPS::DBI::GUESS_ID_FIELD_TYPE;
+        $type_info = SPOPS::DBI::TypeInfo->new({ table => $item->base_table });
+        $type_info->add_type( $id_field, $SPOPS::DBI::GUESS_ID_FIELD_TYPE );
         _w( 0, "Likely was not passed sufficient information to ",
                "get infromation requested. Making a 'best guess'" );
     }
     my $use_id_field = ( $opt eq 'noqualify' )
                          ? $id_field
                          : join( '.', $item->table_name, $id_field );
-    return join(' = ', $use_id_field,
-                       $item->sql_quote( $id, $type_info->{ lc $id_field }, $db ) );
+    my $quoted_value = $item->sql_quote( $id, $type_info->get_type( $id_field ), $db );
+    return join(' = ', $use_id_field, $quoted_value );
 }
 
 
@@ -892,7 +893,7 @@ sub field_update {
                     "values as a hashref for the first argument.";
     }
 
-	my ( %holding, $old );
+	my ( %holding, %old_values );
 
 	# convert to hashref ...
 	if ( ref $fields ) {
@@ -921,21 +922,21 @@ sub field_update {
         # take match values from $p->{if_match} href
 		if ( ref $p->{if_match} eq 'HASH' ) {
             for ( keys %{ $p->{if_match} } ) {
-                $old->{ $_ } = $p->{if_match}{ $_ };
+                $old_values{ $_ } = $p->{if_match}{ $_ };
             }
 		}
 
         # take match values from $item
         else {
             for ( keys %{ $new } ) {
-                $old->{ $_ } = $item->{ $_ };
+                $old_values{ $_ } = $item->{ $_ };
             }
 		}
 
 		my @where = ();
 		my $type_info = $item->db_discover_types( $item->table_name, $p );
-		while ( my ( $k, $v ) = each %{ $old } ) {
-			$v = $item->sql_quote( $v, $type_info->{ $k }, $p->{db} );
+		while ( my ( $k, $v ) = each %old_values ) {
+			$v = $item->sql_quote( $v, $type_info->get_type( $k ), $p->{db} );
 			push @where, " $k = $v ";
 		}
 		$p->{where} = join( ' AND ', @where );
@@ -955,7 +956,7 @@ sub field_update {
 	$p->{db}		||= $item->global_datasource_handle( $p->{connect_key} );
 
 	my $rv = $item->db_update( $p );
-    $rv = ( $rv != 0 );                 # ...only if >= 1 row is updated
+    $rv = ( $rv ne '0' );            # ...only if >= 1 row is updated
 
 	# update values in object if db_update was successful and we
 	# passed in new values (vs. from object).

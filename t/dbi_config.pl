@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: dbi_config.pl,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: dbi_config.pl,v 3.1 2002/10/10 12:07:42 lachoy Exp $
 
 use strict;
 use DBI qw( SQL_VARCHAR SQL_INTEGER );
@@ -49,9 +49,8 @@ sub test_dbi_run {
     do "t/config.pl";
     my $config = _read_config_file();
     unless ( $config->{DBI_dsn} and $config->{DBI_driver} ) {
-        print "1..0\n";
-        print "Skipping test on this platform\n";
-        exit;
+        require Test::More;
+        Test::More->import( skip_all => "Insufficient information to use DBI database for tests" );
     }
     return $config;
 }
@@ -186,7 +185,7 @@ ASANY
     # test class to include the type info in its configuration
 
     if ( $DRIVER_NO_TYPE{ $driver_name } ) {
-        warn "\nDBD Driver $driver_name does not support {TYPE} information\n",
+        warn "\nDBD::$driver_name does not support {TYPE} information. ",
              "Installing manual types for test.\n";
         assign_manual_types( $spops_class );
     }

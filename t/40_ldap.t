@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 40_ldap.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: 40_ldap.t,v 3.1 2002/10/10 12:07:42 lachoy Exp $
 
 use strict;
 use constant NUM_TESTS => 37;
@@ -34,15 +34,12 @@ END {
 
     do "t/config.pl";
     my $config = _read_config_file() || {};
-    unless ( $config->{LDAP_base_dn} and $config->{LDAP_host} ) {
-        print "1..0\n";
-        print "Skipping test on this platform\n";
-        exit;
-    }
-
-    $do_end++;
 
     require Test::More;
+    unless ( $config->{LDAP_base_dn} and $config->{LDAP_host} ) {
+        Test::More->import( skip_all => 'Insufficient information to use LDAP for tests' );
+    }
+
     Test::More->import( tests => NUM_TESTS );
 
     # Tests: 1 - 3
@@ -105,6 +102,8 @@ END {
                       : ();
     my $ldap_msg = $ldap->bind( @bind_args );
     ok( ! $ldap_msg->code, 'Bind to directory' ); # && die "Cannot bind! Error: ", $msg->error, "\n";
+
+    $do_end++;
 
     # Cleanup any leftover items
 

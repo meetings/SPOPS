@@ -1,6 +1,6 @@
-dbd         mysql
-dsn         test
-usename     myuser
-password    mypassword
-table       spopstest
+dbd         Pg
+dsn         dbname=test
+usename     cwinters
+password    
+table       mytest
 sql

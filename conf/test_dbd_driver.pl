@@ -125,7 +125,7 @@ sub english_sql_type {
     return ( "SQL_BINARY", "blah" )       if ( $type == SQL_BINARY );
     return ( "SQL_VARBINARY", "blah" )    if ( $type == SQL_VARBINARY );
     return ( "SQL_LONGVARBINARY", "blah" ) if ( $type == SQL_LONGVARBINARY );
-    return ( "SQL_BIGINT", 4287 )         if ( $type == SQL_BIGINT );
+#    return ( "SQL_BIGINT", 4287 )         if ( $type == SQL_BIGINT );
     return ( "SQL_TINYINT", 42 )          if ( $type == SQL_TINYINT );
     return ( "SQL_BIT", 1 )               if ( $type == SQL_BIT );
     return ( "SQL_WCHAR", "wblah" )       if ( $type == SQL_WCHAR );

@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 41_ldap_inline_config.t,v 1.1 2002/09/09 12:39:59 lachoy Exp $
+# $Id: 41_ldap_inline_config.t,v 1.2 2002/10/10 12:07:42 lachoy Exp $
 
 use strict;
 use constant NUM_TESTS       => 4;
@@ -14,15 +14,11 @@ my ( $db, $do_end );
 
     do "t/config.pl";
     my $config = _read_config_file() || {};
-    unless ( $config->{LDAP_base_dn} and $config->{LDAP_host} ) {
-        print "1..0\n";
-        print "Skipping test on this platform\n";
-        exit;
-    }
-
-    $do_end++;
 
     require Test::More;
+    unless ( $config->{LDAP_base_dn} and $config->{LDAP_host} ) {
+        Test::More->import( skip_all => 'Insufficient information to use LDAP for tests' );
+    }
     Test::More->import( tests => NUM_TESTS );
 
     require_ok( 'SPOPS::Initialize' );
@@ -62,4 +58,5 @@ my ( $db, $do_end );
 
     my $ldap = $SPOPS_CLASS->global_datasource_handle;
     ok( UNIVERSAL::isa( $ldap, 'Net::LDAP' ), 'Retrieved datasource from class' );
+    $do_end++;
 }

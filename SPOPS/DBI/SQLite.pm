@@ -1,14 +1,15 @@
 package SPOPS::DBI::SQLite;
 
-# $Id: SQLite.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
+# $Id: SQLite.pm,v 3.2 2002/10/10 12:06:59 lachoy Exp $
 
 use strict;
 
 use DBI qw( SQL_VARCHAR );
 use SPOPS  qw( _w DEBUG );
+use SPOPS::DBI::TypeInfo;
 use SPOPS::Utility;
 
-$SPOPS::DBI::SQLite::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::SQLite::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return SPOPS::Utility->now }
 
@@ -38,7 +39,12 @@ sub db_discover_types {
     my $type_idx = join( '-', lc $db->{Name}, lc $table );
     unless ( $TYPE_INFO{ $type_idx } ) {
         my $fields = $class->field_list;
-        $TYPE_INFO{ $type_idx } = { map { $_ => SQL_VARCHAR } @{ $fields } };
+        my $type_info = SPOPS::DBI::TypeInfo->new({ database => $db->{Name},
+                                                    table    => $table });
+        foreach my $field ( @{ $fields } ) {
+            $type_info->add_type( $field, SQL_VARCHAR );
+        }
+        $TYPE_INFO{ $type_idx } = $type_info;
     }
     return $TYPE_INFO{ $type_idx }
 }
@@ -97,7 +103,9 @@ And tell SPOPS you are using an auto-increment field:
  };
 
 B<NOTE>: Since SQLite is typeless, we assume for quoting purposes that
-everything is a C<SQL_VARCHAR> type of field.
+everything is a C<SQL_VARCHAR> type of field, overriding
+C<db_discover_types> from L<SPOPS::SQLInterface|SPOPS::SQLInterface>
+with our own version.
 
 =head1 BUGS
 

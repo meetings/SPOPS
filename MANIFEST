@@ -20,6 +20,7 @@ SPOPS/DBI/Pg.pm
 SPOPS/DBI/Oracle.pm
 SPOPS/DBI/SQLite.pm
 SPOPS/DBI/Sybase.pm
+SPOPS/DBI/TypeInfo.pm
 SPOPS/Error.pm
 SPOPS/Exception.pm
 SPOPS/Exception/DBI.pm
@@ -133,6 +134,7 @@ t/31_dbi_multifield.t
 t/32_dbi_inline_config.t
 t/33_dbi_discover_field.t
 t/34_dbi_find_defaults.t
+t/35_dbi_type_info.t
 t/40_ldap.t
 t/41_ldap_inline_config.t
 t/50_rule_create_only.t

@@ -1,5 +1,66 @@
 Revision history for Perl extension SPOPS.
 
+0.71  Thu Oct 10 08:01:48 EDT 2002
+
+Overall:
+
+   * Create SPOPS::DBI::TypeInfo object to hold field type information
+     for a table, and replace all callers to deal with the modified
+     return. I don't anticipate this to be disruptive since this is
+     mostly an internal function.
+
+   * Modify Import/Export classes to use Class::Factory 1.00
+
+Individual:
+
+   * Makefile.PL:
+
+     - Bump up requirement for Class::Factory to 1.00
+
+   * SPOPS/ClassFactory/DefaultBehavior.pm:
+
+     - Modify to use new SPOPS::DBI::TypeInfo class
+
+   * SPOPS/ClassFactory/DefaultBehavior.pm:
+
+     - Apply patch from Eric Veldhuyzen <eric@terra.nu> to suppress
+     'Subroutine foo redefined...' messages when creating rulesets.
+
+   * SPOPS/DBI.pm:
+
+     - Modify to use new SPOPS::DBI::TypeInfo class
+
+     - Update 'field_update()' with a more stringent test on the
+     return value from db_update() so we return a true value when
+     appropriate.
+
+   * SPOPS/DBI/TypeInfo.pm:
+
+     - Add simple object to hold type information for a table.
+
+   * SPOPS/Import.pm, SPOPS/Import/DBI/TableTransform.pm, SPOPS/Export.pm:
+
+     - Remove old Class::Factory method/lexical variable, since it
+     keeps track of these now.
+
+   * SPOPS/SQLInterface.pm:
+
+     - Modify to use new SPOPS::DBI::TypeInfo class
+
+   * SPOPS/Tool/DBI/Datasource.pm:
+
+     - Don't die if 'username' not defined in connection information.
+
+   * t/35_dbi_type_info.t:
+
+     - Add tests for new SPOPS::DBI::TypeInfo object (skip if we're
+     using DBD::SQLite, since it's essentially typeless)
+
+   * t/dbi_config.pl, t/03_uuid.t, t/40_ldap.t, t/41.ldap.t:
+
+     - Add message for why we're skipping tests
+
+
 0.70  Mon Sep 16 16:56:33 EDT 2002
 
 Individual:

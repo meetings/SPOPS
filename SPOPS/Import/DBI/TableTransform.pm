@@ -1,17 +1,12 @@
 package SPOPS::Import::DBI::TableTransform;
 
-# $Id: TableTransform.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
+# $Id: TableTransform.pm,v 3.2 2002/10/10 03:59:44 lachoy Exp $
 
 use strict;
 use base qw( Class::Factory );
 use SPOPS::Exception;
 
-$SPOPS::Import::DBI::TableTransform::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
-
-my %INCLUDED   = ();
-sub get_factory_map  { return \%INCLUDED }
-my %REGISTERED = ();
-sub get_register_map { return \%REGISTERED }
+$SPOPS::Import::DBI::TableTransform::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 my %TYPES = (
  mysql     => 'SPOPS::Import::DBI::TableTransform::MySQL',
