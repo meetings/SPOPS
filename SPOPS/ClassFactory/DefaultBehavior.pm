@@ -1,14 +1,14 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 1.6 2001/08/22 11:01:57 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 1.11 2001/10/15 04:27:39 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
 @SPOPS::ClassFactory::DefaultBehavior::ISA       = ();
-$SPOPS::ClassFactory::DefaultBehavior::VERSION   = '1.8';
-$SPOPS::ClassFactory::DefaultBehavior::Revision  = substr(q$Revision: 1.6 $, 10);
+$SPOPS::ClassFactory::DefaultBehavior::VERSION   = '1.90';
+$SPOPS::ClassFactory::DefaultBehavior::Revision  = substr(q$Revision: 1.11 $, 10);
 
 my @PARSE_INTO_HASH = qw( field no_insert no_update skip_undef multivalue );
 
@@ -23,22 +23,22 @@ sub conf_modify_config {
     my ( $class ) = @_;
 
     DEBUG() && _w( 1, "Trying to modify configuration for class ($class)" );
-    my $config = $class->CONFIG;
+    my $CONFIG = $class->CONFIG;
 
     # When we change a listref to a hashref, keep the order
     # by maintaining a count; that way they can be re-ordered
     # if desired.
 
     foreach my $item ( @PARSE_INTO_HASH ) {
-        next unless ( ref $config->{ $item } eq 'ARRAY' );
+        next unless ( ref $CONFIG->{ $item } eq 'ARRAY' );
         DEBUG() && _w( 1, "Parsing key ($item) into a hash" );
         my $count = 1;
         my %new = ();
-        foreach my $subitem ( @{ $config->{ $item } } ) {
+        foreach my $subitem ( @{ $CONFIG->{ $item } } ) {
             $new{ $subitem } = $count;
             $count++;
         }
-        $config->{ $item } = \%new;
+        $CONFIG->{ $item } = \%new;
     }
     return ( OK, undef );
 }
@@ -86,14 +86,14 @@ sub conf_id_method {
 sub conf_read_code {
     my ( $class ) = @_;
 
-    my $config = $class->CONFIG;
-    my $code_class = $config->{code_class};
+    my $CONFIG = $class->CONFIG;
+    my $code_class = $CONFIG->{code_class};
     return ( OK, undef )  unless ( $code_class );
 
     my @files_used = ();
     $code_class = [ $code_class ] unless ( ref $code_class eq 'ARRAY' );
     foreach my $read_code_class ( @{ $code_class } ) {
-        DEBUG() && _w( 1, "Trying to read code from $read_code_class to $class" );
+        DEBUG() && _w( 2, "Trying to read code from ($read_code_class) to ($class)" );
         my $filename = $read_code_class;
         $filename =~ s|::|/|g;
         my $final_filename = undef;
@@ -101,14 +101,14 @@ sub conf_read_code {
 PREFIX:
         foreach my $prefix ( @INC ) {
             my $full_filename = "$prefix/$filename.pm";
-            DEBUG() && _w( 2, "Try file: $full_filename" );
+            DEBUG() && _w( 3, "Try file: ($full_filename)" );
             if ( -f $full_filename ) {
                 $final_filename = $full_filename;
                 last PREFIX;
             }
         }
 
-        DEBUG() && _w( 1, "File ($final_filename) will be used for $read_code_class" );
+        DEBUG() && _w( 2, "File ($final_filename) will be used for $read_code_class" );
         if ( -f $final_filename ) {
             eval { open( PKG, $final_filename ) || die $! };
             if ( $@ ) {
@@ -137,7 +137,7 @@ CODEPKG:
                 $code_pkg .= <PKG>;
             }
             close( PKG );
-            DEBUG() && _w( 3, "Going to eval code:\n\n$code_pkg" );
+            DEBUG() && _w( 5, "Going to eval code:\n\n$code_pkg" );
             {
                 local $SIG{__WARN__} = sub { return undef };
                 eval $code_pkg;
@@ -147,8 +147,8 @@ CODEPKG:
             }
         }
         else {
-            warn " **Filename not found for code to be read in from class(es): ",
-                 join( ', ', @{ $code_class } ), "\n";
+            warn " **Filename not found for code to be read in for specified",
+                 "class ($read_code_class)\n";
         }
     }
     return ( OK, undef );
@@ -176,9 +176,9 @@ HASA
 
 sub conf_relate_hasa {
     my ( $class ) = @_;
-    my $config = $class->CONFIG;
-    $config->{has_a} ||= {};
-    foreach my $hasa_class ( keys %{ $config->{has_a} } ) {
+    my $CONFIG = $class->CONFIG;
+    $CONFIG->{has_a} ||= {};
+    foreach my $hasa_class ( keys %{ $CONFIG->{has_a} } ) {
         DEBUG() && _w( 1, "Try to alias $class hasa $hasa_class" );
         my $hasa_config   = $hasa_class->CONFIG;
         my $hasa_id_field = $hasa_config->{id_field};
@@ -202,9 +202,9 @@ sub conf_relate_hasa {
 
         #   has_a => { 'MySPOPS::User' => 'created_by', ... }
 
-        my $id_fields = ( ref $config->{has_a}->{ $hasa_class } eq 'ARRAY' )
-                        ? $config->{has_a}->{ $hasa_class } 
-                        : [ $config->{has_a}->{ $hasa_class } ];
+        my $id_fields = ( ref $CONFIG->{has_a}->{ $hasa_class } eq 'ARRAY' )
+                        ? $CONFIG->{has_a}->{ $hasa_class } 
+                        : [ $CONFIG->{has_a}->{ $hasa_class } ];
         my $num_id_fields = scalar @{ $id_fields };
         foreach my $usea_id_info ( @{ $id_fields } ) {
             my ( $hasa_alias, $usea_id_field ) = '';
@@ -234,9 +234,9 @@ sub conf_relate_hasa {
             my $this_hasa_sub = $hasa_sub;
             $this_hasa_sub =~ s/%%HASA_ALIAS%%/$hasa_alias/g;
             $this_hasa_sub =~ s/%%HASA_ID_FIELD%%/$usea_id_field/g;
-            DEBUG() && _w( 1, "Aliasing ($hasa_class) with field ($usea_id_field) ",
+            DEBUG() && _w( 2, "Aliasing ($hasa_class) with field ($usea_id_field) ",
                               "using alias ($hasa_alias) within ($class)" );
-            DEBUG() && _w( 3, "Now going to eval the routine:\n$this_hasa_sub" );
+            DEBUG() && _w( 5, "Now going to eval the routine:\n$this_hasa_sub" );
             {
                 local $SIG{__WARN__} = sub { return undef };
                 eval $this_hasa_sub;
@@ -258,6 +258,7 @@ my $GENERIC_FETCH_BY = <<'FETCHBY';
 
        sub %%CLASS%%::fetch_by_%%FETCH_BY_FIELD%% {
            my ( $item, $fb_field_value, $p ) = @_;
+           $p ||= {};
            my $obj_list = $item->fetch_group({ where => "%%FETCH_BY_FIELD%% = ?",
                                                value => [ $fb_field_value ],
                                                %{ $p } });
@@ -273,14 +274,14 @@ FETCHBY
 
 sub conf_relate_fetchby {
     my ( $class ) = @_;
-    my $config = $class->CONFIG;
-    $config->{fetch_by} ||= [];
-    foreach my $fetch_by_field ( @{ $config->{fetch_by} } ) {
-        DEBUG() && _w( 1, "Creating routine for fetch_by_$fetch_by_field" );
+    my $CONFIG = $class->CONFIG;
+    $CONFIG->{fetch_by} ||= [];
+    foreach my $fetch_by_field ( @{ $CONFIG->{fetch_by} } ) {
         my $fetch_by_sub = $GENERIC_FETCH_BY;
         $fetch_by_sub    =~ s/%%CLASS%%/$class/g;
         $fetch_by_sub    =~ s/%%FETCH_BY_FIELD%%/$fetch_by_field/g;
-        DEBUG() && _w( 3, "Now going to eval the routine:\n$fetch_by_sub" );
+        DEBUG() && _w( 2, "Creating fetch_by for field ($fetch_by_field)" );
+        DEBUG() && _w( 5, "Now going to eval the routine:\n$fetch_by_sub" );
         {
             local $SIG{__WARN__} = sub { return undef };
             eval $fetch_by_sub;
@@ -306,7 +307,7 @@ RULESET
 
 sub conf_add_rules {
     my ( $class ) = @_;
-    my $config = $class->CONFIG;
+    my $CONFIG = $class->CONFIG;
     DEBUG() && _w( 1, "Adding rules to ($class)" );
 
     # Install the variable/subroutine RULESET into the class
@@ -320,10 +321,11 @@ sub conf_add_rules {
 
     # Now find all the classes that have the method RULESET_METHOD
 
-    my $subs = SPOPS::ClassFactory->find_parent_methods( $class, RULESET_METHOD );
+    my $rule_classes = $CONFIG->{rules_from} || [];
+    my $subs = SPOPS::ClassFactory->find_parent_methods( $class, $rule_classes, RULESET_METHOD );
     foreach my $sub_info ( @{ $subs } ) {
         $sub_info->[1]->( $class, $class->RULESET );
-        DEBUG() && _w( 1, "Calling ruleset generation method from ($sub_info->[0])" );
+        DEBUG() && _w( 2, "Calling ruleset generation for ($class) from ($sub_info->[0])" );
     }
     return ( OK, undef );
 }
@@ -376,7 +378,7 @@ Nothing known.
 
 =head1 SEE ALSO
 
-L<SPOPS::ClassFactory>
+L<SPOPS::ClassFactory|SPOPS::ClassFactory>
 
 =head1 COPYRIGHT
 

@@ -1,14 +1,14 @@
 package SPOPS::DBI::Pg;
 
-# $Id: Pg.pm,v 1.10 2001/08/22 10:51:45 lachoy Exp $
+# $Id: Pg.pm,v 1.12 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::Key::DBI::Sequence;
 
 @SPOPS::DBI::Pg::ISA      = ();
-$SPOPS::DBI::Pg::VERSION  = '1.8';
-$SPOPS::DBI::Pg::Revision = substr(q$Revision: 1.10 $, 10);
+$SPOPS::DBI::Pg::VERSION  = '1.90';
+$SPOPS::DBI::Pg::Revision = substr(q$Revision: 1.12 $, 10);
 
 
 sub sql_quote {
@@ -148,7 +148,11 @@ Nothing known.
 
 =head1 SEE ALSO
 
-L<SPOPS::Key::DBI::Sequence>, L<DBD::Pg>, L<DBI>
+L<SPOPS::Key::DBI::Sequence|SPOPS::Key::DBI::Sequence>
+
+L<DBD::Pg|DBD::Pg>
+
+L<DBI|DBI>
 
 =head1 COPYRIGHT
 

@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 20_gdbm.t,v 1.1 2001/07/30 22:11:49 lachoy Exp $
+# $Id: 20_gdbm.t,v 1.2 2001/09/12 14:00:10 lachoy Exp $
 
 use strict;
 
@@ -35,12 +35,15 @@ sub new_object {
     # Ensure GDBM_File is installed (Makefile.PL should have checked,
     # but just in case...)
 
-    eval { require GDBM_File };
-    ok( ! $@, 'GDBM_File module' );
+    # Test 1
+
+    require_ok( 'GDBM_File' );
 
     # Same with SPOPS::Initialize
-    eval { require SPOPS::Initialize };
-    ok( ! $@, 'SPOPS::Initialize require' );
+
+    # Test 2
+
+    require_ok( 'SPOPS::Initialize' );
 
     my $spops_config = {
        tester => {
@@ -48,22 +51,32 @@ sub new_object {
            isa        => [ 'SPOPS::GDBM' ],
            field      => [ qw/ name version author url / ],
            create_id  => sub { return join '-', $_[0]->{name}, $_[0]->{version} },
-           gdbm_info  => { filename => GDBM_FILE }, 
+           gdbm_info  => { filename => GDBM_FILE },
        },
     };
 
+    # Initialize class
+
+    # Tests 3 and 4
+
     my $class_init_list = eval { SPOPS::Initialize->process({ config => $spops_config }) };
-    ok( ! $@, 'Initialize process run' );
+    ok( ! $@, "Initialize process run $@" );
     ok( $class_init_list->[0] eq 'GDBMTest', 'Initialize class' );
-    
+
     # Time for a test drive
     {
 
         # Make sure we can at least create an object
+
+        # Test 5
+
         my $obj = new_object;
         ok( ! $@, "Create object" );
 
         # Make sure GDBM_WRCREAT really creates a new file
+
+        # Test 6
+
         cleanup();
         $obj = new_object;
         eval { $obj->save({ perm => 'create' }) };
@@ -71,12 +84,18 @@ sub new_object {
         ok( ! $@ && -w GDBM_FILE, 'Create new file (create permission)' );
 
         # Make sure GDBM_WRITE gets changed to GDBM_WRCREAT if the file doesn't exist
+
+        # Test 7
+
         cleanup();
         $obj = new_object;
         eval { $obj->save({ perm => 'write' }) };
         ok( ! $@ && -w GDBM_FILE, 'Create new file (write permission)' );
 
         # See if it does the Right Thing on its own
+
+        # Test 8
+
         cleanup();
         $obj = new_object;
         eval { $obj->save };
@@ -85,6 +104,9 @@ sub new_object {
     }
 
     # Fetch an object, then clone it and save it (no cleanup from previous
+
+    # Test 9 - 13
+
     {
         my $obj = eval { GDBMTest->fetch( 'MyProject-1.14' ) };
         ok( ! $@, 'Fetch object' );
@@ -99,6 +121,9 @@ sub new_object {
     }
 
     # Fetch the two objects in the db and be sure we got them all
+
+    # Test 14 - 15
+
     {
         my $obj_list = eval { GDBMTest->fetch_group };
         ok( ! $@, 'Fetch group' );

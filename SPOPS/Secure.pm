@@ -1,6 +1,6 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 1.22 2001/08/27 03:00:28 lachoy Exp $
+# $Id: Secure.pm,v 1.27 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use vars         qw( $EMPTY );
@@ -8,8 +8,8 @@ use Data::Dumper qw( Dumper );
 require Exporter;
 
 @SPOPS::Secure::ISA      = qw( Exporter );
-$SPOPS::Secure::VERSION  = '1.8';
-$SPOPS::Secure::Revision = substr(q$Revision: 1.22 $, 10);
+$SPOPS::Secure::VERSION  = '1.90';
+$SPOPS::Secure::Revision = substr(q$Revision: 1.27 $, 10);
 
 # Stuff for security constants and exporting
 
@@ -137,22 +137,29 @@ sub check_action_security {
     }
     DEBUG() && _w( 1, "Found security level of ($level)" );
 
-    # If the level is below what is necessary, set an error message and
+    # If the level is below what is necessary call
+    # register_security_error() which should set an error message and
     # die with a general one.
 
     if ( $level < $p->{required} ) {
-        DEBUG() && _w( 1, "Cannot access $class record with ID $id; ",
-                          "access: $level while $p->{required} is required." );
-        my $msg = "Action prohibited due to security. Insufficient access for requested action";
-        SPOPS::Error->set({ user_msg   => $msg,
-                            type       => 'security',
-                            system_msg => "Required access: $p->{required}; retrieved access: $level",
-                            extra      => { security => $level } });
-        die $msg;
+        $class->register_security_error({ class => $class, id => $id,
+                                          level => $level, required => $p->{required} });
     }
     return $level; # Rock and roll
 }
 
+
+sub register_security_error {
+    my ( $class, $p ) = @_;
+    DEBUG() && _w( 1, "Cannot access $p->{class} record with ID $p->{id}; ",
+                      "access: $p->{level} while $p->{required} is required." );
+    my $msg = "Action prohibited due to security. Insufficient access for requested action";
+    SPOPS::Error->set({ user_msg   => $msg,
+                        type       => 'security',
+                        system_msg => "Required access: $p->{required}; retrieved access: $p->{level}",
+                        extra      => { security => $p->{level} } });
+    die $msg;
+}
 
 
 # Returns: security level for a particular object/class given a scope
@@ -193,10 +200,11 @@ sub check_security {
     # Go through the groups; if there are groups, we return the highest
     # level among them.
 
-    my $group_max = undef;
+    my $group_max = 0;
     $sec_info->{ SEC_SCOPE_GROUP() } ||= {};
     foreach my $gid ( keys %{ $sec_info->{ SEC_SCOPE_GROUP() } } ) {
-        my $group_level = $sec_info->{ SEC_SCOPE_GROUP() }->{ $gid } ;
+        my $group_level = $sec_info->{ SEC_SCOPE_GROUP() }->{ $gid };
+        next unless ( $group_level );
         $group_max = ( $group_level > $group_max ) ? $group_level : $group_max;
         DEBUG() && _w( 1, "Level of GROUP ($gid) is ($group_level)" );
     }
@@ -259,7 +267,7 @@ sub get_security_scopes {
     if ( $p->{user} and $p->{group} ) {
         DEBUG() && _w( 1, "Both user and group were specified." );
         $user       = $p->{user};
-        $group_list = eval { $p->{user}->group; };  
+        $group_list = eval { $p->{user}->group; }; 
         _w( 0, "Cannot fetch groups from user record: $@." ) if ( $@ );
         my @extra_group = ( ref $p->{group} eq 'ARRAY' )
                             ? @{ $p->{group} } : ( $p->{group} );
@@ -680,7 +688,7 @@ sub set_item_security {
 
     # if there is no change, we're done
 
-    return 1 if ( $obj->{security_level} == $level ); 
+    return 1 if ( $obj->{security_level} == $level );
 
     # Otherwise set the level and save, letting any errors from the
     # save bubble up
@@ -736,7 +744,7 @@ ITEM:
 
 
 sub remove_item_security {
-    my ( $item, $p ) = @_; 
+    my ( $item, $p ) = @_;
     if ( $p->{scope} ne SEC_SCOPE_WORLD and $p->{scope_id} == 1 ) {
         _w( 0, "Will not remove security with scope $p->{scope} ($p>{scope_id}) - admin." );
         return undef;
@@ -744,7 +752,7 @@ sub remove_item_security {
 
     # Since we can pass in the class/oid, those take precedence
 
-    my $object_id = $p->{oid} || $p->{object_id}; 
+    my $object_id = $p->{oid} || $p->{object_id};
     my ( $class, $oid ) = $item->_get_object_info_for_security(
                                              $p->{class}, $object_id );
     DEBUG() && _w( 1, "Removing security for $class ($oid) with ",
@@ -818,13 +826,11 @@ sub _check_superuser {
     $allow_all{ SEC_SCOPE_USER() } = SEC_LEVEL_WRITE;
 
     if ( ref $user and $item->is_superuser( $user->{user_id} ) ) {
-        warn "SUPERUSER PRESENT! All kneel before Zod!\n";
         DEBUG() && _w( 1, "User is superuser, checking ($item)" );
         return \%allow_all;
     }
     if ( ref $group_list eq 'ARRAY' ) {
         if ( $item->is_supergroup( map { $_->{group_id} } @{ $group_list } ) ) {
-            warn "SUPERGROUP PRESENT! All kneel before Zod!\n";
             return \%allow_all ;
         }
     }
@@ -858,8 +864,6 @@ sub _assemble_error_message {
 }
 
 
-
-
 1;
 
 __END__
@@ -884,10 +888,9 @@ SPOPS::Secure - Implement security across one or more classes of SPOPS objects
 
 =head1 DESCRIPTION
 
-By adding this module into the @ISA variable for your
-SPOPS class, you implement a mostly transparent per-object
-security system. This security system relies on a few things
-being implemented:
+By adding this module into the 'isa' configuration key for your SPOPS
+class, you implement a mostly transparent per-object security
+system. This security system relies on a few things being implemented:
 
 =over 4
 
@@ -909,155 +912,10 @@ Easy, eh? Fortunately, SPOPS comes with all three, although you are
 free to modify them as you see fit. (As version 0.42, see the 'eg/My'
 directory in the source distribution for the sample classes.)
 
-=head2 Overview of Security
-
-Security is implemented with a number of methods that are called
-within the SPOPS implementation module. For instance, every time you
-call I<fetch()> on an object, SPOPS first determines whether you have
-rights to do so. Similar callbacks are located in I<save()> and
-I<remove()>. If you do not either define the method in your SPOPS
-implementation or use this module, the action will always be allowed.
-
-We use the Unix-style of permission scheme, separating the scope into:
-USER, GROUP and WORLD from most- to least-specific. (This is
-abbreviated as U/G/W.) When we check permissions, we check whether a
-security level is defined for the most-specific item first, then work
-our way up to the least_specific. (We use the term 'scope' frequently
-in the module and documentation -- a 'specific scope' is a particular
-user or group, or the world.)
-
-Even though we use the U/G/W scheme from Unix, we are not constrained
-by its history. There is no strict 'ownership' assigned to an object
-as there is to a Unix file. Instead, an object can have assigned to
-it permissions from any number of users, and any number of groups.
-
-There are three settings for any object combined with a specific scope:
-
- NONE:  The scope is barred from even seeing the object.
- READ:  The scope can read the object but not save it.
- WRITE: The scope can read, write and delete the object.
-
-(To be explicit: WRITE permission implies READ permission as well; if
-a specific scope has WRITE permission for an object, that specific
-scope can do anything with the object, including remove it.)
-
-=head2 Security Rules
-
-With security, there are some important assumptions. These
-rules are laid out here.
-
-=over 4
-
-=item *
-
-I<The most specific security wins.> This means that you might have set
-permissions on an object to be SEC_LEVEL_WRITE for SEC_LEVEL_WORLD,
-but if the user who is logged in has SEC_LEVEL_NONE, permission will
-be denied.
-
-=item *
-
-I<All objects must have a WORLD permission.> Configuration for your
-SPOPS object must include the I<initial_security> hash. The only
-required field is 'WORLD', which defines the default WORLD permission
-for newly-created objects. If you do not include this, the system will
-automatically set the WORLD permission to SEC_LEVEL_NONE, which is
-probably not what you want.
-
-=back
-
-For instance, look at an object that represents a news notice posted:
-
- Object Class: MyApp::News
- Object ID:    1625
-
- ------------------------------------------------
- | SCOPE | SCOPE_ID |  NONE  |  READ  |  WRITE  |
- ------------------------------------------------
- | USER  | 71827    |        |   X    |         |
- | USER  | 6351     |   X    |        |         |
- | USER  | 9182     |        |        |    X    |
- | GROUP | 762      |        |   X    |         |
- | GROUP | 938      |        |        |    X    |
- | WORLD |          |        |   X    |         |
- ------------------------------------------------
-
->From this, we can say:
-
-=over 4
-
-=item *
-
-User 6351 can B<never> view this notice. Even though the user might be
-a part of a group that can; even though WORLD has READ
-permission. Since the user is explicitly forbidden from viewing the
-notice, nothing else matters.
-
-=item *
-
-If a different User (say, 21092) who belongs to both Group 762 and
-Group 938 tries to determine permission for this object, that User
-will have WRITE permission since the system returns the highest
-permission granted by all Group memberships.
-
-=item *
-
-Any user who is not specified here and who does not belong to either
-Group 762 or Group 938 will get READ permission to the object, using
-the permission for the scope WORLD.
-
-=back
-
-=head2 Setting Security for Created Objects
-
-The Unix paradigm of file permissions assumes several things.
-
-=head2 User and Group Objects
-
-It is a fundamental tenet of this persistence framework that
-it should have no idea what your application looks like.
-However, since we deal with user and group objects, it is
-necessary to enforce some standards.
-
-=over 4
-
-=item *
-
-Must be able to retrieve the ID of the object with the method call
-'id'. The ID value can be numeric or it can be a string, but it must
-have 16 or fewer characters.
-
-=item *
-
-Must be able to get an arrayref of members. With a group object, you
-must implement a method that returns users called 'user'. Similarly,
-your user object must implement a method that returns the groups that
-user belongs to via the method 'group':
-
- # Note that 'login_name' is not required as a parameter; this is just
- # an example
-
- my $user_members = eval { $group->user };
- foreach my $user ( @{ $user_members } ) {
-   print "Username is $user->{login_name}\n";
- }
-
- # Note that 'name' is not required as a parameter; this is just an
- # example
-
- my $groups = eval { $user->group };
- foreach my $group ( @{ $groups } ) {
-   print "Group name is $group->{name}\n";
- }
-
-=item *
-
-Must be able to retrieve the logged-in user (and, by the rule stated
-above, the groups that user belongs to).  This is done via the
-I<global_user_current> method call. The SPOPS object or other class
-must be able to fulfill this method and return a user object.
-
-=back
+Most people interested in security should not be reading the docs for
+this class. Instead, look at
+L<SPOPS::Manual::Security|SPOPS::Manual::Security> which offers a
+broad view of security as well as how to use, implement and extend it.
 
 =head1 METHODS
 
@@ -1072,8 +930,9 @@ well. For instance, if your application uses classes to implement
 modules within an application, you might wish to restrict the module
 by security very similar to the security implemented for individual
 objects. In this case, you would have a class name and no object ID
-(object_id) value. (See L<SUBCLASSING AND CUSTOM SECURITY> below for
-more information.)
+(object_id) value. (See
+L<SPOPS::Manual::Security|SPOPS::Manual::Security> for more
+information.)
 
 =head2 check_security( [ \%params ] )
 
@@ -1125,9 +984,9 @@ you restrict the user/groups.
 
 Finally: this will not be on the test, since you will probably not
 need to use this very often unless you are subclassing this class to
-create your own custom security checks. The I<check_security()> and
-I<set_security()> methods are likely the only interfaces you need with
-security whether it be object or class-based. The I<get_security()>
+create your own custom security checks. The C<check_security()> and
+C<set_security()> methods are likely the only interfaces you need with
+security whether it be object or class-based. The C<get_security()>
 method is used primarily for internal purposes, but you might also
 need it if you are writing security administration tools.
 
@@ -1223,97 +1082,9 @@ Examples:
 
 =head2 create_initial_security( \%params )
 
-Creates the initial security for an object. This can be simple, or
-this can be complicated :) It is designed to be flexible enough for us
-to easily plug-in security policy modules whenever we write them, but
-simple enough to be used just from the object configuration.
-
-Object security configuration information is specified in the
-'creation_security' hashref in the object configuration. A typical
-setup might look like:
-
-  creation_security => {
-     u   => undef,
-     g   => { 3 => 'WRITE' },
-     w   => 'READ',
-  },
-
-Each of the keys maps to a (hopefully intuitive) scope:
-
- u = SEC_SCOPE_USER
- g = SEC_SCOPE_GROUP
- w = SEC_SCOPE_WORLD
-
-For each scope you can either name security specifically or you can
-defer the decision-making process to a subroutine. The former is
-called 'exact specification' and the latter 'code specification'. Both
-are described below.
-
-Note that the 'level' values used ('WRITE' or 'READ' above) do not
-match up to the SEC_LEVEL_* values exported from this module. Instead
-they are just handy mnemonics to use -- just lop off the 'SEC_LEVEL_'
-from the exported variable:
-
- SEC_LEVEL_NONE  = 'NONE'
- SEC_LEVEL_READ  = 'READ'
- SEC_LEVEL_WRITE = 'WRITE'
-
-B<Exact specification>
-
-'Exact specification' does exactly that -- you specify the ID and
-security level of the users and/or groups, along with one for the
-'world' scope if you like. This is handy for smaller sites where you
-might have a small number of groups.
-
-The exact format is:
-
- SCOPE => ID => LEVEL,
-          ID => LEVEL, ... } }
-
-Where 'SCOPE' is 'u' or 'g', 'ID' is the ID of the group/user and
-'LEVEL' is the level you want to assign to that group/user. So using
-our example above:
-
-     g   => { level => { 3 => 'WRITE' } },
-
-We assign the security level 'SEC_LEVEL_WRITE' to the group with ID 3.
-
-You can also use shortcuts.
-
-For the SEC_SCOPE_USER scope, if you specify a level:
-
-    u    => { level => 'READ' }
-
-Then that security level is assigned for the user who created the object.
-
-For the SEC_SCOPE_GROUP scope, if you specify a level:
-
-    g    => { level => 'READ' }
-
-Then that security level is assigned for all of the groups to which
-the user who created the object belongs.
-
-If you specify anything other than a level for the SEC_SCOPE_WORLD
-scope, the system will discard the entry.
-
-B<Code specificiation>
-
-You can also assign the entire process off to a separate routine:
-
-  creation_security => {
-     code => [ 'My::Package' => 'security_set' ]
-  },
-
-This code should return a hashref formatted like this
-
- {
-   u => SEC_LEVEL_*,
-   g => { gid => SEC_LEVEL_* },
-   w => SEC_LEVEL_*
- }
-
-If you do not include a scope in the hashref, no security information
-for that scope will be entered.
+Creates the security for a newly created object. Generally this
+entails looking at the C<creation_security> key of an object
+configuration and mapping the permissions there to the object.
 
 Parameters:
 
@@ -1344,9 +1115,9 @@ If your class does not use the supergroup, just setup a function:
 B<_check_superuser( $user_object, \@group_object )>
 
 Checks whether the given user and group listing has superuser
-status. Returns a hashref suitable for passing to C<check_security>.
+status. Returns a hashref suitable for passing to C<check_security()>.
 
-NOTE: We may rename this to C<check_superuser> in the future.
+NOTE: We may rename this to C<check_superuser()> in the future.
 
 B<is_superuser( $user_id )>
 
@@ -1359,33 +1130,6 @@ B<is_supergroup( @group_id )>
 Returns true if one of C<@group_id> is the supergroup, false if
 not. Default is for the value C<1> to be the supergroup ID, but
 subclasses can easily override.
-
-=head1 SUBCLASSING AND CUSTOM SECURITY
-
-The SPOPS security scheme is flexbile enough for you to implement your
-own security. For instance, if you had a database of contacts for your
-national membership organization you might want to ensure that each
-state sees only the contacts within its state.
-
-To do this, you could simply create a C<get_security()> method in your
-contact class. A simplified example of what such a method might look
-something like:
-
- sub get_security {
-     my ( $self, $p ) = @_;
-     my ( $user, $group_list ) = $self->get_security_scopes( $p );
-     if ( my $security_info = $self->_check_superuser( $user, $group_list ) ) {
-         DEBUG() && _w( 1, "Superuser is logged in, can do anything" );
-         return $security_info;
-     }
-     if ( $self->{state} eq $user->{state} ) {
-         return { SEC_SCOPE_WORLD() => SEC_LEVEL_WRITE };
-     }
-     return { SEC_SCOPE_WORLD() => SEC_LEVEL_NONE };
- }
-
-For a good example of what you can do with subclassing, see the code
-for the subclass L<SPOPS::Secure::Hierarchy>.
 
 =head1 TAGS FOR SCOPE/LEVEL
 

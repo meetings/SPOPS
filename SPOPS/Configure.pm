@@ -1,13 +1,13 @@
 package SPOPS::Configure;
 
-# $Id: Configure.pm,v 1.17 2001/08/28 21:32:45 lachoy Exp $
+# $Id: Configure.pm,v 1.19 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS::ClassFactory;
 
 @SPOPS::Configure::ISA       = ();
-$SPOPS::Configure::VERSION   = '1.8';
-$SPOPS::Configure::Revision  = substr(q$Revision: 1.17 $, 10);
+$SPOPS::Configure::VERSION   = '1.90';
+$SPOPS::Configure::Revision  = substr(q$Revision: 1.19 $, 10);
 
 sub process_config {
     my ( $class, $p ) = @_;
@@ -33,14 +33,14 @@ SPOPS::Configure - DEPRECATED
 
 =head1 SYNOPSIS
 
-See L<SPOPS::ClassFactory>
+See L<SPOPS::ClassFactory|SPOPS::ClassFactory>
 
 =head1 DESCRIPTION
 
 THIS CLASS IS DEPRECATED. As of SPOPS 0.50 it has been entirely
-replaced by L<SPOPS::ClassFactory>, and the main interface into this
-class (C<process_config()>) simply forwards the call. In the future
-the class will be removed entirely.
+replaced by L<SPOPS::ClassFactory|SPOPS::ClassFactory>, and the main
+interface into this class (C<process_config()>) simply forwards the
+call. In the future the class will be removed entirely.
 
 =head1 COPYRIGHT
 

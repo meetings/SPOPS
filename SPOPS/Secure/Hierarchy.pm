@@ -1,6 +1,6 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 1.14 2001/08/22 10:51:45 lachoy Exp $
+# $Id: Hierarchy.pm,v 1.17 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use vars          qw( $ROOT_OBJECT_NAME );
@@ -11,8 +11,8 @@ require Exporter;
 
 @SPOPS::Secure::Hierarchy::ISA       = qw( Exporter SPOPS::Secure );
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
-$SPOPS::Secure::Hierarchy::VERSION   = '1.8';
-$SPOPS::Secure::Hierarchy::Revision  = substr(q$Revision: 1.14 $, 10);
+$SPOPS::Secure::Hierarchy::VERSION   = '1.90';
+$SPOPS::Secure::Hierarchy::Revision  = substr(q$Revision: 1.17 $, 10);
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 
@@ -27,18 +27,18 @@ sub get_security {
     # Find object info for debugging and for passing to the
     # fetch_by_object method later
     my $object_id = $p->{oid} || $p->{object_id};
-    my ( $class, $oid ) = $item->_get_object_info_for_security( 
+    my ( $class, $oid ) = $item->_get_object_info_for_security(
                                              $item, $object_id );
     DEBUG() && _w( 1, "Checking security for $class ($oid)" );
 
     # Punt the request back to our parent if we're getting security
     # explicitly for the ROOT_OBJECT, which generally only happens when
     # we're editing its security
-    
+
     if ( $oid eq $ROOT_OBJECT_NAME ) {
         DEBUG() && _w( 1, "Object ID == ROOT_OBJECT_NAME: punting to parent" );
-        return SUPER->get_security({ %{ $p }, 
-                                     class     => $class, 
+        return SUPER->get_security({ %{ $p },
+                                     class     => $class,
                                      object_id => $oid });
     }
 
@@ -69,7 +69,7 @@ sub get_hierarchy_levels {
     # Grab hierarchy config info from the params or from the object
 
     my $object_id = $p->{oid} || $p->{object_id};
-    my $h_info = $item->_get_hierarchy_parameters({ %{ $p }, 
+    my $h_info = $item->_get_hierarchy_parameters({ %{ $p },
                                                     hierarchy_value => $object_id });
 
     # Ensure we have necessary info
@@ -94,7 +94,7 @@ sub get_hierarchy_levels {
     my $check_list = $h_info->{hierarchy_manip}->( $h_info->{hierarchy_sep},
                                                    $h_info->{hierarchy_value} );
 
-    return $item->_fetch_hierarchy_levels({ %{ $p }, 
+    return $item->_fetch_hierarchy_levels({ %{ $p },
                                             check_list => $check_list,
                                             ordered    => 1  });
 }
@@ -118,7 +118,7 @@ sub create_root_object_security {
 sub _fetch_hierarchy_levels {
     my ( $item, $p ) = @_;
     my $class = $p->{class} || ref $item || $item;
-    my $so_class = $p->{security_object_class} || 
+    my $so_class = $p->{security_object_class} ||
                    $class->global_security_object_class;
 
     my $first_found = undef;
@@ -127,7 +127,7 @@ sub _fetch_hierarchy_levels {
 
     unless ( $p->{class} ) {
         my $object_id = $p->{oid} || $p->{object_id};
-        ( $p->{class}, $p->{oid} ) = $item->_get_object_info_for_security( 
+        ( $p->{class}, $p->{oid} ) = $item->_get_object_info_for_security(
                                                     $p->{class}, $object_id );
         DEBUG() && _w( 1, "Checking security for $p->{class} ($p->{oid})" );
     }
@@ -150,7 +150,8 @@ SECVALUE:
                                      group     => $p->{group} }) };
         DEBUG() && _w( 1, "Security found for ($security_check):\n", Dumper( $sec_listing ) );
         if ( $@ ) {
-            $SPOPS::Error::user_msg = "Cannot retrieve security listing for hierarchy value $security_check";
+            $SPOPS::Error::user_msg = "Cannot retrieve security listing for " .
+                                      "hierarchy value ($security_check)";
             _w( 0, "Error found when checking ($security_check): $@" );
             die $SPOPS::Error::user_msg;
         }
@@ -263,9 +264,9 @@ SPOPS::Secure::Hierarchy - Define hierarchical security
  # in this example is controlled by you and used as an identifier
  # only.
 
- my $level = eval { SPOPS::Secure::Hierarchy->check_security({ 
+ my $level = eval { SPOPS::Secure::Hierarchy->check_security({
                       class                 => 'My::Nonexistent::File::Class',
-                      user                  => $my_user, 
+                      user                  => $my_user,
                       group                 => $my_group_list,
                       security_object_class => 'My::SecurityObject',
                       object_id             => '/docs/release/devel-only/v1.3/mydoc.html',
@@ -303,12 +304,11 @@ If the security were defined like this:
 (Note: this is pseudo-code, and not necessarily the internal
 representation):
 
- <ROOT OBJECT> => 
+ <ROOT OBJECT> =>
       { world => SEC_LEVEL_READ,
         group => { admin => SEC_LEVEL_WRITE } }
 
  /docs/release/devel-only =>
-
       { world => SEC_LEVEL_NONE,
         group => { devel => SEC_LEVEL_WRITE } }
 
@@ -360,7 +360,7 @@ objects once this happens.
 
 Here is how to create such security:
 
- $class->create_root_object_security({ 
+ $class->create_root_object_security({
           scope => [ SEC_SCOPE_WORLD, SEC_SCOPE_GROUP ],
           level => { SEC_SCOPE_WORLD() => SEC_LEVEL_READ,
                      SEC_SCOPE_GROUP() => { 3 => SEC_LEVEL_WRITE } }
@@ -372,8 +372,8 @@ permissions for WORLD and WRITE permissions for group ID 3.
 =head1 METHODS
 
 Most of the functionality in this class is found in
-L<SPOPS::Secure>. We override one of its methods and add another to
-implement the functionality of this module.
+L<SPOPS::Secure|SPOPS::Secure>. We override one of its methods and add
+another to implement the functionality of this module.
 
 B<get_hierarchy_levels( \%params )>
 
@@ -413,7 +413,7 @@ Parameters:
 
 =item *
 
-B<class> ($) (not required if calling from object) 
+B<class> ($) (not required if calling from object)
 
 Class (or generic identifier) for which we would like to check
 security
@@ -504,7 +504,7 @@ needs to be able to flow through more than one generation.
 
 =head1 SEE ALSO
 
-L<SPOPS::Security>
+L<SPOPS::Secure|SPOPS::Secure>
 
 =head1 COPYRIGHT
 

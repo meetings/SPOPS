@@ -1,0 +1,123 @@
+README: SPOPS/eg
+========================================
+
+This directory contains sample SPOPS code and classes you can use for
+users, groups and security, along with a simple class to test them
+out. Plus one class that's useful anywhere.
+
+
+For the class that's useful anywhere:
+
+ My/DiscoverField.pm
+
+     - class that implements an SPOPS::ClassFactory rule so that you
+     do not need to specify fields in your object configuration if
+     you're using all fields in the table. (Extremely handy!)
+
+
+The remainder of the files are to demonstrate user, group and security
+objects. You can use these as you like.
+
+Note that if you create a database, run the data stocking script and
+then clear the data out, the security data won't match up properly. In
+particular, the ID of the group 'managers' (3) is hardcoded into both
+My/Group.pm and My/User.pm. You might need to change it.
+
+How to use these:
+
+ (1) Either pick a database to use or create a new one
+
+ (2) Create the schema -- this is dependent on your database. An
+ example is:
+
+ $ mysql --user=test --password=dingdong test < users_groups_mysql.sql
+
+ (3) Set the parameters in My/Common.pm for your database and driver.
+
+ (4) Run the user and group stocking script:
+
+ $ perl stock_user_group.pl
+
+ (5) Check out the raw data to see what it looks like:
+
+ $ mysql --user=test --password=dingdong test
+ mysql> select * from spops_user;
+ ...
+ mysql> select * from spops_security;
+
+ (6) Run the doodad stocking script:
+
+ $ perl stock_doodads.pl
+
+ (7) Run the simple fetching script:
+
+ $ perl fetch_doodads.pl
+
+ (8) Clear out the tables and do it all again, playing around with the
+ different scripts and classes.
+
+ $ mysql--user=test --password=dingdong test < users_groups_clear.sql
+
+
+
+Schema files:
+
+ users_groups_(mysql|pgsql|tsql).sql
+
+     - SQL to create the user, group and linking tables. Three
+     separate files for MySQL (mysql), PostgreSQL (pgsql) and
+     Transact-SQL-based databases like Sybase ASE, Sybase ASA or
+     Microsoft SQL Server (tsql).
+
+ users_groups_clear.sql
+
+     - SQL to clear out the tables (all databases)
+
+ users_groups_clear_pgsql.sql
+
+     - Extra SQL to clear out sequences from PostgreSQL. Run in
+     addition to 'users_groups_clear.sql'.
+
+
+Scripts to manipulate the objects:
+
+ stock_user_group.pl
+
+     - add some sample user/group data
+
+ stock_doodads.pl
+
+     - add sample objects
+
+ fetch_doodads.pl
+
+     - fetch sample objects as two different users, displaying
+     different security settings for each
+
+
+Object classes:
+
+ My/Common.pm
+
+     - common parents for the My::* hierarchy. You'll need to set a
+     few values here so the objects know what database they are
+     connecting to and how they'll connect.
+
+ My/Doodad.pm
+
+     - sample dummy object
+
+ My/Group.pm
+
+     - sample group object
+
+ My/Security.pm
+
+     - sample security object
+
+ My/User.pm
+
+     - sample user object
+
+========================================
+$Id: README,v 1.7 2001/10/15 04:46:13 lachoy Exp $

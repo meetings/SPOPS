@@ -1,14 +1,14 @@
 package SPOPS::Iterator;
 
-# $Id: Iterator.pm,v 1.9 2001/08/22 10:51:45 lachoy Exp $
+# $Id: Iterator.pm,v 1.12 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS  qw( DEBUG _w );
 require Exporter;
 
 @SPOPS::Iterator::ISA       = qw( Exporter );
-$SPOPS::Iterator::VERSION   = '1.8';
-$SPOPS::Iterator::Revision  = substr(q$Revision: 1.9 $, 10);
+$SPOPS::Iterator::VERSION   = '1.90';
+$SPOPS::Iterator::Revision  = substr(q$Revision: 1.12 $, 10);
 
 @SPOPS::Iterator::EXPORT_OK   = qw( ITER_IS_DONE ITER_FINISHED );
 
@@ -74,7 +74,7 @@ sub new {
     $self->{_FIELDS}        = $params->{fields};
     eval { $self->initialize( $params ) };
     if ( $@ ) {
-        SPOPS::Error->set({ user_msg   => "Cannot create iterator -- initialization failed! (Error: $@)",
+        SPOPS::Error->set({ user_msg   => "Cannot create iterator -- initialization failed! ($@)",
                             system_msg => $@ });
         die $SPOPS::Error::user_msg;
     }
@@ -128,6 +128,13 @@ sub DESTROY {
     $self->finish unless ( $self->{ ITER_FINISHED() } );
 }
 
+
+sub from_list {
+    my ( $class, $list ) = @_;
+    require SPOPS::Iterator::WrapList;
+    return SPOPS::Iterator::WrapList->new({ object_list => $list });
+}
+
 1;
 
 __END__
@@ -176,7 +183,7 @@ onto the next object.
 
 As a result, users will B<never> create an C<SPOPS::Iterator> object
 themselves. Instead, the object is returned from a method in a SPOPS
-implementation class, such as C<SPOPS::DBI>. 
+implementation class, such as C<SPOPS::DBI>.
 
 The initial module documentation is for the interface; there is also a
 section of creating a subclass of this module for SPOPS authors.
@@ -216,7 +223,7 @@ Since the iterator is never advancing.
 
 B<position()>
 
-Returns the position of the last item fetched. 
+Returns the position of the last item fetched.
 
 So if you start up an iterator and execute the following code:
 
@@ -277,7 +284,7 @@ Example:
       my $related_objects = $object->related;
       ...
   }
- 
+
 You can also do this:
 
   my $iter = $spops_class->fetch_iterator({ where => "active = 'yes'" });
@@ -326,6 +333,28 @@ Example:
       print "Player $object->{first_name} $object->{last_name} is not Mario.\n";
   }
 
+B<from_list( \@objects )>
+
+As a convenience you can create an iterator from an existing list of
+objects. The utility of this might not be immediately obvious -- if
+you already have a list, what do you need an iterator for? But this
+allows you to create one set of code for object lists while allowing
+your code to accept both object lists and object iterators. For
+instance:
+
+ unless( $params->{iterator} {
+     $params->{iterator} = SPOPS::Iterator->from_list( $params->{list} );
+ }
+ my $template = Template->new;
+ $template->process( \*DATA, $params );
+
+ __DATA__
+
+ Object listing:
+
+ [% WHILE ( object = iterator.get_next ) -%]
+       Object: [% object.name %] (ID: [% object.id %])
+ [% END -%]
 
 =head1 INTERNAL DOCUMENTATION
 
@@ -460,18 +489,18 @@ None yet!
 B<Provide more 'position' management>
 
 Subclasses generally need to maintain the position themselves, which
-can be irritating. 
+can be irritating.
 
 B<Relationship calls return iterators>
 
 Relationship calls (for relationships created by
-L<SPOPS::ClassFactory> and/or one of its utilized behaviors) should be
-modified to optionally return an C<SPOPS::Iterator> object. So you
-could do:
+L<SPOPS::ClassFactory|SPOPS::ClassFactory> and/or one of its utilized
+behaviors) should be modified to optionally return an
+C<SPOPS::Iterator> object. So you could do:
 
   my $iter = $user->group({ iterator => 1 });
   while ( my $group = $iter->get_next ) {
-     print "User is in group: $group->{name}\n";
+       print "User is in group: $group->{name}\n";
   }
 
 Other options:
@@ -481,9 +510,9 @@ Other options:
 
 =head1 SEE ALSO
 
-L<SPOPS>
+L<SPOPS|SPOPS>
 
-L<Template::Iterator>
+L<Template::Iterator|Template::Iterator>
 
 Talks and papers by Mark-Jason Dominus on infinite lists and
 iterators. (See: http://www.plover.com/perl/)

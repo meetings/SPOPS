@@ -1,6 +1,6 @@
 package SPOPS::Iterator::DBI;
 
-# $Id: DBI.pm,v 1.5 2001/08/22 10:51:45 lachoy Exp $
+# $Id: DBI.pm,v 1.8 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS           qw( _w DEBUG );
@@ -8,8 +8,8 @@ use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 use SPOPS::Secure   qw( :level );
 
 @SPOPS::Iterator::DBI::ISA      = qw( SPOPS::Iterator );
-$SPOPS::Iterator::DBI::VERSION  = '1.8';
-$SPOPS::Iterator::DBI::Revision = substr(q$Revision: 1.5 $, 10);
+$SPOPS::Iterator::DBI::VERSION  = '1.90';
+$SPOPS::Iterator::DBI::Revision = substr(q$Revision: 1.8 $, 10);
 
 # Keys with _DBI at the beginning are specific to this implementation;
 # keys without _DBI at the begining are used in all iterators.
@@ -20,7 +20,7 @@ sub initialize {
     $self->{_DBI_OFFSET}    = $p->{offset};
     $self->{_DBI_MAX}       = $p->{max};
     $self->{_DBI_ID_LIST}   = $p->{id_list};
-    $self->{_DBI_COUNT}     = 0;
+    $self->{_DBI_COUNT}     = 1;
     $self->{_DBI_RAW_COUNT} = 0;
 }
 
@@ -40,7 +40,7 @@ sub fetch_object {
         my $id = $self->{_DBI_ID_LIST}->[ $self->{_DBI_RAW_COUNT} ];
         DEBUG() && _w( 1, "Trying to retrieve idx ($self->{_DBI_RAW_COUNT}) with ",
                           "ID ($id) from class ($self->{_CLASS}" );
-        $obj = eval { $object_class->fetch( $id, 
+        $obj = eval { $object_class->fetch( $id,
                                             { skip_security => $self->{_SKIP_SECURITY} } ) };
 
         # If the object doesn't exist then it's likely a security issue,
@@ -180,7 +180,9 @@ B<finish()>
 
 =head1 SEE ALSO
 
-L<SPOPS::Iterator>, L<SPOPS::DBI>
+L<SPOPS::Iterator|SPOPS::Iterator>
+
+L<SPOPS::DBI|SPOPS::DBI>
 
 =head1 COPYRIGHT
 

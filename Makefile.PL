@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.10 2001/08/22 11:10:04 lachoy Exp $
+# $Id: Makefile.PL,v 1.11 2001/10/15 00:08:27 lachoy Exp $
 
 use strict;
 use ExtUtils::MakeMaker;
@@ -14,6 +14,7 @@ my ( $EXTRA_INFO );
 my %SUPPORTED_DBD_DRIVERS = ( mysql  => 1,
                               Pg     => 1,
                               ASAny  => 1,
+                              ODBC   => 1,
                               Sybase => \&_set_sybase_env );
 
  # File we write the configuration info to
@@ -129,7 +130,7 @@ sub check_dbi {
     my ( $dbi_test, $dbi_driver, $dbi_dsn, $dbi_user, $dbi_pass );
     eval { require DBI };
     if ( $@ ) {
-        print "You don't appear to have DBI installed; skipping DBI tests.";
+        print "You don't appear to have DBI installed; skipping DBI tests.\n";
         return ( 'n' );
     }
     $dbi_test  = lc get_response( "Would you like to run tests using DBI? (Y/n)\n", 'Y' );
@@ -158,6 +159,15 @@ sub check_dbi {
     }
     print "\n";
 
+    my ( $odbc_driver );
+    if ( $dbi_driver eq 'ODBC' ) {
+        print "You've chosen ODBC as your DBD. However, SPOPS needs to know ",
+              "what type of database is working behind the ODBC driver.\n";
+        $odbc_driver = get_response( "Choose a database behind the scenes (MySQL, Pg, Sybase)\n" .
+                                     "(MS SQL users should enter 'Sybase')", 'Sybase' );
+    }
+    print "\n";
+
     $dbi_dsn = get_response( "Please enter the tail end of the DSN to use for the driver you chose\n" .
                              "('DBI:$dbi_driver:' will be prepended unless you specify a full DSN)\n",
                              $ENV{DBI_DSN} );
@@ -175,6 +185,8 @@ sub check_dbi {
     print "Please note: you might want to remove the file \n",
           "'$CONFIG_FILE' after the tests have run since it \n",
           "contains user/password information.\n\n";
+
+    $dbi_driver = $odbc_driver if ( $odbc_driver );
     return ( 'y', $dbi_driver, $dbi_dsn, $dbi_user, $dbi_pass );
 }
 
@@ -185,7 +197,7 @@ sub check_ldap {
     my ( $ldap_test, $ldap_host, $ldap_port, $ldap_base_dn, $ldap_bind_dn, $ldap_password );
     eval { require Net::LDAP };
     if ( $@ ) {
-        print "You don't appear to have Net::LDAP installed; skipping LDAP tests.";
+        print "You don't appear to have Net::LDAP installed; skipping LDAP tests.\n";
         return ( 'n' );
     }
     $ldap_test = lc get_response( "Would you like to run tests using LDAP? (Y/n)\n", 'Y' );
@@ -213,7 +225,7 @@ sub check_ldap {
 sub check_gdbm {
     eval { require GDBM_File };
     if ( $@ ) {
-        print "You don't appear to have GDBM_File installed, skipping GDBM tests.";
+        print "You don't appear to have GDBM_File installed, skipping GDBM tests.\n";
         return ( 'n' );
     } 
     my $gdbm_test = lc get_response( "Would you like to run tests using GDBM? (Y/n)\n", 'Y' );

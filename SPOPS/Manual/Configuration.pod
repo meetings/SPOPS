@@ -1,0 +1,438 @@
+=head1 NAME
+
+SPOPS::Manual::Configuration - Description of variables used in the SPOPS configuration process
+
+=head1 DESCRIPTION
+
+This document aims to answer the questions:
+
+=over 4
+
+=item *
+
+What configuration options are available for SPOPS objects?
+
+=item *
+
+How do I modify configuration options?
+
+=item *
+
+How can I get to the configuration items once the object class is
+operational?
+
+=item *
+
+How can I add new configuration items?
+
+=back
+
+=head1 GENERAL CONFIGURATION
+
+These are variables used in all SPOPS implementations. The name of the
+variable is the key used in the configuration hashref.
+
+Here is a fairly minimal example of a configuration hashref:
+
+  1: my $spops = {
+  2:   'news' => {
+  3:      class           => 'My::News',
+  4:      isa             => [ qw/ MyApp::Datasource SPOPS::DBI::Pg SPOPS::DBI / ],
+  5:      rules_from      => [ 'My::DiscoverField' ],
+  6:      code_class      => [],
+  7:      field_discover  => 'yes',
+  8:      base_table      => 'news',
+  9:      id_field        => 'news_id',
+ 10:      increment_field => 1,
+ 11:      no_insert       => [ 'news_id' ],
+ 12:      no_update       => [ 'news_id' ],
+ 13:   },
+ 14: };
+
+=head2 General Configuration Fields
+
+B<class> ($)
+
+The name of the class SPOPS will build.
+
+B<code_class> (\@)
+
+An arrayref of class names that will be read in as additional
+behaviors to the SPOPS-generated class.
+
+B<field> (\@)
+
+An arrayref of fieldnames used in this object.
+
+B<strict_field> (bool)
+
+A flag indicating whether to use strict field checking.
+
+B<isa> (\@)
+
+An arrayref of classes representing the ISA parent hierarchy of the
+generated class. These classes are examined for class factory
+behaviors and object rules during the code generating process, and
+they're also used in the normal ISA fashion as class ancestors.
+
+B<rules_from> (\@)
+
+An arrayref of classes to read class factory behaviors and object
+rules from. These classes are not used as ancestors of the class, and
+once the code generation process is done the generated class has
+nothing to do with them.
+
+B<id_field> ($)
+
+The name of the field used as the ID (or primary key) field for the
+object. Currently, multi-field primary keys are not supported.
+
+B<column_group> (\%)
+
+Used by the lazy loading process to determine the group-to-fieldname
+mappings. See L<SPOPS::Manual::Object|SPOPS::Manual::Object> for more
+information on lazy loading.
+
+B<field_map> (\%)
+
+A hashref of field-to-field relationships so you can make an object
+appear as another one. For instance, if you have a legacy datastore
+with short, unreadable fieldnames you can make it appear as a modern,
+intelligible object. See
+L<SPOPS::Manual::Object|SPOPS::Manual::Object> for more information on
+field mapping.
+
+B<multivalue> (\@)
+
+List all fieldnames that can hold multiple values. Currently the only
+native support for this is in L<SPOPS::LDAP|SPOPS::LDAP>, but you can
+also use it along with some object rules to fake relationships.
+
+B<no_insert> (\@)
+
+List of fields not to use when creating a new object in the datastore.
+
+B<no_update> (\@)
+
+List of fields not to update when saving a previously saved object.
+
+B<skip_undef> (\@)
+
+You can elect not to include a field that's undefined when saving or
+updating an object by including it in this list.
+
+B<creation_security> (\%)
+
+If you're using security, specify here what security the object will
+have when it's first created.
+
+B<no_security> (bool)
+
+If true, the object won't use security even if
+L<SPOPS::Secure|SPOPS::Secure> is in the C<isa>.
+
+B<no_cache> (bool)
+
+If true, the object won't be cached even if the application specifies
+that it should. (Currently unused.)
+
+B<object_name> ($)
+
+The general name of a type of object. For an object representing a
+news story this might be 'News'.
+
+B<name> ($ or \&)
+
+How an object is uniquely identified to humans. This is often used
+when displaying an object of unknown origin -- we can ask about its
+information using the C<object_description()> method that all SPOPS
+objects have. For an object representing a news story this might be
+'title'.
+
+B<display> (\%)
+
+A URL specifying how to display an instance of an object. The
+C<object_description()> method uses a base URL then appends relevant
+query information to it.
+
+B<as_string_order> (\@)
+
+Ordered list of object fields to use when the C<as_string()> method is
+called. If you don't specify this SPOPS will use the object fields as
+listed in the C<field> configuration key.
+
+B<as_string_label> (\%)
+
+Hashref of object field-to-label mappings used when the C<as_string()>
+method is called.
+
+B<has_a> (\%)
+
+Metadata for SPOPS to use when building a relationship from one object
+to another. This generally means that the object itself has the
+information in its own properties necessary to fetch one or more
+objects.
+
+See L<SPOPS::Manual::Relationships|SPOPS::Manual::Relationships> for
+more information.
+
+B<fetch_by> (\@)
+
+A list of fields that tell SPOPS you want to create special methods
+for retrieving objects based on a the value of particular field. For
+instance, with user objects we might want to specify 'email' and
+'login_name' so SPOPS will create the methods 'fetch_by_email' and
+'fetch_by_login_name'.
+
+# TODO: Add more here.
+
+=head1 SPOPS::DBI CONFIGURATION
+
+This section describes configuration keys that are used differently by
+L<SPOPS::DBI|SPOPS::DBI> than the default, as well as new
+configuration keys used only by L<SPOPS::DBI|SPOPS::DBI>.
+
+=head2 General Configuration Fields
+
+B<isa> (\@)
+
+Same as a normal SPOPS field, but it must have
+L<SPOPS::DBI|SPOPS::DBI> in it.
+
+B<base_table> ($)
+
+Table name for data to be stored. This may be modified during the
+configuration process to be a fully qualified name (e.g.,
+'user.table') where necessary. The value is always available via the
+C<table_name()> class method.
+
+B<sql_defaults> (\@)
+
+List of fields that have defaults defined in the SQL table. For
+instance:
+
+   active   CHAR(3) DEFAULT 'yes',
+
+After L<SPOPS::DBI|SPOPS::DBI> fetches a record, it then checks to see
+if there are any defaults for the record and if so it refetches the
+object to ensure that the data in the object and the data in the
+database are synced.
+
+B<field_alter> (\%)
+
+Allows you to define different formatting behaviors for retrieving
+fields. For instance, if you want dates formatted in a certain manner
+by the database rather than after the fact, you can do something like:
+
+ field_alter => {
+    posted_on => q/DATE_FORMAT( posted_on, '%M %e, %Y (%h:%i %p)' )/,
+ }
+
+Which instead of the default time format:
+
+ 2000-09-26 10:29:00
+
+will if you're using MySQL return something like:
+
+ September 26, 2000 (10:29 AM)
+
+These are typically database-specific.
+
+=head2 General Relationship Fields
+
+B<links_to> (\%)
+
+The 'links_to' field allows you to specify a SPOPS alias and specify
+which table is used to link the objects:
+
+ { 'SPOPS-class' => 'table_name' }
+
+Note that this relationship assumes a link table that joins two
+separate tables. When you sever a link between two objects, you are
+only deleting the link rather than deleting an object. See
+L<SPOPS::ClassFactory::DBI|SPOPS::ClassFactory::DBI> for another
+proposal.
+
+=head1 SPOPS::LDAP CONFIGURATION
+
+Configuration of an L<SPOPS::LDAP|SPOPS::LDAP> data object is similar
+to that of other SPOPS objects, with a few modifications.
+
+=head2 General Configuration Fields
+
+B<isa> (\@)
+
+Same as a normal SPOPS field, but it must have
+L<SPOPS::LDAP|SPOPS::LDAP> in it.
+
+B<base_dn> ($)
+
+DN in an LDAP tree where this object is located. For instance, the
+common 'inetOrgPerson' type of object might be located under:
+
+  base_dn  => 'ou=People,dc=MyCompany,dc=com'
+
+While 'printer' objects might be located under:
+
+  base_dn  => 'ou=Equipment,dc=MyCompany,dc=com'
+
+Note that L<SPOPS::LDAP::MultiDatasource|SPOPS::LDAP::MultiDatasource>
+allows you to specify a partial DN on a per-datasource basis.
+
+B<ldap_object_class> (\@)
+
+When you create a new object you can specify the LDAP object class
+yourself when creating the object or L<SPOPS::LDAP|SPOPS::LDAP> can do
+it for you behind the scenes. If you specify one or more LDAP object
+class strings here they will be used whenever you create a new object
+and save it.
+
+Example:
+
+ ldap_object_class => [ 'top', 'person', 'inetOrgPerson',
+                        'organizationalPerson' ]
+
+B<ldap_fetch_object_class> ($) (optional)
+
+Specify an objectclass here to ensure your results are restricted
+properly. This is also used to do an 'empty' search and find all
+records of a particular class.
+
+NOTE: This is B<only> used with the C<fetch_group()> and
+C<fetch_iterator()> methods.
+
+Example:
+
+ ldap_fetch_object_class => 'person'
+
+B<ldap_update_only_changed> (bool) (optional)
+
+Set a true value here to update only those fields whose values have
+changed.
+
+B<multivalue> (\@) (optional)
+
+You B<must> list the fields here that may have multiple values in the
+directory. Otherwise the object will have only one of the values and,
+on saving the object, will probably wipe out all the others.
+
+Example:
+
+ multivalue  => [ 'objectclass', 'cn' ]
+
+B<id_value_field> ($) (optional)
+
+Returns the field used for the ID value (a string) in this object. By
+default this is the value stored in 'id_field', but there are cases
+where you may wish to use a particular fieldname for the DN of an
+object and the value from another field.
+
+=head2 Relationship Fields
+
+The 'has_a' relationship exists where one object has the information
+for one or more objects of another type in its own properties. The
+DN(s) for the other object(s) are held in one of the object
+properties.
+
+For instance, one of the objects represented in the standard LDAP
+schema is a group. This has the object class 'groupOfUniqueNames' and
+a property 'uniquemember' which may have zero, one or more DNs for
+member objects.
+
+The 'links_to' relationship exists where one object is related to one
+or more objects of another type, but the information is held in the
+property of the other object. So a member of one or more groups would
+use a 'links_to' relationship to find all the groups to which the
+member belongs.
+
+As an example of both of these, take the canonical relationship of
+users to groups. The group object 'has_a' zero or more user objects
+since it is a 'groupOfUniqueNames' and has the property
+'uniquemember'. So we would define it:
+
+ group => {
+    class    => 'My::Group',
+    isa      => [ 'SPOPS::LDAP' ],
+    has_a    => { 'My::User' => 'uniquemember' },
+ },
+
+So a group that had the following DNs in its 'uniquemember' field:
+
+  cn=Fred Flintstone,ou=People,dc=hanna-barberra,dc=com
+  cn=Wilma Flintstone,ou=People,dc=hanna-barberra,dc=com
+  cn=Dino,ou=People,dc=hanna-barberra,dc=com
+
+would return user objects for Fred, Wilma and Dino.
+
+The user object might be defined:
+
+ user => {
+    class    => 'My::User',
+    isa      => [ 'SPOPS::LDAP' ],
+    links_to => { 'My::Group' => 'uniquemember' },
+ },
+
+And would find all groups that had its DN in the field 'uniquemember'
+of the group objects.
+
+This is generally more straightforward than the DBI equivalent.
+
+=head1 SPOPS::LDAP::MultiDatasource Configuration
+
+Also see the L<SPOPS::LDAP|SPOPS::LDAP> configuration information
+unless otherwise noted.
+
+=head2 General Configuration Fields
+
+B<datasource> (\@)
+
+If you want to use multiple datasources, you need to specify them. The
+C<datasource> key holds an arrayref of datasources B<in the order you
+want them searched>.
+
+Example:
+
+ my $spops = {
+   class      => 'My::Person',
+   isa        => [ 'SPOPS::LDAP::MultiDatasource' ],
+   datasource => [ 'main', 'accounting', 'development', 'etc' ],
+ };
+
+The 'etc' datasource will be the last one searched. This would
+obviously be a performance hit if most of your objects were there.
+
+B<ldap_base_dn> ($ or \%)
+
+First, this should B<not> be a full DN, but rather a partial one that
+when matched up with a datasource creates a full DN. For example:
+
+ my $spops = {
+   class        => 'My::Person',
+   isa          => [ 'SPOPS::LDAP::MultiDatasource' ],
+   ldap_base_dn => 'ou=People',
+ };
+
+Second, if you use a scalar for this key you are in effect saying 'use
+the same partial DN for all my datasources'. But if you are using
+different partial DNs for different datasources, you need to specify
+them:
+
+ my $spops = {
+   class        => 'My::Person',
+   isa          => [ 'SPOPS::LDAP::MultiDatasource' ],
+   datasource   => [ 'main', 'accounting', 'development', 'etc' ],
+   ldap_base_dn => { main        => 'ou=People',
+                     accounting  => 'ou=BeanCounters',
+                     development => 'ou=Geeks',
+                     etc         => 'ou=Commoners' },
+ };
+
+=head1 COPYRIGHT
+
+Copyright (c) 2001 Chris Winters. All rights reserved.
+
+See L<SPOPS::Manual|SPOPS::Manual> for license.
+
+=head1 AUTHORS
+
+Chris Winters <chris@cwinters.com>

@@ -107,11 +107,14 @@ real purpose, let us know!
 WHAT DATABASES ARE SUPPORTED RIGHT NOW?
 ====================
 
-Currently supported databases include (in alphabetical order):
-
- * MS SQL Server (using DBD::ODBC and SPOPS::DBI::Sybase)
+Following is a list of supported databases. Note that ANY DBI database
+should work fine for read-only operations.
 
  * MySQL (using DBD::mysql and SPOPS::DBI::MySQL
+
+ * ODBC datasources; so far we've tried MS SQL Server (using DBD::ODBC
+   and SPOPS::DBI::Sybase) which works fine for read-write, and DB2 on
+   an AS/400 which works fine for read-only operations.
 
  * PostgreSQL (using DBD::Pg and SPOPS::DBI::Pg)
 
@@ -159,65 +162,11 @@ WHERE CAN I LEARN MORE?
 ====================
 
 If you want to learn more about how to use SPOPS, read the
-documentation! It's quite substantial, and we're always working on
-it. Here are some guidelines:
+documentation! Once you've installed SPOPS, start out with:
 
-Overview and examples
+ $ perldoc SPOPS::Manual
 
- perldoc SPOPS
-
-Initializing objects
-
- perldoc SPOPS::Initialize
-
-Class Factory
-
- perldoc SPOPS::ClassFactory
- perldoc SPOPS::ClassFactory::DefaultBehavior
-
-Error handling
-
- perldoc SPOPS::Error
-
-Security
-
- perldoc SPOPS::Security
- perldoc SPOPS::Security::Hierarchy
-
-DBI issues
-
- perldoc SPOPS::ClassFactory::DBI
- perldoc SPOPS::DBI
- perldoc SPOPS::SQLInterface
- perldoc SPOPS::DBI::MySQL
- perldoc SPOPS::DBI::Sybase
- perldoc SPOPS::DBI::Pg
- Perldoc SPOPS::Iterator::DBI
- perldoc SPOPS::Key::DBI::HandleField
- perldoc SPOPS::Key::DBI::Identity
- perldoc SPOPS::Key::DBI::Pool
- perldoc SPOPS::Key::DBI::Sequence
-
-LDAP issues
-
- perldoc SPOPS::ClassFactory::LDAP
- perldoc SPOPS::Iterator::LDAP
- perldoc SPOPS::LDAP
- perldoc SPOPS::LDAP::MultiDatasource
-
-Iterators
-
- perldoc SPOPS::Iterator
-
-Utilities that might be useful:
-
- perldoc SPOPS::Key::Random
- perldoc SPOPS::Utility
-
-More information about how data are stored in an object
-
- perldoc SPOPS::Tie
- perldoc SPOPS::Tie::StrictField
+And follow pointers from there.
 
 
 IDEAS? SUGGESTIONS? PATCHES?
@@ -301,4 +250,4 @@ version 2 of the License (see 'COPYING'), or (at your option) any
 later version.
 
 =========================
-$Id: README,v 1.6 2001/08/28 21:09:54 lachoy Exp $
+$Id: README,v 1.9 2001/10/15 04:28:24 lachoy Exp $

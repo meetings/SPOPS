@@ -1,74 +1,53 @@
 package SPOPS::Error;
 
-# $Id: Error.pm,v 1.9 2001/08/27 03:00:28 lachoy Exp $
+# $Id: Error.pm,v 1.11 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
+use vars         qw( @FIELDS );
+use Data::Dumper qw( Dumper );
 
 *_w    = *SPOPS::_w;
 *DEBUG = *SPOPS::DEBUG;
 
 @SPOPS::Error::ISA      = ();
-$SPOPS::Error::VERSION  = '1.8';
-$SPOPS::Error::Revision = substr(q$Revision: 1.9 $, 10);
+$SPOPS::Error::VERSION  = '1.90';
+$SPOPS::Error::Revision = substr(q$Revision: 1.11 $, 10);
 
-$SPOPS::Error::user_msg   = undef;
-$SPOPS::Error::system_msg = undef;
-$SPOPS::Error::type       = undef;
-$SPOPS::Error::package    = undef;
-$SPOPS::Error::filename   = undef;
-$SPOPS::Error::line       = undef;
-$SPOPS::Error::method     = undef;
-$SPOPS::Error::extra      = ();
+@FIELDS   = qw( user_msg system_msg type extra
+                package filename line method );
+
+__PACKAGE__->clear();
 
 sub clear {
- $SPOPS::Error::user_msg   = undef;
- $SPOPS::Error::system_msg = undef;
- $SPOPS::Error::type       = undef;
- $SPOPS::Error::package    = undef;
- $SPOPS::Error::filename   = undef;
- $SPOPS::Error::line       = undef;
- $SPOPS::Error::method     = undef;
- $SPOPS::Error::extra      = {};
+    my ( $class ) = @_;
+    no strict 'refs';
+    for ( @FIELDS ) { ${ $class . '::' . $_ } = undef }
 }
+
 
 sub get {
     my ( $class ) = @_;
-    return { user_msg   => $SPOPS::Error::user_msg,
-             system_msg => $SPOPS::Error::system_msg,
-             type       => $SPOPS::Error::type,
-             package    => $SPOPS::Error::package,
-             filename   => $SPOPS::Error::filename,
-             line       => $SPOPS::Error::line,
-             method     => $SPOPS::Error::method,
-             extra      => $SPOPS::Error::extra };
+    no strict 'refs';
+    return { map { $_ => ${ $class . '::' . $_ } } @FIELDS };
 }
 
 
 sub set {
     my ( $class, $p ) = @_;
-
-    # First clean everything up
-
     $class->clear;
-
-    # Then set everything passed in
-
     {
         no strict 'refs';
-        foreach my $key ( keys %{ $p } ) {
-            DEBUG() && _w( 1, "Setting error $key to $p->{ $key }" );
-            ${ $class . '::' . $key } = $p->{ $key };
-        }
+        for ( @FIELDS ) { ${ $class . '::' . $_ } = $p->{ $_} }
     }
 
     # Set the caller information if the user didn't pass anything in
 
     unless ( $p->{package} and $p->{filename} and $p->{line} ) {
-        ( $SPOPS::Error::package, 
-          $SPOPS::Error::filename, 
-          $SPOPS::Error::line ) = caller;
+        ( $SPOPS::Error::package,
+          $SPOPS::Error::filename,
+          $SPOPS::Error::line,
+          $SPOPS::Error::method ) = caller(0);
     }
-
     return $class->get;
 }
 
@@ -86,11 +65,11 @@ SPOPS::Error - Centralized error messages from all SPOPS objects.
 
  # Using SPOPS in your application
 
- my $obj_list = eval { $obj->fetch_group( { where => 'this = that' } ) };
+ my $obj_list = eval { $class->fetch_group({ where => 'this = that' }) };
  if ( $@ ) {
    warn "Error found! Error: $@\n",
         "Error type: $SPOPS::Error::type\n",
-        "More specific: $SPOPS::Error::system_msg\n", 
+        "More specific: $SPOPS::Error::system_msg\n",
         "Extra stuff:\n",
         "--$SPOPS::Error::extra->{sql}\n",
         "--$SPOPS::Error::extra->{valuesb}\n";
@@ -124,8 +103,8 @@ instead, you want to tell them:
 
  Database query failed to execute
 
-This variable is identical to the value thrown by the I<die()>
-command, so you do not normally need to refer to it.
+Typically, this is the message that the SPOPS class will C<die()>
+with.
 
 B<system_msg> ($)
 
@@ -138,8 +117,14 @@ B<type> ($)
 SPOPS knows about a few types of errors. Some depend on your SPOPS
 implementation (e.g., DBI, dbm, LDAP, etc.). Others can be:
 
- -security: There is a security violation and the action could not be
-            completed
+=over 4
+
+=item *
+
+B<security>: There is a security violation and the action could not be
+completed
+
+=back
 
 B<package> ($)
 
@@ -147,7 +132,8 @@ Set to the package from where the error was thrown.
 
 B<method> ($)
 
-Set to the method from where the error was thrown.
+Set to the method from where the error was thrown. (If set
+automatically, this is a fully-qualified subroutine name.)
 
 B<filename> ($)
 
@@ -166,7 +152,7 @@ keys; see their documentation for details.
 
 =head1 METHODS
 
-B<clear>
+B<clear()>
 
 Clears the current error saved in the class. Classes outside the
 B<SPOPS::> hierarchy should never need to call this.
@@ -177,14 +163,15 @@ B<get()>
 
 Returns a hashref with all the currently set error values.
 
-B<set( \% )>
+B<set( \%params )>
 
 First clears the variables then sets them all in one fell swoop. The
 variables that are set are passed in the first argument, a
-hashref. Also sets both the package and method variables for you,
-although you can override by setting manually.
+hashref. Also sets both the package, method, filename and line and
+variables for you, although you can override by setting manually.
 
-No return value;
+Returns the results from a C<get()>, including the results that may be
+automatically filled in.
 
 =head1 NOTES
 
@@ -198,11 +185,11 @@ a SPOPS error variable. For instance, you can do:
 
 And then refer to the alias in your local package:
 
- my $obj_list = eval { $obj->fetch_group( { where => 'this = that' } ) };
+ my $obj_list = eval { $obj->fetch_group({ where => 'this = that' }) };
  if ( $@ ) {
    warn "Error found! Error: $@\n",
         "Error type: $err_type\n",
-        "More specific: $err_system_msg\n", 
+        "More specific: $err_system_msg\n",
         "Extra stuff:\n",
         "--$err_extra{sql}\n",
         "--$err_extra{values}\n";

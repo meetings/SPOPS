@@ -1,6 +1,6 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 1.11 2001/08/22 10:51:45 lachoy Exp $
+# $Id: GDBM.pm,v 1.13 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -8,8 +8,8 @@ use GDBM_File;
 use SPOPS         qw( _w DEBUG );
 
 @SPOPS::GDBM::ISA      = qw( SPOPS );
-$SPOPS::GDBM::VERSION  = '1.8';
-$SPOPS::GDBM::Revision = substr(q$Revision: 1.11 $, 10);
+$SPOPS::GDBM::VERSION  = '1.90';
+$SPOPS::GDBM::Revision = substr(q$Revision: 1.13 $, 10);
 
 # Make this the default for everyone -- they can override it
 # themselves...
@@ -43,7 +43,7 @@ sub _class_initialize { return 1; }
 sub initialize {
     my ( $self, $p ) = @_;
     return unless ( ref $p and scalar keys %{ $p } );
-  
+
     # Set the GDBM filename if it was passed
 
     if ( $p->{GDBM_FILENAME} ) {
@@ -74,7 +74,7 @@ sub initialize {
 sub global_gdbm_tie {
     my ( $item, $p ) = @_;
     return $p->{db}    if ( ref $p->{db} );
-  
+
     my $gdbm_filename = $p->{filename};
     unless ( $gdbm_filename ) {
         if ( ref $item ) {
@@ -137,8 +137,8 @@ sub _return_structure_for_key {
     return undef unless ( $item_info );
     my $data = undef;
     { 
-        no strict 'vars'; 
-        $data = eval $item_info; 
+        no strict 'vars';
+        $data = eval $item_info;
     }
     die "Cannot rebuild object! Error: $@" if ( $@ );
     return $data;
@@ -174,7 +174,7 @@ sub fetch_group {
     my @objects = ();
     foreach my $key ( @object_keys ) {
         my $data = eval { $class->_return_structure_for_key( $key, { db => $db } ) };
-        next unless ( $data );      
+        next unless ( $data );
         push @objects, $class->fetch( undef, { data => $data } );
     } 
     return \@objects;
@@ -399,11 +399,11 @@ None known.
 
 GDBM software:
 
-http://www.fsf.org/gnulist/production/gdbm.html
+ http://www.fsf.org/gnulist/production/gdbm.html
 
-GDBM on Perl/Win32: 
+GDBM on Perl/Win32:
 
-http://www.roth.net/perl/GDBM/
+ http://www.roth.net/perl/GDBM/
 
 =head1 COPYRIGHT
 
@@ -416,6 +416,6 @@ it under the same terms as Perl itself.
 
 Chris Winters  <chris@cwinters.com>
 
-See the L<SPOPS> module for the full author/helper list.
+See the L<SPOPS|SPOPS> module for the full author/helper list.
 
 =cut

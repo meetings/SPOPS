@@ -1,13 +1,13 @@
 package SPOPS::LDAP::MultiDatasource;
 
-# $Id: MultiDatasource.pm,v 1.5 2001/08/28 21:32:45 lachoy Exp $
+# $Id: MultiDatasource.pm,v 1.7 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS::LDAP;
 
 @SPOPS::LDAP::MultiDatasource::ISA       = qw( SPOPS::LDAP );
-$SPOPS::LDAP::MultiDatasource::VERSION   = '1.8';
-$SPOPS::LDAP::MultiDatasource::Revision  = substr(q$Revision: 1.5 $, 10);
+$SPOPS::LDAP::MultiDatasource::VERSION   = '1.90';
+$SPOPS::LDAP::MultiDatasource::Revision  = substr(q$Revision: 1.7 $, 10);
 
 use constant DEFAULT_CONNECT_KEY => 'main';
 
@@ -116,74 +116,35 @@ SPOPS::LDAP::MultiDatasource -- SPOPS::LDAP functionality but fetching objects f
 
 =head1 DESCRIPTION
 
-This class extends L<SPOPS::LDAP> with one purpose: be able to fetch
-objects from multiple datasources. This can happen when you have got
-objects dispersed among multiple directories -- for instance, your
-'Accounting' department is on one LDAP server and your 'Development'
-department on another. One class can (more or less -- see below) link
-the two LDAP servers.
+This class extends L<SPOPS::LDAP|SPOPS::LDAP> with one purpose: be
+able to fetch objects from multiple datasources. This can happen when
+you have got objects dispersed among multiple directories -- for
+instance, your 'Accounting' department is on one LDAP server and your
+'Development' department on another. One class can (more or less --
+see below) link the two LDAP servers.
 
 =head2 Caveats
 
 The C<fetch()> method is the only functional method overridden from
-C<SPOPS::LDAP>. The C<fetch_group()> or C<fetch_iterator()> methods
-will only use the first datasource in the listing, whatever datasource
-you pass in with the parameter 'connect_key' or whatever LDAP
-connection handle you pass in with the parameter 'ldap'. If you want
-to retrieve objects from multiple datasources using the same filter,
-use the C<fetch_group_all()> method.
+L<SPOPS::LDAP|SPOPS::LDAP>. The C<fetch_group()> or
+C<fetch_iterator()> methods will only use the first datasource in the
+listing, whatever datasource you pass in with the parameter
+'connect_key' or whatever LDAP connection handle you pass in with the
+parameter 'ldap'. If you want to retrieve objects from multiple
+datasources using the same filter, use the C<fetch_group_all()>
+method.
 
 The C<fetch_iterator()> method is not supported at all for multiple
-datasources -- use C<fetch_group_all()>.
+datasources -- use C<fetch_group_all()> in conjunction with
+L<SPOPS::Iterator::WrapList|SPOPS::Iterator::WrapList> if your
+implementation expects an L<SPOPS::Iterator|SPOPS::Iterator> object.
 
 =head1 SETUP
 
-There are a number of items to configure and setup to use this class.
-
-=head2 SPOPS Configuration
-
-B<datasource> (\@)
-
-If you want to use multiple datasources, you need to specify them. The
-C<datasource> key holds an arrayref of datasources B<in the order you
-want them searched>.
-
-Example:
-
- my $spops = {
-   class      => 'My::Person',
-   isa        => [ 'SPOPS::LDAP::MultiDatasource' ],
-   datasource => [ 'main', 'accounting', 'development', 'etc' ],
- };
-
-The 'etc' datasource will be the last one searched. This would
-obviously be a performance hit if most of your objects were there.
-
-B<ldap_base_dn> ($ or \%)
-
-First, this should B<not> be a full DN, but rather a partial one that
-when matched up with a datasource creates a full DN. For example:
-
- my $spops = {
-   class      => 'My::Person',
-   isa        => [ 'SPOPS::LDAP::MultiDatasource' ],
-   ldap_base_dn => 'ou=People',
- };
-
-Second, if you use a scalar for this key you are in effect saying 'use
-the same partial DN for all my datasources'. But if you are using
-different partial DNs for different datasources, you need to specify
-them:
-
- my $spops = {
-   class      => 'My::Person',
-   isa        => [ 'SPOPS::LDAP::MultiDatasource' ],
-   datasource => [ 'main', 'accounting', 'development', 'etc' ],
-   ldap_base_dn => { main        => 'ou=People',
-                     accounting  => 'ou=BeanCounters',
-                     development => 'ou=Geeks',
-                     etc         => 'ou=Commoners' },
- };
+There are a number of items to configure and setup to use this
+class. Please see
+L<SPOPS::Manual::Configuration|SPOPS::Manual::Configuration> for the
+configuration keys used by this module.
 
 =head2 Methods You Must Implement
 
@@ -309,7 +270,7 @@ C<\%params> from one of the datasources. When it finds an object it is
 immediately returned.
 
 If you pass in the key 'ldap' in \%params, this functions as the
-C<fetch()> does in C<SPOPS::LDAP> and multiple datasources are not
+C<fetch()> does in L<SPOPS::LDAP|SPOPS::LDAP> and multiple datasources are not
 used.
 
 Returns: SPOPS object (if found), or undef.
@@ -346,11 +307,11 @@ Test some more.
 
 =head1 SEE ALSO
 
-L<SPOPS::LDAP>
+L<SPOPS::LDAP|SPOPS::LDAP>
 
 =head1 COPYRIGHT
 
-fCopyright (c) 2001 MSN Marketing Service Nordwest, GmbH. All rights
+Copyright (c) 2001 MSN Marketing Service Nordwest, GmbH. All rights
 reserved.
 
 This library is free software; you can redistribute it and/or modify

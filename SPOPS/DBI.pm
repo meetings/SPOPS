@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 1.46 2001/08/24 20:20:06 lachoy Exp $
+# $Id: DBI.pm,v 1.51 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -12,8 +12,8 @@ use SPOPS::SQLInterface;
 use SPOPS::Tie    qw( $PREFIX_INTERNAL );
 
 @SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
-$SPOPS::DBI::VERSION   = '1.8';
-$SPOPS::DBI::Revision  = substr(q$Revision: 1.46 $, 10);
+$SPOPS::DBI::VERSION   = '1.90';
+$SPOPS::DBI::Revision  = substr(q$Revision: 1.51 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -90,9 +90,9 @@ sub class_initialize {
     my ( $class, $CONFIG )  = @_;
     $CONFIG ||= {};
     my $C = $class->CONFIG;
-    $C->{field_list}  = [ sort{ $C->{field}->{$a} <=> $C->{field}->{$b} }
+    $C->{field_list}  = [ sort{ $C->{field}{$a} <=> $C->{field}{$b} }
                           keys %{ $C->{field} } ];
-    $C->{table_owner} = $CONFIG->{db_info}->{db_owner};
+    $C->{table_owner} = $CONFIG->{db_info}{db_owner};
     $C->{table_name}  = ( $C->{table_owner} )
                           ? "$C->{table_owner}.$C->{base_table}" : $C->{base_table};
 
@@ -126,6 +126,8 @@ sub _class_initialize { return 1 }
 
 sub id_clause {
     my ( $item, $id, $opt, $p ) = @_;
+    $p->{DEBUG} ||= DEBUG_FETCH;
+
     $opt ||= '';
     $p   ||= {};
 
@@ -133,25 +135,27 @@ sub id_clause {
     # object, there's a problem
 
     unless ( $id or ref( $item ) ) {
-        _w( 0, "No ID passed in and called as a class method rather than an object method." );
+        _w( 0, "No ID passed in and called as a class method rather than",
+               "an object method." );
         return undef;
     }
     $id ||= $item->id;
 
-    my $db = $p->{db} || $item->global_db_handle;
+    my $db = $p->{db} || $item->global_datasource_handle( $p->{connect_key} );
     unless ( $db ) {
         _w( 0, "Cannot create ID clause because no database handle accessible." );
         my $msg = 'Cannot create ID clause';
         SPOPS::Error->set({ user_msg   => $msg,
                             system_msg => 'No db handle available when id_clause routine entered',
                             method     => 'id_clause',
-                            type       => 'db' } );
+                            type       => 'db' });
         die $msg;
     }
     my $id_field  = $item->id_field;
     my $type_info = eval { $item->db_discover_types( $item->base_table,
                                                      { dbi_type_info => $p->{dbi_type_info},
-                                                       db            => $db } ) };
+                                                       db            => $db,
+                                                       DEBUG         => $p->{DEBUG} } ) };
 
     # If we cannot get the type via our own system, just guess that the
     # ID field is a number
@@ -178,7 +182,9 @@ sub id_clause {
 sub format_select {
     my ( $class, $fields, $conf ) = @_;
     $conf ||= {};
-    die "Fields passed in not an arrayref: ($fields)" unless ( ref $fields eq 'ARRAY' );
+    unless ( ref $fields eq 'ARRAY' ) {
+        die "Fields passed in for referring to format must be an arrayref: ($fields)";
+    }
     my @return_fields;
     my $altered = $class->field_alter();
     foreach my $field ( @{ $fields } ) {
@@ -190,13 +196,12 @@ sub format_select {
 
 sub fetch {
     my ( $class, $id, $p ) = @_;
+    $p->{DEBUG} ||= DEBUG_FETCH;
     $id ||= 0;
-    $p  ||= {};
-    DEBUG() && _wm( 2, DEBUG_FETCH,
-                    "Trying to fetch an item of $class with ID $id and params ",
-                    join " // ",
-                    map { $_ . ' -> ' . ( defined( $p->{$_} ) ? $p->{$_} : '' ) }
-                        keys %{ $p } );
+    $p->{DEBUG} && _wm( 2, $p->{DEBUG}, "Trying to fetch an item of $class with ID $id and params ",
+                           join " // ",
+                                map { $_ . ' -> ' . ( defined( $p->{$_} ) ? $p->{$_} : '' ) }
+                                    keys %{ $p } );
 
     # No ID, no object
 
@@ -206,7 +211,7 @@ sub fetch {
 
     my $level = $p->{security_level};
     unless ( $p->{skip_security} ) {
-        $level ||= $class->check_action_security({ id       => $id,
+        $level ||= $class->check_action_security({ id       => $id, DEBUG => $p->{DEBUG},
                                                    required => SEC_LEVEL_READ });
     }
 
@@ -230,7 +235,7 @@ sub fetch {
 
     unless ( ref $obj eq $class ) {
         my ( $raw_fields, $select_fields ) = $class->_fetch_select_fields( $p );
-        DEBUG() && _wm( 1, DEBUG_FETCH, "SELECTing: ", join( "//", @{ $select_fields } ) );
+        $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "SELECTing: ", join( "//", @{ $select_fields } ) );
 
         # Put all the arguments into a hash (so we can reuse them simply
         # later) and grab the record
@@ -239,7 +244,8 @@ sub fetch {
                      select => $select_fields,
                      where  => $class->id_clause( $id, undef, $p ),
                      db     => $p->{db},
-                     return => 'single' );
+                     return => 'single',
+                     DEBUG  => $p->{DEBUG} );
         my $row = eval { $class->db_select( \%args ); };
 
         # Keep the SQLInterface error messages in place
@@ -262,7 +268,7 @@ sub fetch {
         # a parameter of an object -- THAT would be fun to debug...
 
         $obj = $class->new( { id => $id, %{ $p } } );
-        $obj->_fetch_assign_row( $raw_fields, $row );
+        $obj->_fetch_assign_row( $raw_fields, $row, $p );
     }
     return $obj->_fetch_post_process( $p, $level );
 }
@@ -271,7 +277,8 @@ sub fetch {
 
 sub fetch_iterator {
     my ( $class, $p ) = @_;
-    DEBUG() && _w( 1, "Trying to create an Iterator with: ", Dumper( $p ) );
+    $p->{DEBUG} ||= DEBUG_FETCH;
+    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Trying to create an Iterator with: ", Dumper( $p ) );
     ( $p->{fields}, $p->{select} ) = $class->_construct_group_select( $p );
     $p->{class}                    = $class;
     ( $p->{offset}, $p->{max} )    = $class->fetch_determine_limit( $p->{limit} );
@@ -286,6 +293,7 @@ sub fetch_iterator {
 
 sub fetch_group {
     my ( $class, $p ) = @_;
+    $p->{DEBUG} ||= DEBUG_FETCH;
     ( $p->{raw_fields}, $p->{select} ) = $class->_construct_group_select( $p );
     my $sth              = $class->_execute_multiple_record_query( $p );
     my ( $offset, $max ) = $class->fetch_determine_limit( $p->{limit} );
@@ -295,7 +303,7 @@ sub fetch_group {
 ROW:
     while ( my $row = $sth->fetchrow_arrayref ) {
         my $obj = $class->new;
-        $obj->_fetch_assign_row( $p->{raw_fields}, $row );
+        $obj->_fetch_assign_row( $p->{raw_fields}, $row, $p );
         next ROW unless ( $obj );
 
         # Check security on the row unless overridden by
@@ -307,8 +315,8 @@ ROW:
             $sec_level = eval { $obj->check_action_security({
                                           required => SEC_LEVEL_READ }) };
             if ( $@ ) {
-                DEBUG() && _wm( 1, DEBUG_FETCH, "Security check for object in ",
-                                                "fetch_group() failed, skipping." );
+                $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Security check for object in ",
+                                          "fetch_group() failed, skipping." );
                 next ROW;
             }
         }
@@ -376,6 +384,7 @@ sub _execute_multiple_record_query {
     $p->{select} ||= $class->_fetch_select_fields( $p );
     $p->{return}   = 'sth';
     $p->{DEBUG}  ||= DEBUG_FETCH;
+    $p->{db}     ||= $class->global_datasource_handle( $p->{connect_key} );
 
     # We return a DBI statement handle here so we can scroll through the
     # rows without assigning them all.
@@ -425,11 +434,12 @@ sub _fetch_select_fields {
 # 'loaded' flags first.
 
 sub _fetch_assign_row {
-    my ( $self, $fields, $row ) = @_;
-    DEBUG() && _wm( 1, DEBUG_FETCH, "Setting data from row into", ref $self );
+    my ( $self, $fields, $row, $p ) = @_;
+    $p->{DEBUG} ||= DEBUG_FETCH;
+    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Setting data from row into", ref $self );
     $self->clear_all_loaded();
     foreach my $i ( 0 .. ( scalar @{ $row } - 1 ) ) {
-        DEBUG() && _wm( 1, DEBUG_FETCH, sprintf( " %-20s --> %s", $fields->[ $i ], substr( $row->[ $i ], 0, 10 ) ) );
+        $p->{DEBUG} && _wm( 1, $p->{DEBUG}, sprintf( " %-20s --> %s", $fields->[ $i ], substr( $row->[ $i ], 0, 10 ) ) );
         $self->{ $fields->[ $i ] } = $row->[ $i ];
         $self->set_loaded( $fields->[ $i ] );
     }
@@ -463,7 +473,7 @@ sub _fetch_post_process {
     # we retrieve a cached copy or not
 
     $self->{tmp_security_level} = $level;
-    DEBUG() && _wm( 1, DEBUG_FETCH,
+    $p->{DEBUG} && _wm( 1, $p->{DEBUG},
                     ref $self, "(", $self->id, ") : cache set (if available),",
                     "post_fetch_action() done, change flag cleared and save ",
                     "flag set. Security: $level" );
@@ -492,10 +502,11 @@ sub perform_lazy_load {
     my %args = ( from   => [ $class->table_name ],
                  select => [ $field ],
                  where  => $class->id_clause( $data->{ $class->id_field } ),
-                 return => 'single' );
+                 return => 'single',
+                 DEBUG  => DEBUG );
     my $row = eval { $class->db_select( \%args ); };
     if ( $@ ) {
-        $SPOPS::Error::user_msg = "Error retrieving single field ($field) on lazy load";
+        $SPOPS::Error::user_msg = "Error retrieving single field ($field) on lazy load for ($class)";
         die $SPOPS::Error::user_msg;
     }
     return $row->[0];
@@ -509,8 +520,8 @@ sub perform_lazy_load {
 
 sub save {
     my ( $self, $p ) = @_;
-    my $DEBUG = DEBUG_SAVE || $p->{DEBUG};
-    $DEBUG && _wm( 1, $DEBUG, "Trying to save a <<", ref $self, ">>" );
+    $p->{DEBUG} ||= DEBUG_SAVE;
+    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Trying to save a (", ref $self, ")" );
     my $id = $self->id;
 
     # We can force save() to be an INSERT by passing in a true value
@@ -523,7 +534,7 @@ sub save {
     # anything.
 
     unless ( $is_add or $self->changed ) {
-        $DEBUG && _wm( 1, $DEBUG, "This object exists and has not changed. Exiting." );
+        $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "This object exists and has not changed. Exiting." );
         return $self;
     }
 
@@ -535,7 +546,7 @@ sub save {
         $level = $self->check_action_security({ required => SEC_LEVEL_WRITE,
                                                 is_add   => $is_add });
     }
-    $DEBUG && _wm( 1, $DEBUG, "Security check passed ok. Continuing." );
+    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Security check passed ok. Continuing." );
 
     # Callback for objects to do something before they're saved
 
@@ -596,10 +607,10 @@ sub post_fetch_id { return undef }
 sub _save_insert {
     my ( $self, $p ) = @_;
     $p ||= {};
-    my $DEBUG = DEBUG_SAVE || $p->{DEBUG};
-    $DEBUG && _wm( 1, $DEBUG, "Treating the save as an INSERT." );
+    $p->{DEBUG} ||= DEBUG_SAVE;
+    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Treating the save as an INSERT." );
 
-    my $db = $p->{db} || $self->global_db_handle;
+    my $db = $p->{db} || $self->global_datasource_handle( $p->{connect_key} );
 
     # Ability to get the ID you want before the insert statement
     # is executed. If something is returned, push the value
@@ -610,7 +621,7 @@ sub _save_insert {
         $self->id( $pre_id );
         push @{ $p->{field} }, $self->id_field;
         push @{ $p->{value} }, $pre_id;
-        $DEBUG && _wm( 1, $DEBUG, "Retrieved ID before insert: $pre_id" );
+        $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Retrieved ID before insert: $pre_id" );
     }
 
     # Do the insert; ask DB to return the statement handle
@@ -644,7 +655,7 @@ sub _save_insert {
     my $post_id = $self->post_fetch_id( { %{ $p }, db => $db, statement => $sth } );
     if ( $post_id ) {	
         $self->id( $post_id );
-        $DEBUG && _wm( 1, $DEBUG, "ID fetched after insert: $post_id" );
+        $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "ID fetched after insert: $post_id" );
     }
 
     # Here we actually re-fetch any new information from the database
@@ -657,14 +668,15 @@ sub _save_insert {
     unless ( $p->{no_sync} or $self->no_save_sync ) {
         my $fill_in_fields = $self->CONFIG->{sql_defaults} || [];
         if ( scalar @{ $fill_in_fields } ) {
-            $DEBUG && _wm( 1, $DEBUG, "Fetching defaults for fields ",
-                           join( ' // ', @{ $fill_in_fields } ), " after insert." );
+            $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Fetching defaults for fields ",
+                              join( ' // ', @{ $fill_in_fields } ), " after insert." );
             my $row = eval { $self->db_select({
                                  from   => [ $self->table_name ],
                                  select => $fill_in_fields,
                                  where  => $self->id_clause( undef, undef, $p ),
                                  db     => $p->{db},
-                                 return => 'single' }) };
+                                 return => 'single',
+                                 DEBUG  => $p->{DEBUG} }) };
 
             # Even though there was an error, we probably want to continue
             # processing... I'm ambivalent about this.
@@ -676,7 +688,7 @@ sub _save_insert {
             }
             else {
                 for ( my $i = 0; $i < scalar @{ $fill_in_fields }; $i++ ) {
-                    $DEBUG && _wm( 2, $DEBUG, "Setting $fill_in_fields->[$i] to $row->[$i]" );
+                    $p->{DEBUG} && _wm( 2, $p->{DEBUG}, "Setting $fill_in_fields->[$i] to $row->[$i]" );
                     $self->{ $fill_in_fields->[ $i ] } = $row->[ $i ];
                 }
             }
@@ -696,7 +708,7 @@ sub _save_insert {
 
 sub _save_update {
     my ( $self, $p ) = @_;
-    my $DEBUG = DEBUG_SAVE || $p->{DEBUG};
+    $p->{DEBUG} ||= DEBUG_SAVE;
 
     # If the ID of the object is changing, we still need to be able to
     # refer to the row with its old ID; allow the user to pass in the old
@@ -705,7 +717,7 @@ sub _save_update {
     my $id_clause = ( $p->{use_id} )
                       ? $self->id_clause( $p->{use_id}, undef, $p )
                       : $self->id_clause( undef, undef, $p );
-    $DEBUG && _wm( 1, $DEBUG, "Processing save as UPDATE with clause ($id_clause)" );
+    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Processing save as UPDATE with clause ($id_clause)" );
 
     # Note that the 'field' and 'value' parameters are in $p and
     # exist when the hashref is expanded into %args
@@ -734,14 +746,14 @@ sub remove {
     # Don't remove it unless it's been saved already
 
     return undef   unless ( $self->is_saved );
-    my $DEBUG = DEBUG || $p->{DEBUG};
+    $p->{DEBUG} ||= DEBUG;
 
     my $level = SEC_LEVEL_WRITE;
     unless ( $p->{skip_security} ) {
         $level = $self->check_action_security({ required => SEC_LEVEL_WRITE });
     }
 
-    $DEBUG && _wm( 1, $DEBUG, "Security check passed ok. Continuing." );
+    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Security check passed ok. Continuing." );
 
     # Allow members to perform an action before getting removed
 
@@ -756,7 +768,7 @@ sub remove {
                             where => $where,
                             value => $p->{value},
                             db    => $p->{db},
-                            DEBUG => $DEBUG  }) };
+                            DEBUG => $p->{DEBUG}  }) };
 
     # Throw the error if it occurs
 
@@ -843,7 +855,7 @@ removing an object from the cache.
 Of course, these methods can also do anything else you like. :-)
 
 As you can see, all the methods are optional. Along with
-L<SPOPS::ClassFactory>, you can create an entirely virtual class
+L<SPOPS::ClassFactory|SPOPS::ClassFactory>, you can create an entirely virtual class
 consisting only of configuration information. So you can actually
 create the implementation for a new object in two steps:
 
@@ -1142,7 +1154,7 @@ B<fetch_iterator \%params )>
 
 Uses the same parameters as C<fetch_group()> but instead of returning
 an arrayref with all the objects, it returns an
-L<SPOPS::Iterator::DBI> object. You can use this object to step
+L<SPOPS::Iterator::DBI|SPOPS::Iterator::DBI> object. You can use this object to step
 through the objects one at a time, which can be an enormous resource
 savings if you are retrieving large groups of objects.
 
@@ -1217,7 +1229,7 @@ yourself and an ID value exists in your object, you can do:
 
 to tell SPOPS to treat the request as a creation rather than an update.
 
-One other thing to note if you are using L<SPOPS::Secure> for
+One other thing to note if you are using L<SPOPS::Secure|SPOPS::Secure> for
 security: SPOPS assumes that your application determines whether a
 user can create an object. That is, all requests to create an object
 are automatically approved. Once the object is created, the initial
@@ -1275,7 +1287,7 @@ but you can subclass it and do what you wish
 
 This class supports lazy loading, available in SPOPS 0.40 and
 later. All you need to do is define one or more 'column_group' entries
-in the configuration of your object and L<SPOPS> will do the rest.
+in the configuration of your object and L<SPOPS|SPOPS> will do the rest.
 
 If you are interested: the method C<perform_lazy_load()> does the
 actual fetch of the field value.
@@ -1289,7 +1301,7 @@ not be able to get it.
 
 Like all SPOPS classes, any errors encountered will be tossed up to
 the application using a die() and a simple string as a message. We
-also set more detailed information in a number of L<SPOPS::Error>
+also set more detailed information in a number of L<SPOPS::Error|SPOPS::Error>
 package variables; see that module for more details.
 
 =head1 TO DO
@@ -1317,6 +1329,6 @@ it under the same terms as Perl itself.
 
 Chris Winters  <chris@cwinters.com>
 
-See the L<SPOPS> module for the full author list.
+See the L<SPOPS|SPOPS> module for the full author list.
 
 =cut

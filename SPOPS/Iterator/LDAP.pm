@@ -1,6 +1,6 @@
 package SPOPS::Iterator::LDAP;
 
-# $Id: LDAP.pm,v 1.4 2001/08/28 21:09:54 lachoy Exp $
+# $Id: LDAP.pm,v 1.7 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS           qw( _w DEBUG );
@@ -8,8 +8,8 @@ use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 use SPOPS::Secure   qw( :level );
 
 @SPOPS::Iterator::LDAP::ISA = qw( SPOPS::Iterator );
-$SPOPS::Iterator::LDAP::VERSION  = '1.8';
-$SPOPS::Iterator::LDAP::Revision = substr(q$Revision: 1.4 $, 10);
+$SPOPS::Iterator::LDAP::VERSION  = '1.90';
+$SPOPS::Iterator::LDAP::Revision = substr(q$Revision: 1.7 $, 10);
 
 # Keys with _LDAP at the beginning are specific to this implementation;
 # keys without _LDAP at the begining are used in all iterators.
@@ -20,7 +20,7 @@ sub initialize {
     $self->{_LDAP_OFFSET}    = $p->{offset};
     $self->{_LDAP_MAX}       = $p->{max};
     $self->{_LDAP_ID_LIST}   = $p->{id_list};
-    $self->{_LDAP_COUNT}     = 0;
+    $self->{_LDAP_COUNT}     = 1;
     $self->{_LDAP_RAW_COUNT} = 0;
 }
 
@@ -171,8 +171,9 @@ methods listed here are for SPOPS developers (versus SPOPS users).
 
 B<initialize()>
 
-Store the L<Net::LDAP::Message> object so we can peel off one record
-at a time, along with the various other pieces of information.
+Store the L<Net::LDAP::Message|Net::LDAP::Message> object so we can
+peel off one record at a time, along with the various other pieces of
+information.
 
 B<fetch_object()>
 
@@ -185,11 +186,11 @@ Just clear out the C<Net::LDAP::Message> object.
 
 =head1 SEE ALSO
 
-L<SPOPS::Iterator>
+L<SPOPS::Iterator|SPOPS::Iterator>
 
-L<SPOPS::LDAP>
+L<SPOPS::LDAP|SPOPS::LDAP>
 
-L<Net::LDAP>
+L<Net::LDAP|Net::LDAP>
 
 =head1 COPYRIGHT
 

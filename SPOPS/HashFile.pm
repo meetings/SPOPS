@@ -1,14 +1,14 @@
 package SPOPS::HashFile;
 
-# $Id: HashFile.pm,v 1.9 2001/08/22 10:51:45 lachoy Exp $
+# $Id: HashFile.pm,v 1.13 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS;
 use Data::Dumper;
 
 @SPOPS::HashFile::ISA       = qw( SPOPS );
-$SPOPS::HashFile::VERSION   = '1.8';
-$SPOPS::HashFile::Revision  = substr(q$Revision: 1.9 $, 10);
+$SPOPS::HashFile::VERSION   = '1.90';
+$SPOPS::HashFile::Revision  = substr(q$Revision: 1.13 $, 10);
 
 # Just grab the tied hash from the SPOPS::TieFileHash
 
@@ -24,7 +24,7 @@ sub new {
 
 # Subclasses can override
 
-sub initialize { return 1; }
+sub initialize { return 1 }
 
 sub class_initialize {
     my $class = shift;
@@ -56,26 +56,29 @@ sub save {
     unless ( $obj->{filename} ) {
         die "Cannot save data: the filename has been erased. Did you assign an empty hash to the object?\n";
     }
+    if ( -f "$obj->{filename}.backup" ) {
+        unlink( "$obj->{filename}.backup}" ); # just to be sure...
+    }
     if ( -f $obj->{filename} ) {
-        rename( $obj->{filename}, "$obj->{filename}.old" ) 
+        rename( $obj->{filename}, "$obj->{filename}.backup" )
               || die "Cannot rename old file to make room for new one. Error: $!";
     }
     return undef unless ( $self->pre_save_action( $p ) );
     my %data = %{ $obj->{data} };
     $p->{dumper_level} ||= 2;
     local $Data::Dumper::Indent = $p->{dumper_level};
-    my $string = Data::Dumper->Dump( [ \%data ], [ 'data' ] ); 
+    my $string = Data::Dumper->Dump( [ \%data ], [ 'data' ] );
     eval { open( INFO, "> $obj->{filename}" ) || die $! };
     if ( $@ ) {
-        rename( "$obj->{filename}.old", $obj->{filename} ) 
+        rename( "$obj->{filename}.backup", $obj->{filename} )
               || die "Cannot open file for writing (reason: $@ ) and ",
                      "cannot move backup file to original place. Reason: $!";
         die "Cannot open file for writing. Backup file restored. Error: $@";
     }
     print INFO $string;
     close( INFO );
-    if ( -f "$obj->{filename}.old" ) {
-        unlink( "$obj->{filename}.old" ) 
+    if ( -f "$obj->{filename}.backup" ) {
+        unlink( "$obj->{filename}.backup" )
               || warn "Cannot remove the old data file. It still lingers in $obj->{filename}.old....\n";
     }
     return undef unless ( $self->post_save_action( $p ) );
@@ -105,7 +108,7 @@ sub remove {
 sub clone {
     my ( $self, $p ) = @_;
     $p->{filename} ||= tied %{ $self }->{filename};
-    my $new = $self->new( { filename => $p->{filename}, perm => $p->{perm} } ); 
+    my $new = $self->new( { filename => $p->{filename}, perm => $p->{perm} } );
     while ( my ( $k, $v ) = each %{ $self } ) {
         $new->{ $k } = $p->{ $k } || $v;
     }
@@ -119,7 +122,7 @@ package SPOPS::TieFileHash;
 use strict;
 
 @SPOPS::TieFileHash::ISA       = ();
-$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.9 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
 
 # These are all very standard routines for a tied hash; more info: see
 # 'perldoc Tie::Hash'
@@ -138,7 +141,7 @@ sub TIEHASH {
     unless ( $filename ) {
         die "You must pass a filename to use for reading and writing.\n";
     }
-    my $file_exists = ( -f $filename ) ? 1 : 0;
+    my $file_exists = ( -f $filename );
     unless ( $file_exists ) {
         if ( $perm eq 'write-new' or $perm eq 'new' ) {
             $perm = 'new';
@@ -147,8 +150,8 @@ sub TIEHASH {
             die "Cannot create object without existing file or 'new' permission (File: $filename; Permission: $perm)\n";
         }
     }
-    if ( $perm eq 'write-new' ) { $perm = 'write' }
-    
+    $perm = 'write' if ( $perm eq 'write-new' );
+
     my $data = undef;
     if ( $file_exists ) {
         open( PD, $filename ) || die "Cannot open ($filename). Reason: $!";
@@ -159,7 +162,7 @@ sub TIEHASH {
         # Note that we create the SIG{__WARN__} handler here to trap any
         # messages that might be sent to STDERR; we want to capture the
         # message and send it along in a 'die' instead
-        
+
         {
             local $SIG{__WARN__} = sub { return undef };
             no strict 'vars';
@@ -177,31 +180,31 @@ sub TIEHASH {
 }
 
 
-sub FETCH  { 
+sub FETCH  {
     my ( $self, $key ) = @_;
     return undef unless $key;
-    return $self->{data}->{ $key }; 
+    return $self->{data}->{ $key };
 }
 
 
-sub STORE  { 
-    my ( $self, $key, $value ) = @_; 
-    return undef unless $key; 
-    return $self->{data}->{ $key } = $value; 
+sub STORE  {
+    my ( $self, $key, $value ) = @_;
+    return undef unless $key;
+    return $self->{data}->{ $key } = $value;
 }
 
 
 sub EXISTS {
-    my ( $self, $key ) = @_;  
-    return undef unless $key; 
-    return exists $self->{data}->{ $key }; 
+    my ( $self, $key ) = @_;
+    return undef unless $key;
+    return exists $self->{data}->{ $key };
 }
 
 
-sub DELETE { 
-    my ( $self, $key ) = @_; 
-    return undef unless $key; 
-    return delete $self->{data}->{ $key }; 
+sub DELETE {
+    my ( $self, $key ) = @_;
+    return undef unless $key;
+    return delete $self->{data}->{ $key };
 }
 
 
@@ -213,7 +216,7 @@ sub CLEAR {
     if ( $self->{perm} ne 'write' ) {
         die "Cannot remove $self->{filename}; permission set to read-only.\n";
     }
-    unlink( $self->{filename} ) 
+    unlink( $self->{filename} )
           || die "Cannot remove file $self->{filename}. Reason: $!";
     $self->{data} = undef;
     $self->{perm} = undef;
@@ -308,7 +311,7 @@ B<remove>
 Deletes the file you read the object from, and blanks out all data in
 the object.
 
-B<clone( { filename =E<gt> $, [ perm =E<gt> $ ] } )> 
+B<clone( { filename =E<gt> $, [ perm =E<gt> $ ] } )>
 
 Create a new object from the old, but you can change the filename and
 permission at the same time. Example:
@@ -336,14 +339,16 @@ the keys match in case, etc. This just stores some information about
 the object (filename, permission, and data) and lets you go on your
 merry way.
 
-However, since we recently changed L<SPOPS::Tie> to make
+However, since we recently changed L<SPOPS::Tie|SPOPS::Tie> to make
 field-checking optional we might be able to use it.
 
 =head1 BUGS
 
 =head1 SEE ALSO
 
-L<SPOPS>, L<Data::Dumper>
+L<SPOPS|SPOPS>
+
+L<Data::Dumper|Data::Dumper>
 
 =head1 COPYRIGHT
 

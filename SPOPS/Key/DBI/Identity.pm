@@ -1,13 +1,13 @@
 package SPOPS::Key::DBI::Identity;
 
-# $Id: Identity.pm,v 1.10 2001/08/22 10:51:45 lachoy Exp $
+# $Id: Identity.pm,v 1.13 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
 @SPOPS::Key::DBI::Identity::ISA      = ();
-$SPOPS::Key::DBI::Identity::VERSION  = '1.8';
-$SPOPS::Key::DBI::Identity::Revision = substr(q$Revision: 1.10 $, 10);
+$SPOPS::Key::DBI::Identity::VERSION  = '1.90';
+$SPOPS::Key::DBI::Identity::Revision = substr(q$Revision: 1.13 $, 10);
 
 # Ensure only POST_fetch_id used
 
@@ -16,7 +16,7 @@ sub pre_fetch_id  { return undef }
 
 # Retrieve the IDENTITY value
 
-sub post_fetch_id { 
+sub post_fetch_id {
     my ( $self, $p ) = @_;
     eval { $p->{statement}->finish };
     my $sql = 'SELECT @@IDENTITY';
@@ -25,10 +25,10 @@ sub post_fetch_id {
         $sth = $p->{db}->prepare( $sql );
         $sth->execute;
     };
-  
+
     # Don't clear the error so it will persist from SELECT statement
 
-    if ( $@ ) {   
+    if ( $@ ) {
         $SPOPS::Error::user_msg   = 'Record saved, but ID of record unknown';;
         die $SPOPS::Error::user_msg;
     }
@@ -90,7 +90,9 @@ Nothing known.
 
 =head1 SEE ALSO
 
-L<DBD::Sybase>, L<DBI>
+L<DBD::Sybase|DBD::Sybase>
+
+L<DBI|DBI>
 
 =head1 COPYRIGHT
 
@@ -103,6 +105,6 @@ it under the same terms as Perl itself.
 
 Chris Winters  <chris@cwinters.com>
 
-See the L<SPOPS> module for the full author list.
+See the L<SPOPS|SPOPS> module for the full author list.
 
 =cut

@@ -1,0 +1,25 @@
+=head1 NAME
+
+SPOPS::Manual::Relationships - SPOPS object relationships
+
+=head1 DESCRIPTION
+
+This document aims to answer the following questions:
+
+=over 4
+
+=item *
+
+How do I relate objects?
+
+=back
+
+=head1 COPYRIGHT
+
+Copyright (c) 2001 Chris Winters. All rights reserved.
+
+See L<SPOPS::Manual|SPOPS::Manual> for license.
+
+=head1 AUTHORS
+
+Chris Winters <chris@cwinters.com>

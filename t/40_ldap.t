@@ -1,15 +1,20 @@
 # -*-perl-*-
 
-# $Id: 40_ldap.t,v 1.6 2001/08/20 21:06:40 lachoy Exp $
+# $Id: 40_ldap.t,v 1.10 2001/09/20 14:56:17 lachoy Exp $
 
-use constant NUM_TESTS => 26;
+use strict;
+use constant NUM_TESTS => 37;
+use Data::Dumper qw( Dumper );
 
-my $LDAP_CLASS = 'LDAP_Test';
-my $LDAP_OU    = 'ou=SPOPSTest';
-my ( $BASE_DN );
+my $USER_LDAP_CLASS  = 'LDAP_User';
+my $GROUP_LDAP_CLASS = 'LDAP_Group';
+my $TEST_OU          = 'ou=SPOPSTest';
+my $USER_OU          = "ou=Users";
+my $GROUP_OU         = "ou=Groups";
+my ( $BASE_DN, $USER_BASE_DN, $GROUP_BASE_DN );
 
-my @DATA_FIELDS = qw( uid cn sn givenname mail );
-my @OBJECT_DATA = (
+my @USER_FIELDS = qw( uid cn sn givenname mail );
+my @USER_DATA = (
    [ 'laverne', 'Laverne the Great', 'DaFazio', 'Laverne', 'laverne@beer.com' ],
    [ 'fonzie', 'The Fonz', 'Fonzerelli', 'Arthur', 'fonzie@cool.com' ],
    [ 'lachoy', 'La Choy', 'Choy', 'La', 'lachoy@spoiled.com' ],
@@ -36,13 +41,15 @@ my @OBJECT_DATA = (
     require_ok( 'SPOPS::LDAP' );
     require_ok( 'SPOPS::Initialize' );
 
-    # Initialize the class
+    # Initialize our classes
 
-    $BASE_DN = "$LDAP_OU,$config->{LDAP_base_dn}";
+    $BASE_DN       = "$TEST_OU,$config->{LDAP_base_dn}";
+    $USER_BASE_DN  = "$USER_OU,$BASE_DN";
+    $GROUP_BASE_DN = "$GROUP_OU,$BASE_DN";
     my $spops_config = {
-         tester => {
-             ldap_base_dn => $BASE_DN,
-             class        => $LDAP_CLASS,
+         user => {
+             ldap_base_dn => $USER_BASE_DN,
+             class        => $USER_LDAP_CLASS,
              isa          => [ 'SPOPS::LDAP' ],
              field        => [ qw/ uid cn sn givenname mail objectclass / ],
              id_field     => 'uid',
@@ -51,18 +58,34 @@ my @OBJECT_DATA = (
              multivalue   => [ 'objectclass' ],
              ldap_object_class => [ qw/ top person inetOrgPerson organizationalPerson / ],
              ldap_fetch_object_class => 'person',
+             links_to     => { $GROUP_LDAP_CLASS => 'uniquemember' },
+         },
+         group => {
+             ldap_base_dn => $GROUP_BASE_DN,
+             class        => $GROUP_LDAP_CLASS,
+             isa          => [ 'SPOPS::LDAP' ],
+             field        => [ qw/ cn uniquemember description objectclass / ],
+             id_field     => 'cn',
+             field_map    => { name => 'cn', notes => 'description' },
+             multivalue   => [ 'uniquemember', 'objectclass' ],
+             ldap_object_class => [ qw/ top groupOfUniqueNames / ],
+             ldap_fetch_object_class => 'groupOfUniqueNames',
+             has_a        => { $USER_LDAP_CLASS => 'uniquemember' },
          }
+
     };
 
-    # Tests: 4 - 5
+    # Tests: 4 - 6
 
     my $class_init_list = eval { SPOPS::Initialize->process({ config => $spops_config }) };
     ok( ! $@, 'Initialize process run' );
-    is( $class_init_list->[0], $LDAP_CLASS, 'Class initialize' );
+    my %class_init_map = map { $_ => 1 } @{ $class_init_list };
+    is( $class_init_map{ $USER_LDAP_CLASS }, 1, 'Class initialize (user)' );
+    is( $class_init_map{ $GROUP_LDAP_CLASS }, 1, 'Class initialize (group)' );
 
     # Now create the connection
 
-    # Tests: 6 - 7
+    # Tests: 7 - 8
 
     my $ldap = Net::LDAP->new( $config->{LDAP_host}, 
                                port    => $config->{LDAP_port} );
@@ -83,32 +106,33 @@ my @OBJECT_DATA = (
 
     setup( $ldap );
 
-    my ( $test_object );
+    my ( $test_object, $fetch_id );
 
-    # Create an object
+    # Create a user object
 
-    # Tests: 8 - 11
+    # Tests: 9 - 12
 
     my @o = ();
     my $create_error = 0;
-    my $data_idx = int( rand scalar @OBJECT_DATA );
-    my $data = $OBJECT_DATA[ $data_idx ];
-    $test_object = $LDAP_CLASS->new;
+    my $data_idx = int( rand scalar @USER_DATA );
+    my $data = $USER_DATA[ $data_idx ];
+    $test_object = $USER_LDAP_CLASS->new;
     ok( ! $test_object->is_saved, 'Save status of new object' );
-    for ( my $j = 0; $j < scalar @DATA_FIELDS; $j++ ) {
-        $test_object->{ $DATA_FIELDS[ $j ] } = $data->[ $j ];
+    for ( my $j = 0; $j < scalar @USER_FIELDS; $j++ ) {
+        $test_object->{ $USER_FIELDS[ $j ] } = $data->[ $j ];
     }
     ok( $test_object->is_changed, 'Change status of modified object' );
     eval { $test_object->save({ ldap => $ldap }) };
     ok( ! $@, 'Create object' );
     ok( $test_object->is_saved, 'Save status of saved object' );
+    $fetch_id = $test_object->id;
     undef $test_object;
 
     # Fetch the object
 
-    # Tests: 12 - 15
+    # Tests: 13 - 16
 
-    $test_object = eval { $LDAP_CLASS->fetch( $data->[0], { ldap => $ldap }) };
+    $test_object = eval { $USER_LDAP_CLASS->fetch( $fetch_id, { ldap => $ldap }) };
     ok( ! $@ and $test_object, 'Fetch object (action)' );
     is( $test_object->{mail}, $data->[4], 'Fetch object (content)' );
     ok( $test_object->is_saved, 'Fetch object save status' );
@@ -118,9 +142,9 @@ my @OBJECT_DATA = (
 
     # Fetch the object with a filter
 
-    # Tests: 16 - 17
+    # Tests: 17 - 18
 
-    $test_object = eval { $LDAP_CLASS->fetch( undef,
+    $test_object = eval { $USER_LDAP_CLASS->fetch( undef,
                                               { ldap  => $ldap,
                                                 filter => $fetch_filter } ) };
     ok( ! $@ and $test_object, 'Fetch object by filter (action)' );
@@ -130,33 +154,51 @@ my @OBJECT_DATA = (
 
     # Fetch the object with a DN
 
-    # Tests: 18 - 19
+    # Tests: 19 - 20
 
-    $test_object = eval { $LDAP_CLASS->fetch_by_dn( $fetch_dn, { ldap => $ldap }) };
+    $test_object = eval { $USER_LDAP_CLASS->fetch_by_dn( $fetch_dn, { ldap => $ldap }) };
     ok( ! $@ and $test_object, 'Fetch object by DN (action)' );
     is( $test_object->{mail}, $data->[4], 'Fetch object by DN (content)' );
 
     # Now update that object
 
-    # Tests: 20 - 22
+    # Tests: 21 - 24
 
     $test_object->{cn}   = 'Heavy D';
     $test_object->{mail} = 'slapdash@yahoo.com';
     ok( $test_object->is_changed, 'Change status of modified object' );
     eval { $test_object->save({ ldap => $ldap }) };
-    ok( ! $@, 'Object update' );
-    ok( ! $test_object->is_changed, 'Change status of modified but saved object' );
+    ok( ! $@, 'Update object' );
+    ok( ! $test_object->is_changed, 'Change status of updated object' );
+    $fetch_id = $test_object->id;
+    undef $test_object;
+    $test_object = eval { $USER_LDAP_CLASS->fetch( $fetch_id, { ldap => $ldap }) };
+    is( $test_object->{cn}, 'Heavy D', 'Update object (content after)' );
+
+    # And update the object so that the 'ldap_update_only_changed' flag is on
+
+    # Tests: 25 - 27
+
+    $test_object->{givenname} = 'monster';
+    $test_object->CONFIG->{ldap_update_only_changed} = 1;
+    eval { $test_object->save({ ldap => $ldap }) };
+    ok( ! $@, 'Update object (only changed fields)' );
+    $fetch_id = $test_object->id;
+    undef $test_object;
+    $test_object = eval { $USER_LDAP_CLASS->fetch( $fetch_id, { ldap => $ldap }) };
+    is( $test_object->{givenname}, 'monster','Update object (content after, changed)' );
+    is( $test_object->{cn}, 'Heavy D','Update object (content after, unchanged)' );
     undef $test_object;
 
     # Now add some more
 
     my $added = 0;
-    for ( my $i = 0; $i < scalar @OBJECT_DATA; $i++ ) {
+    for ( my $i = 0; $i < scalar @USER_DATA; $i++ ) {
         next if ( $i == $data_idx );
-        my $new_object = $LDAP_CLASS->new;
-        my $new_data   = $OBJECT_DATA[ $i ];
-        for ( my $j = 0; $j < scalar @DATA_FIELDS; $j++ ) {
-            $new_object->{ $DATA_FIELDS[ $j ] } = $new_data->[ $j ];
+        my $new_object = $USER_LDAP_CLASS->new;
+        my $new_data   = $USER_DATA[ $i ];
+        for ( my $j = 0; $j < scalar @USER_FIELDS; $j++ ) {
+            $new_object->{ $USER_FIELDS[ $j ] } = $new_data->[ $j ];
         }
         eval { $new_object->save({ ldap => $ldap }) };
         $added++;
@@ -164,34 +206,96 @@ my @OBJECT_DATA = (
 
     # Then fetch them all
 
-    # Tests: 23
+    # Tests: 28
 
-    my $object_list = $LDAP_CLASS->fetch_group({ ldap  => $ldap });
-    is( scalar @OBJECT_DATA, scalar @{ $object_list }, 'Fetch group of objects' );
+    my $object_list = $USER_LDAP_CLASS->fetch_group({ ldap  => $ldap });
+    is( scalar @USER_DATA, scalar @{ $object_list }, 'Fetch group of objects' );
 
     # And fetch them all with an iterator
 
-    # Tests: 24-25
+    # Tests: 29 - 30
 
-    my $ldap_iter = $LDAP_CLASS->fetch_iterator({ ldap => $ldap });
+    my $ldap_iter = $USER_LDAP_CLASS->fetch_iterator({ ldap => $ldap });
     ok( $ldap_iter->isa( 'SPOPS::Iterator' ), 'Iterator return' );
     my $iter_count = 0;
     while ( my $iterated = $ldap_iter->get_next ) {
         $iter_count++;
     }
-    is( scalar @OBJECT_DATA, $iter_count, 'Iterate through objects' );
+    is( scalar @USER_DATA, $iter_count, 'Iterate through objects' );
 
-    # And remove all the entries
+    # Now add two groups
 
-    # Tests: 26
+    my $public_group = eval { $GROUP_LDAP_CLASS->new({ cn          => 'public',
+                                                       description => 'Public Group',
+                                                       uniquemember => [] })
+                                               ->save({ ldap => $ldap }) };
+    my $admin_group  = eval { $GROUP_LDAP_CLASS->new({ cn           => 'admin',
+                                                       description  => 'Admin Group',
+                                                       uniquemember => []  })
+                                               ->save({ ldap => $ldap }) };
 
-    my $removed = 0;
+    # Add every user to the public group and every other user to the
+    # admin group
+
+    # Tests: 31 - 32
+
+    my $user_iter = $USER_LDAP_CLASS->fetch_iterator({ ldap => $ldap });
+    my ( $public_count, $admin_count, $public_ok, $admin_ok ) = ( 0, 0, 0, 0 );
+    while ( my $user = $user_iter->get_next ) {
+        eval { $public_group->user_add( [ $user ], { ldap => $ldap } ) };
+        $public_ok++ unless ( $@ );
+        $public_count++;
+        if ( $public_count % 2 == 0 ) {
+            $admin_group->user_add( [ $user ], { ldap => $ldap } );
+            $admin_ok++ unless ( $@ );
+            $admin_count++;
+        }
+    }
+    is( $public_ok, $public_count, "Add has_a 1" );
+    is( $admin_ok,  $admin_count,  "Add has_a 2" );
+
+    # Now try to fetch them again
+
+    # Tests: 33 - 34
+
+    my $public_user_list = $public_group->user({ ldap => $ldap });
+    my $admin_user_list  = $admin_group->user({ ldap => $ldap });
+
+    is( scalar @{ $public_user_list }, $public_ok, "Fetch has_a 1" );
+    is( scalar @{ $admin_user_list },  $admin_ok,  "Fetch has_a 1" );
+
+    # And remove all users in the 'admin' group from the 'public' group
+
+    # Test: 35
+
+    my $removed = $public_group->user_remove( $admin_user_list, { ldap => $ldap } );
+    is( $public_ok - $admin_ok, $removed, "Remove has_a" );
+
+    # Now every user should link to one group -- see if it's so
+
+    # Test: 36
+
+    my ( $user_count, $group_count ) = ( 0, 0 );
+    $user_iter = $USER_LDAP_CLASS->fetch_iterator({ ldap => $ldap });
+    while ( my $user = $user_iter->get_next ) {
+        my $member_of = eval { $user->group({ ldap => $ldap }) };
+        warn $@ if ( $@ );
+        $user_count++;
+        $group_count += scalar @{ $member_of };
+    }
+    is( $user_count, $group_count, 'Links to' );
+
+    # Now remove all the users
+
+    # Tests: 37
+
+    my $user_remove = 0;
     foreach my $ldap_object ( @{ $object_list } ) {
         eval { $ldap_object->remove({ ldap => $ldap }) };
-        $removed++  unless ( $@ );
+        $user_remove++  unless ( $@ );
     }
 
-    is ( $removed, scalar @OBJECT_DATA, 'Remove object' );
+    is ( $user_remove, scalar @USER_DATA, 'Remove object' );
 
     # And remove our OU object
 
@@ -203,24 +307,42 @@ my @OBJECT_DATA = (
 
 sub setup {
     my ( $ldap ) = @_;
-    my $ldap_msg = $ldap->add( $BASE_DN,
+    add_ou( $ldap, $BASE_DN,       'SPOPS Testing' );
+    add_ou( $ldap, $USER_BASE_DN,  'SPOPS Testing Users' );
+    add_ou( $ldap, $GROUP_BASE_DN, 'SPOPS Testing Groups' );
+}
+
+
+sub add_ou {
+    my ( $ldap, $ou_dn, $cn ) = @_;
+    my $ldap_msg = $ldap->add( $ou_dn,
                                attr => [ objectclass => [ 'organizationalRole' ],
-                                         cn          => [ 'SPOPS Testing Group' ] ]);
+                                         cn          => [ $cn ] ]);
     if ( my $code = $ldap_msg->code ) {
-        die "Cannot create OU entry for ($BASE_DN) in LDAP\n",
+        die "Cannot create OU entry for ($ou_dn) in LDAP\n",
             "Error: ", $ldap_msg->error, " ($code)\n";
     }
 }
-
 
 # Find all the entries and remove them, along with our OU
 
 sub tear_down {
     my ( $ldap ) = @_;
-    my $ldap_msg = $ldap->search( scope  => 'sub', 
-                                  base   => $BASE_DN,
-                                  filter => 'objectclass=person' );
-    return if ( $ldap_msg->code );
+    my $entry_count = 0;
+    $entry_count += clear_all( $ldap, $USER_BASE_DN,  'person' );
+    $entry_count += clear_all( $ldap, $GROUP_BASE_DN, 'groupOfUniqueNames' );
+    my $ldap_msg = $ldap->delete( $BASE_DN );
+    return $entry_count if ( $ldap_msg->code );
+    return $entry_count + 1;
+}
+
+
+sub clear_all {
+    my ( $ldap, $ou_dn, $object_class ) = @_;
+    my $ldap_msg = $ldap->search( scope  => 'sub',
+                                  base   => $ou_dn,
+                                  filter => "objectclass=$object_class" );
+    return 0 if ( $ldap_msg->code );
     my $entry_count = 0;
     my @entries = $ldap_msg->entries;
     foreach my $entry ( @entries ) {
@@ -228,7 +350,8 @@ sub tear_down {
         $entry->update( $ldap );
         $entry_count++;
     }
-    $ldap->delete( $BASE_DN );
-    $entry_count++;
-    return $entry_count;
+    $ldap_msg = $ldap->delete( $ou_dn );
+    return $entry_count if ( $ldap_msg->code );
+    return $entry_count + 1;
 }
+

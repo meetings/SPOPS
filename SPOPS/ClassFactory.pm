@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory;
 
-# $Id: ClassFactory.pm,v 1.8 2001/08/22 11:10:04 lachoy Exp $
+# $Id: ClassFactory.pm,v 1.20 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use Class::ISA;
@@ -9,16 +9,20 @@ use SPOPS         qw( _w DEBUG );
 require Exporter;
 
 @SPOPS::ClassFactory::ISA       = qw( Exporter );
-$SPOPS::ClassFactory::VERSION   = '1.8';
-$SPOPS::ClassFactory::Revision  = substr(q$Revision: 1.8 $, 10);
-@SPOPS::ClassFactory::EXPORT_OK = qw( OK DONE ERROR RESTART FACTORY_METHOD RULESET_METHOD );
+$SPOPS::ClassFactory::VERSION   = '1.90';
+$SPOPS::ClassFactory::Revision  = substr(q$Revision: 1.20 $, 10);
+@SPOPS::ClassFactory::EXPORT_OK = qw( OK DONE NOTIFY ERROR RESTART
+                                      FACTORY_METHOD RULESET_METHOD );
 
 use constant OK             => 'OK';
 use constant DONE           => 'DONE';
+use constant NOTIFY         => 'NOTIFY';
 use constant ERROR          => 'ERROR';
 use constant RESTART        => 'RESTART';
 use constant FACTORY_METHOD => 'behavior_factory';
 use constant RULESET_METHOD => 'ruleset_factory';
+
+my %REQ_CLASSES = ();
 
 my $PK = '__private__'; # Save typing...
 
@@ -27,16 +31,10 @@ my $PK = '__private__'; # Save typing...
 # order and be able to keep the variable a lexical
 
 my @SLOTS = qw(
-    manipulate_configuration
-    id_method
-    read_code
-    fetch_by
-    has_a
-    links_to
-    add_rule
+  manipulate_configuration id_method read_code fetch_by has_a links_to add_rule
 );
 
-my %SLOTS = map { $SLOTS[ $_ ] => $_ } ( 0 .. ( scalar @SLOTS - 1 ) );
+my %SLOT_NUM = map { $SLOTS[ $_ ] => $_ } ( 0 .. ( scalar @SLOTS - 1 ) );
 
 
 ########################################
@@ -153,19 +151,18 @@ sub create_stub {
     my ( $class, $config ) = @_;
 
     my $this_class = $config->{class};
-    DEBUG() && _w( 1, "Creating stub ($this_class) with main alias ($config->{main_alias})");
+    DEBUG() && _w( 2, "Creating stub ($this_class) with main alias ($config->{main_alias})");
 
     # Create the barest information forming the class; just substitute our
     # keywords (currently only the class name) for the items in the
     # generic template above.
 
-    DEBUG() && _w( 1, "Creating $this_class on-the-fly." );
     my $module      = $GENERIC_TEMPLATE;
     $module        =~ s/%%CLASS%%/$this_class/g;
     my $isa_listing = join( ' ', @{ $config->{isa} } );
     $module        =~ s/%%ISA%%/$isa_listing/g;
 
-    DEBUG() && _w( 3, "Trying to create class with the code:\n$module\n" );
+    DEBUG() && _w( 5, "Trying to create class with the code:\n$module\n" );
 
     # Capture 'warn' calls that get triggered as a result of warnings,
     # redefined subroutines or whatnot; these get dumped to STDERR and
@@ -179,21 +176,26 @@ sub create_stub {
             return ( ERROR, "Error creating stub class: $@ with code\n" . $module );
         }
     }
-    return $class->require_isa( $config );
+    return $class->require_config_classes( $config );
 }
 
 
 # Just step through @{ $config->{isa} } and 'require' each entry
+# unless it's already been; also require everything in @{
+# $config->{rules_from} }
 
-sub require_isa {
+sub require_config_classes {
     my ( $class, $config ) = @_;
     my $this_class = $config->{class};
-    foreach my $isa_class ( @{ $config->{isa} } ) {
-        eval "require $isa_class";
+    my $rules_from = $config->{rules_from} || [];
+    foreach my $req_class ( @{ $config->{isa} }, @{ $rules_from } ) {
+        next if ( $REQ_CLASSES{ $req_class } );
+        eval "require $req_class";
         if ( $@ ) {
-            return ( ERROR, "Error requiring class ($isa_class) from ISA in ($this_class): $@" );
+            return ( ERROR, "Error requiring class ($req_class) from ISA in ($this_class): $@" );
         }
-        DEBUG() && _w( 1, "Class ($isa_class) require'd ok." );
+        DEBUG() && _w( 3, "Class ($req_class) require'd by ($this_class) ok." );
+        $REQ_CLASSES{ $req_class }++;
     }
     return ( OK, undef );
 }
@@ -209,8 +211,8 @@ sub require_isa {
 
 sub install_configuration {
     my ( $class, $this_class, $config ) = @_;
-    DEBUG() && _w( 3, "Installing configuration to class ($this_class)\n",
-                      Dumper( $config ) );
+    DEBUG() && _w( 1, "Installing configuration to class ($this_class)" );
+    DEBUG() && _w( 4, "Config ($this_class)\n", Dumper( $config ) );
     my $class_config = $this_class->CONFIG;
     while ( my ( $k, $v ) = each %{ $config } ) {
         $class_config->{ $k } = $v;
@@ -229,8 +231,13 @@ sub install_configuration {
 
 sub find_behavior {
     my ( $class, $this_class ) = @_;
-    my $subs = $class->find_parent_methods( $this_class, FACTORY_METHOD );
     my $this_config = $this_class->CONFIG;
+
+    # Allow config to specify ClassFactory-only classes in
+    # 'rules_from' configuration key.
+
+    my $rule_classes = $this_config->{rules_from} || [];
+    my $subs = $class->find_parent_methods( $this_class, $rule_classes, FACTORY_METHOD );
     my %behavior_map = ();
     foreach my $sub_info ( @{ $subs } ) {
         my $behavior_gen_class = $sub_info->[0];
@@ -242,11 +249,12 @@ sub find_behavior {
         # the class config.
 
         my $behaviors = $behavior_gen_sub->( $this_class ) || {};
-        DEBUG() && _w( 1, "Behaviors returned: ", join( ', ', keys %{ $behaviors } ) );
+        DEBUG() && _w( 2, "Behaviors returned for ($this_class): ",
+                          join( ', ', keys %{ $behaviors } ) );
         foreach my $slot_name ( keys %{ $behaviors } ) {
             my $typeof = ref $behaviors->{ $slot_name };
             next unless ( $typeof eq 'CODE' or $typeof eq' ARRAY' );
-            DEBUG() && _w( 1, "Adding slot behaviors for ($slot_name)" );
+            DEBUG() && _w( 2, "Adding slot behaviors for ($slot_name)" );
             if ( $typeof eq 'CODE' ) {
                 push @{ $this_config->{ $PK }{behavior_table}{ $slot_name } }, $behaviors->{ $slot_name };
             }
@@ -262,21 +270,22 @@ sub find_behavior {
 
 
 # Find all instances of method $method supported by classes in the ISA
-# of $class. Hooray for Class::ISA!
+# of $class as well as in \@added_classes. Hooray for Class::ISA!
 
 sub find_parent_methods {
-    my ( $class, $this_class, @method_list ) = @_;
-    my @isa_classes = Class::ISA::self_and_super_path( $this_class );
+    my ( $class, $this_class, $added_classes, @method_list ) = @_;
+    my @all_classes = ( @{ $added_classes },
+                        Class::ISA::self_and_super_path( $this_class ) );
     my @subs = ();
-    foreach my $isa_class ( @isa_classes ) {
+    foreach my $check_class ( @all_classes ) {
         no strict 'refs';
-        my $src = \%{ $isa_class . '::' };
+        my $src = \%{ $check_class . '::' };
 METHOD:
         foreach my $method ( @method_list ) {
             if ( defined( $src->{ $method } ) and
                  defined( my $sub = *{ $src->{ $method } }{CODE} ) ) {
-                push @subs, [ $isa_class, $sub ];
-                DEBUG() && _w( 1, "($this_class): Found ($method) in class ($isa_class)\n" );
+                push @subs, [ $check_class, $sub ];
+                DEBUG() && _w( 2, "($this_class): Found ($method) in class ($check_class)\n" );
                 last METHOD;
             }
         }
@@ -295,12 +304,15 @@ METHOD:
 sub exec_behavior {
     my ( $class, $slot_name, $this_class ) = @_;
     my $this_config = $this_class->CONFIG;
+
+    # Grab the behavior list and see how many there are to execute; if
+    # none, then we're all done with this slot
+
     my $behavior_list = $this_config->{ $PK }{behavior_table}{ $slot_name };
-
-    # No behaviors to execute, all done with this slot
-
-    return 1 unless ( ref $behavior_list eq 'ARRAY' and scalar @{ $behavior_list } );
-    DEBUG() && _w( 1, "Behaviors in ($this_class)($slot_name): ", scalar @{ $behavior_list } );
+    return 1 unless ( ref $behavior_list eq 'ARRAY' );
+    my $num_behaviors = scalar @{ $behavior_list };
+    return 1 unless ( $num_behaviors > 0 );
+    DEBUG() && _w( 2, "# behaviors in ($this_class)($slot_name): $num_behaviors" );
 
     # Cycle through the behaviors for this slot. Note that they are
     # currently unordered -- that is, the order shouldn't
@@ -309,14 +321,14 @@ sub exec_behavior {
 BEHAVIOR:
     foreach my $behavior ( @{ $behavior_list } ) {
 
-        DEBUG() && _w( 1, "Running behavior for slot ($slot_name) and class ($this_class)" );
+        DEBUG() && _w( 2, "Running behavior for slot ($slot_name) and class ($this_class)" );
 
         # If this behavior has already been run, then skip it. This
         # becomes relevant when we get a RESTART status from one of
         # the behaviors (below)
 
         if ( $this_config->{ $PK }{behavior_run}{ $behavior } ) {
-            DEBUG() && _w( 1, "Skipping behavior, already run." );
+            DEBUG() && _w( 2, "Skipping behavior, already run." );
             next BEHAVIOR;
         }
         # Every behavior should return a two-element list with the
@@ -331,7 +343,7 @@ BEHAVIOR:
 
         # If anything but an error, go ahead and mark this behavior as
         # run. Note that we rely on coderefs always stringifying to
-        # the same memory location.
+        # the same memory location. (This is a safe assumption, I think.)
 
         $this_config->{ $PK }{behavior_run}{ $behavior }++;
 
@@ -345,24 +357,48 @@ BEHAVIOR:
 
         next BEHAVIOR  if ( $status eq OK );
 
+        if ( $status eq NOTIFY ) {
+            warn join( "\n", "WARNING executing $slot_name for $class", "  $msg",
+                             'Process will continue' ), "\n";
+            next BEHAVIOR;
+        }
+
         # RESTART is a little tricky. A 'RESTART' means that we need
         # to re-check this class for new behaviors. If we don't find
         # any new ones, no problem. If we do find new ones, then we
         # need to then re-run all behavior slots before this one. Note
         # that we will *NOT* re-run behaviors that have already been
-        # run -- we're tracking them.
+        # run -- we're tracking them in 'behavior_run'
 
         if ( $status eq RESTART ) {
+            $class->sync_isa( $this_class );
             my $new_behavior_map = $class->find_behavior( $this_class );
-            my $behaviors_same   = $class->compare_behavior_map( $new_behavior_map,
-                                                                 $this_config->{ $PK }{behavior_map} );
+            my $behaviors_same   = $class->compare_behavior_map(
+                                                     $new_behavior_map,
+                                                     $this_config->{ $PK }{behavior_map} );
             next BEHAVIOR if ( $behaviors_same );
+            DEBUG() && _w( 2, "Behaviors changed after receiving RESTART; re-running",
+                              "from slot ($SLOTS[0]) to ($slot_name)" );
             $this_config->{ $PK }{behavior_map} = $new_behavior_map;
-            for ( my $i = 0; $i <= $SLOTS{ $slot_name }; $i++ ) {
+            for ( my $i = 0; $i <= $SLOT_NUM{ $slot_name }; $i++ ) {
                 $class->exec_behavior( $SLOTS[ $i ], $this_class );
             }
         }
     }
+    return 1;
+}
+
+
+# Sync $this_class::ISA with $this_class->CONFIG->{isa}
+
+sub sync_isa {
+    my ( $class, $this_class ) = @_;
+    my $config_isa = $this_class->CONFIG->{isa};
+    no strict 'refs';
+    @{ $this_class . '::ISA' } = @{ $config_isa };
+    DEBUG && _w( 2, "ISA for ($this_class) synched, now: ", join( ', ', @{ $config_isa } ) );
+    my ( $status, $msg ) = $class->require_config_classes( $this_class->CONFIG );
+    die "$msg\n" if ( $status eq ERROR );
     return 1;
 }
 
@@ -376,6 +412,7 @@ sub compare_behavior_map {
     return undef unless ( $class->_compare_behaviors( $b2, $b1 ) );
     return 1;
 }
+
 
 # Return false if all classes and slot names of behavior-1 are not in
 # behavior-2
@@ -419,7 +456,7 @@ SPOPS::ClassFactory - Create SPOPS classes from configuration and code
 
 =head1 SYNOPSIS
 
- # Using SPOPS::Initialize (recommended)
+ # Using SPOPS::Initialize (strongly recommended)
 
  my $config = { ... };
  SPOPS::Initialize->process({ config => $config });
@@ -439,203 +476,26 @@ if you try to use C<SPOPS::Configure> you will (for the moment) get a
 warning about using a deprecated interface and call this module, but
 that will not last forever.
 
-=head1 DISCUSSION
-
-(This section will probably be removed or merged into others as the
-behavior firms up.)
-
-So with configuration, we would create a number of slots into which
-classes could install behaviors. The slots might look something like:
-
- - manipulate_installed_configuration
- - id_method
- - read_code
- - fetch_by
- - has_a (relationship)
- - links_to (relationship)
- - add_rule
-
-(These are not definite yet and will probably change with actual
-usage.)
-
-A class in the hierarchy for an object could install a behavior in
-none or all of the slots. So for instance, C<SPOPS::Configure::DBI>
-would go away and be replaced by a 'links_to' behavior being installed
-by SPOPS::DBI.
-
-Multiple behaviors can be installed in each slot. I am still a little
-unclear about how things will be ordered -- I suspect that by doing a
-depth-first inheritance walk we will be ok. The processing of each
-slot can use a (slightly modified) 'Chain of Responsibility' pattern
--- a behavior can decide to perform or not perform any action and
-continue (OK), to perform an action, to declare the slot finished
-(DONE), to stop the process entirely (ERROR) or that the behavior has
-made changes which necessitates refreshing the behavior listing
-(RESTART)..
-
-As a completely untested example of a behavior, say we wanted to
-ensure that all of our objects are using a particular SPOPS::DBI
-subclass:
-
-   my $USE_CLASS = 'SPOPS::DBI::Pg';
-
-   sub check_spops_subclass {
-       my ( $config ) = @_;
-       foreach ( @{ $config->{isa} } ) {
-           s/^SPOPS::DBI::.*$/$USE_CLASS/;
-       }
-       return SPOPS::ClassFactory::OK;
-   }
-
-We would just put this method in a common parent to all our objects
-and install the behavior in the 'manipulate_configuration' slot. When
-the class is configured the rule would be executed and we would never
-have to worry about our objects using the wrong DBI class again. (This
-is common in OpenInteract when you install new packages and forget to
-run 'oi_manage change_spops_driver'.)
-
-I believe this would enable more focused and flexible behaviors. For
-instance, we could create one 'links_to' behavior for DBI to handle
-the current configuration style and another to handle the proposed
-(and more robust) ESPOPS configuration style. The first could step
-through the 'links_to' configuration items and process only those it
-can, while the second could do the same.
-
-We could also do wacky stuff, like install a 'read_code'
-behavior to use LWP to grab a module and checksums off a code
-repository somewhere. If the checksum and code match up, we can bring
-the code into the SPOPS class.
-
-This new scheme might sound more complicated, but I believe most of
-the complicated stuff will be done behind the scenes. These behaviors
-can be extremely simple and therefore easy to code and understand.
-
-=head1 SLOTS
-
-We use the term 'slots' to refer to the different steps we walk
-through to create, configure and auto-generate methods for an SPOPS
-class. Each 'slot' can have multiple behaviors attached to it, and the
-behaviors can come from any of the classes in the @ISA for the
-generated class.
-
-Here are the current slots and a description of each. Note that they
-might change -- in particular, the 'links_to' and 'has_a' slots might
-be merged into a single 'relationship' slot.
-
-=over 4
-
-=item *
-
-B<manipulate_configuration>: Modify the configuration as
-necessary. SPOPS comes with one method to transform arrayrefs (for
-easy typing) into hashref (for easy lookup). Other options might be to
-set application-specific information accessible from all your objects,
-futz around with the @ISA, etc.
-
-=item *
-
-B<id_method>: Very focused: generate an C<id( [ $new_id ] )>
-method. SPOPS uses these to ensure it can get the crucial information
-from every object -- class and ID -- without having to know what the
-ID field is.
-
-SPOPS comes with a default method for this that will probably work
-fine for you -- see L<SPOPS::ClassFactory::DefaultBehavior>.
-
-=item *
-
-B<read_code>: Reads in code from another class to the class
-being created/configured. SPOPS comes with a method to read the
-value(s) from the configuration key 'code_class', find them along @INC
-and read them in.
-
-But you can perform any action you need here -- you could even issue a
-SOAP request to read Perl code (along with checksums) off the net,
-check the code then read it in.
-
-=item *
-
-B<fetch_by>: Process the 'fetch_by' configuration key. SPOPS comes
-with autogenerated methods to do this, but you can modify it and
-implement your own.
-
-=item *
-
-B<has_a>: Process the 'has_a' configuration key. Usually this is
-implementation-specific and involves auto-generating methods. SPOPS
-comes with a default for this, but an implementation class can elect
-to not use it by returning the 'DONE' constant.
-
-=item *
-
-B<links_to>: Process the 'links_to' configuration key. Usually this is
-implementation-specific and involves auto-generating methods.
-
-=item *
-
-B<add_rule>: You will probably never need to create a behavior here:
-SPOPS has one that performs the same duties as
-C<SPOPS::Configure::Ruleset> used to -- it scans the @ISA of a class,
-finds the ruleset generation methods from all the parents and installs
-these coderefs to the class.
-
-=back
-
-=head1 BEHAVIOR GENERATOR
-
-The behavior generator is called 'behavior_factory' (the name can be
-imported in the constant 'FACTORY_METHOD') and it takes a single
-argument, the name of the class being generated. It should return a
-hashref with the slot names as keys. A value should either be a
-coderef (for a single behavior) or an arrayref of coderefs (for
-multiple behaviors).
-
-Here is an example, directly from from C<SPOPS>:
-
-  sub behavior_factory {
-      my ( $class ) = @_;
-      require SPOPS::ClassFactory::DefaultBehavior;
-      DEBUG() && _w( 1, "Installing SPOPS default behaviors for ($class)" );
-      return { manipulate_configuration => \&SPOPS::ClassFactory::DefaultBehavior::conf_modify_config,
-               read_code                => \&SPOPS::ClassFactory::DefaultBehavior::conf_read_code,
-               id_method                => \&SPOPS::ClassFactory::DefaultBehavior::conf_id_method,
-               has_a                    => \&SPOPS::ClassFactory::DefaultBehavior::conf_relate_hasa,
-               fetch_by                 => \&SPOPS::ClassFactory::DefaultBehavior::conf_relate_fetchby,
-               add_rule                 => \&SPOPS::ClassFactory::DefaultBehavior::conf_add_rules, };
-  }
-
-=head1 BEHAVIOR DESCRIPTION
-
-Behaviors can be simple or complicated, depending on what you need
-them to do. Here is an example of a behavior installed to the
-'manipulate_configuration' slot:
-
-   my $USE_CLASS = 'SPOPS::DBI::Pg';
-
-   sub check_spops_subclass {
-       my ( $class ) = @_;
-       foreach ( @{ $class->CONFIG->{isa} } ) {
-           s/^SPOPS::DBI::.*$/$USE_CLASS/;
-       }
-       return SPOPS::ClassFactory::OK;
-   }
-
-# NOTE: WE NEED TO DEAL WITH THIS ISA ISSUE SPECIFICALLY, SINCE YOU
-# HAVE @ISA AND \@$class->CONFIG->{isa}. Do they get synchronized?
-
-...
-
-There can be a few wrinkles, although you will probably never
-encounter any of them. One of the main ones is: what if a behavior
-modifies the 'ISA' of a class?
+See L<SPOPS::Manual::CodeGeneration|SPOPS::Manual::CodeGeneration> for
+a discussion of what this module does and how you can customize it.
 
 =head1 METHODS
 
 B<create( \%multiple_config, \%params )>
 
-This is the main interface into the class factory, and generally the
-only one you need. That said, most users will only ever require the
-C<SPOPS::Initialize> window into this functionality.
+Before you read on, are you sure you need to learn more about this
+process? If you are just using SPOPS (as opposed to extending it), you
+almost certainly want to look at
+L<SPOPS::Initialize|SPOPS::Initialize> instead since it hides all
+these machinations from you.
+
+So, we can now assume that you want to learn about how this class
+works. This is the main interface into the class factory, and
+generally the only one you will probably ever need. Other methods in
+the class factory rely on configuration information in the object or
+on particular methods ('behavior generators') in the object or the
+parents of the object to provide the actions for the class factory to
+process.
 
 Return value is an arrayref of classes created;
 
@@ -647,7 +507,8 @@ format:
    alias => { ... } }
 
 The second parameter is a hashref of options. Currently there is only
-one parameter supported, but the future could bring more options.
+one option supported, but the future could bring more options. Options
+right now:
 
 =over 4
 
@@ -656,13 +517,79 @@ one parameter supported, but the future could bring more options.
 B<alias_list> (\@) (optional)
 
 List of aliases to process from C<\%multiple_config>. If not given we
-simply read the keys of C<\%multiple_config> (screening out those that
-begin with '_').
+simply read the keys of C<\%multiple_config>, screening out those that
+begin with '_'.
 
 Use this if you only want to process a limited number of the SPOPS
 class definitions available in C<\%multiple_config>.
 
 =back
+
+=head2 Individual Configuration Methods
+
+B<find_behavior( $class )>
+
+Find all the factory method-generators in all members of the
+inheritance tree for an SPOPS class, then run each of the generators
+and keep track of the slots each generator uses, a.k.a. the behavior
+map.
+
+Return value is the behavior map, a hashref with keys as class names
+and values as arrayrefs of slot names. For instance:
+
+ my $b_map = SPOPS::ClassFactory->find_behavior( 'My::SPOPS' );
+ print "Behaviors retrieved for My::SPOPS\n";
+ foreach my $class_name ( keys %{ $b_map } ) {
+     print "  -- Retrieved from ($class_name): ",
+           join( ', ' @{ $b_map->{ $class_name } } ), "\n";
+ }
+
+B<exec_behavior( $slot_name, $class )>
+
+Execute behavior rules in slot C<$slot_name> collected by
+C<find_behavior()> for C<$class>.
+
+Executing the behaviors in a slot succeeds if there are no behaviors
+to execute or if all the behaviors execute without returning an
+C<ERROR>.
+
+If a behavior returns an C<ERROR>, the entire process is stopped and a
+C<die> is thrown with the message returned from the behavior.
+
+If a behavior returns a C<RESTART>, we re-find all behaviors for the
+class and if they do not match up with what was found earlier, run the
+behaviors that were not previously run before.
+
+For instance, if a behavior changes the C<@ISA> of a class (by
+modifying the C<{isa}> configuration key), we need to check that class
+to see if it has any additional behaviors for our class. In theory,
+you could get into some hairy situations with this recursion -- e.g.,
+two behaviors keep adding each other -- but practically it will rarely
+occur. (At least we hope so.)
+
+Return value: true if success, C<die>s on failure.
+
+B<create_stub( \%config )>
+
+Creates the class specified by C<\%config>, sets its C<@ISA> to what
+is set in C<\%config> and ensures that all members of the C<@ISA> are
+C<require>d.
+
+Return value: same as any behavior (OK or ERROR/NOTIFY plus message).
+
+B<require_config_classes( \%config )>
+
+Runs a 'require' on all members of the 'isa' and 'rules_from' keys in
+C<\%config>.
+
+Return value: same as a behavior (OK or ERROR/NOTIFY plus message).
+
+B<install_configuration( $class, \%config )>
+
+Installs the configuration C<\%config> to the class C<$class>. This is
+a simple copy and we do not do any transformation of the data.
+
+Return value: same as a behavior (OK or ERROR/NOTIFY plus message).
 
 =head2 Multiple Configuration Methods
 
@@ -696,59 +623,6 @@ configuration of all necessary classes.
 
 Calls: nothing.
 
-=head2 Individual Configuration Methods
-
-B<find_behavior( $class )>
-
-Find all the factory method-generators in all members of the
-inheritance tree for an SPOPS class, then run each of the generators
-and keep track of the slots each generator uses (behavior map).
-
-Return value is the behavior map, a hashref with keys as class names
-and values as arrayrefs of slot names. For instance:
-
- my $b_map = SPOPS::ClassFactory->find_behavior( 'My::SPOPS' );
- print "Behaviors retrieved for My::SPOPS\n";
- foreach my $class_name ( keys %{ $b_map } ) {
-     print "  -- Retrieved from ($class_name): ", 
-           join( ', ' @{ $b_map->{ $class_name } } ), "\n";
- }
-
-B<exec_behavior( $slot_name, $class )>
-
-Execute behavior rules in slot C<$slot_name> collected by
-C<find_behavior()> for C<$class>.
-
-Executing the behaviors in a slot succeeds if there are no behaviors
-to execute or if all the behaviors execute without returning an
-C<ERROR>.
-
-If a behavior returns an C<ERROR>, the entire process is stopped and a
-C<die> is thrown with the message returned from the behavior.
-
-Return value: true if success, C<die>s on failure.
-
-B<create_stub( \%config )>
-
-Creates the class specified by C<\%config>, sets its C<@ISA> to what
-is set in C<\%config> and ensures that all members of the C<@ISA> are
-C<require>d.
-
-Return value: same as any behavior (OK or ERROR plus message).
-
-B<require_isa( \%config )>
-
-Runs a 'require' on all members of the 'isa' key in C<\%config>.
-
-Return value: same as a behavior (OK or ERROR plus message).
-
-B<install_configuration( $class, \%config )>
-
-Installs the configuration C<\%config> to the class C<$class>. This is
-a simple copy and we do not do any transformation of the data.
-
-Return value: same as a behavior (OK or ERROR plus message).
-
 =head2 Utility Methods
 
 B<get_alias_list( \%multiple_config, \%params )>
@@ -759,11 +633,12 @@ C<\%multiple_config> that do not begin with '_'.
 
 Returns: arrayref of alias names.
 
-B<find_parent_methods( $class, @method_list )>
+B<find_parent_methods( $class, \@added_classes, @method_list )>
 
-Walks through the inheritance tree for C<$class> and finds all
-instances of any member of C<@method_list>. The first match wins, and
-only one match will be returned per class.
+Walks through the inheritance tree for C<$class> as well as each of
+the classes specified in C<\@added_classes> and finds all instances of
+any member of C<@method_list>. The first match wins, and only one
+match will be returned per class.
 
 Returns: arrayref of two-element arrayrefs describing all the places
 that $method_name can be executed in the inheritance tree; the first
@@ -772,15 +647,25 @@ item is the class name, the second a code reference.
 Example:
 
  my $parent_info = SPOPS::ClassFactory->find_parent_methods(
-                                'My::Class', 'method_factory', 'method_generate' );
+                            'My::Class', [], 'method_factory', 'method_generate' );
  foreach my $method_info ( @{ $parent_info } ) {
      print "Class $method_info->[0] found sub which has the result: ",
            $method_info->[1]->(), "\n";
  }
 
+B<sync_isa( $class )>
+
+Synchronize the C<@ISA> in C<$class> with the C<{isa}> key in its
+configuration. Also C<require>s all classes in the newly synchronized
+C<@ISA>.
+
+Returns true if there are no problems, throws a C<die> otherwise. (The
+only reason it would fail is if a recently added class cannot be
+C<require>d.)
+
 B<compare_behavior_map( \%behavior_map, \%behavior_map )>
 
-Returns 1 if the two are equivalent, 0 if not.
+Returns true if the two are equivalent, false if not.
 
 =head1 BUGS
 
@@ -796,7 +681,7 @@ Nothing known.
 
 =head1 SEE ALSO
 
-L<SPOPS>
+L<SPOPS|SPOPS>
 
 =head1 COPYRIGHT
 

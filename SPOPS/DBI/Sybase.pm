@@ -1,13 +1,13 @@
 package SPOPS::DBI::Sybase;
 
-# $Id: Sybase.pm,v 1.8 2001/08/22 10:51:45 lachoy Exp $
+# $Id: Sybase.pm,v 1.10 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS::Key::DBI::Identity;
 
 @SPOPS::DBI::Sybase::ISA      = ();
-$SPOPS::DBI::Sybase::VERSION  = '1.8';
-$SPOPS::DBI::Sybase::Revision = substr(q$Revision: 1.8 $, 10);
+$SPOPS::DBI::Sybase::VERSION  = '1.90';
+$SPOPS::DBI::Sybase::Revision = substr(q$Revision: 1.10 $, 10);
 
 sub sql_quote {
     my ( $class, $value, $type, $db ) = @_;
@@ -88,7 +88,11 @@ Nothing known.
 
 =head1 SEE ALSO
 
-L<SPOPS::Key::DBI::Identity>, L<DBD::Sybase>, L<DBI>
+L<SPOPS::Key::DBI::Identity|SPOPS::Key::DBI::Identity>
+
+L<DBD::Sybase|DBD::Sybase>
+
+L<DBI|DBI>
 
 =head1 COPYRIGHT
 
@@ -101,6 +105,6 @@ it under the same terms as Perl itself.
 
 Chris Winters  <chris@cwinters.com>
 
-See the L<SPOPS> module for the full author list.
+See the L<SPOPS|SPOPS> module for the full author list.
 
 =cut

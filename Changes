@@ -1,5 +1,114 @@
 Revision history for Perl extension SPOPS.
 
+0.51  Sun Oct 14 20:23:59 EDT 2001
+
+Overall:
+
+   - Centralized SPOPS documentation started
+
+   - LDAP bugfixes and additional tests
+
+   - Other fixes and goodies
+
+Individual:
+
+   * SPOPS/Manual*:
+
+     - Added first draft of SPOPS manual. Note that much of the
+     documentation was removed from other classes, reworked and placed
+     here. For example, all discussion of configuration keys is now in
+     one place, SPOPS::Manual::Configuration. Some pieces of the
+     manual are fairly complete while others are barren. To start,
+     just do 'perldoc SPOPS::Manual'.
+
+   * eg/(items from 0.50):
+
+     - Actually added these to the distribution (doh!)
+
+   * eg/My/DiscoverField.pm:
+
+     - Added sample ClassFactory behavior for auto-discovering fields
+     in a DBI datasource and using all of them as object properties.
+
+   * SPOPS/ClassFactory.pm:
+
+     - Allow rules-only classes to be specified in the configuration
+     field 'rules_from' in addition to in the 'isa' (used for
+     ClassFactory behaviors).
+
+     - change require_isa() to require_config_classes(), and enable it
+     to require the 'rules_from' classes as well
+
+   * SPOPS/ClassFactory/DBI.pm:
+
+     - Change 'warn' calls when we get an error to 'SPOPS::_w' calls,
+     to fit with everything else
+
+     - Change generated 'links_to' methods so that we get the database
+     handle from the correct class. (This hasn't been a problem for
+     people because most people use the same datasource to hold
+     related objects. But SPOPS doesn't care!)
+
+   * SPOPS/ClassFactory/DefaultBehavior.pm:
+
+     - Allow rules-only classes to be specified in the configuration
+     field 'rules_from' rather than in the 'isa' (used for rulesets)
+
+   * SPOPS/ClassFactory/LDAP.pm:
+
+     - Add %alias%_add() and %alias%_remove() calls to the 'has_a'
+     methods.
+
+     - Move certain parameter-parsing and object-getting functionality
+     from separate generated methods and into a method that gets
+     installed via the 'read_code' slot in the ClassFactory process.
+
+   * SPOPS/Iterator/(DBI|LDAP).pm:
+
+     - Fixed off-by-one error when using 'limit'
+
+   * SPOPS/Iterator/WrapList.pm:
+
+     - Added simple implementation of SPOPS::Iterator to wrap around an
+     already-existing list of objects.
+
+   * SPOPS/LDAP.pm:
+
+     - Modified the save procedures to first fetch the existing object
+     then implement a 'replace' on only the items that SPOPS knows
+     about.
+
+     - Modified 'fetch()' to work properly with a secured object that
+     is fetched with a filter rather than an ID.
+
+     - 'fetch_by_dn()' is much more sensible about how it works (it
+     now does a search for all objects below the particular DN and
+     returns the only one that should be there)
+
+     - Pulled out pre- and post- actions from fetch() so that other
+     methods can use them.
+
+     - You can force a filter to not be used by passing a true value
+     for the 'no_filter' parameter key to 'fetch'
+
+     - ensure that _perform_postfetch() looks at the {skip_security}
+     setting before checking security on a 'delay_security_check'
+     (Thanks to Andreas Nolte <Andreas.Nolte@Bertelsmann.de>)
+
+   * SPOPS/Secure.pm:
+
+     - Move security error reporting (putting error info into
+     SPOPS::Error plus the 'die' call) into a separate method so it
+     can be called from elsewhere
+
+   * t/40_ldap.t:
+
+     - Add tests for new feature signified by ldap_update_only_changed
+     configuration flag
+
+     - Add tests for 'has_a' and 'links_to' linking functionality
+
+
 0.50  Tue Aug 28 16:59:39 EDT 2001
 
 Overall:

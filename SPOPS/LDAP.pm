@@ -1,6 +1,6 @@
 package SPOPS::LDAP;
 
-# $Id: LDAP.pm,v 1.20 2001/08/28 21:32:45 lachoy Exp $
+# $Id: LDAP.pm,v 1.30 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use Data::Dumper     qw( Dumper );
@@ -14,8 +14,8 @@ use SPOPS::Secure    qw( :level );
 use constant DEBUG => 0;
 
 @SPOPS::LDAP::ISA       = qw( SPOPS );
-$SPOPS::LDAP::VERSION   = '1.8';
-$SPOPS::LDAP::Revision  = substr(q$Revision: 1.20 $, 10);
+$SPOPS::LDAP::VERSION   = '1.90';
+$SPOPS::LDAP::Revision  = substr(q$Revision: 1.30 $, 10);
 
 
 ########################################
@@ -24,13 +24,18 @@ $SPOPS::LDAP::Revision  = substr(q$Revision: 1.20 $, 10);
 
 # LDAP config items available from class/object
 
-sub base_dn           { return $_[0]->CONFIG->{ldap_base_dn} || die "No Base DN defined, cannot continue!\n"; }
-sub id_value_field    { return $_[0]->CONFIG->{id_value_field} }
-sub ldap_object_class { return $_[0]->CONFIG->{ldap_object_class} }
-sub ldap_fetch_object_class { return $_[0]->CONFIG->{ldap_fetch_object_class} }
+sub no_insert                { return $_[0]->CONFIG->{no_insert}   || {}  }
+sub no_update                { return $_[0]->CONFIG->{no_update}   || {}  }
+sub skip_undef               { return $_[0]->CONFIG->{skip_undef}  || {}  }
+sub base_dn                  { return $_[0]->CONFIG->{ldap_base_dn}
+                                || die "No Base DN defined, cannot continue!\n" }
+sub id_value_field           { return $_[0]->CONFIG->{id_value_field} }
+sub ldap_object_class        { return $_[0]->CONFIG->{ldap_object_class} }
+sub ldap_fetch_object_class  { return $_[0]->CONFIG->{ldap_fetch_object_class} }
+sub ldap_update_only_changed { return $_[0]->CONFIG->{ldap_update_only_changed} }
 
-sub get_superuser_id  { return $_[0]->CONFIG->{ldap_root_dn} }
-sub get_supergroup_id { return $_[0]->CONFIG->{ldap_root_group_dn} }
+sub get_superuser_id         { return $_[0]->CONFIG->{ldap_root_dn} }
+sub get_supergroup_id        { return $_[0]->CONFIG->{ldap_root_group_dn} }
 
 sub is_superuser {
     my ( $class, $id ) = @_;
@@ -62,9 +67,10 @@ sub behavior_factory {
     my ( $class ) = @_;
     require SPOPS::ClassFactory::LDAP;
     DEBUG() && _wm( 2, DEBUG, "Installing SPOPS::LDAP behaviors for ($class)" );
-    return { has_a    => \&SPOPS::ClassFactory::LDAP::conf_relate_has_a,
-             links_to => \&SPOPS::ClassFactory::LDAP::conf_relate_links_to,
-             fetch_by => \&SPOPS::ClassFactory::LDAP::conf_fetch_by, };
+    return { read_code => \&SPOPS::ClassFactory::LDAP::conf_read_code,
+             has_a     => \&SPOPS::ClassFactory::LDAP::conf_relate_has_a,
+             links_to  => \&SPOPS::ClassFactory::LDAP::conf_relate_links_to,
+             fetch_by  => \&SPOPS::ClassFactory::LDAP::conf_fetch_by, };
 
 }
 
@@ -76,7 +82,7 @@ sub behavior_factory {
 sub class_initialize {
     my ( $class )  = @_;
     my $C = $class->CONFIG;
-    $C->{field_list}  = [ sort{ $C->{field}->{$a} <=> $C->{field}->{$b} }
+    $C->{field_list}  = [ sort{ $C->{field}{$a} <=> $C->{field}{$b} }
                           keys %{ $C->{field} } ];
     $class->_class_initialize;
     return 1;
@@ -101,6 +107,24 @@ sub dn {
 # FETCH
 ########################################
 
+sub create_id_filter {
+    my ( $item, $id ) = @_;
+    return join( '=', $item->id_field, $id )  if ( $id );
+    unless ( ref $item ) {
+        die "Cannot create ID filter with a class method call and no ID passed in\n";
+    }
+    return join( '=', $item->id_field, $item->id );
+}
+
+
+# TODO: If the object is requested with a 'filter' argument rather
+# than the ID, we might need to fetch the object twice, or perhaps
+# fetch the object and create it, and then call 'fetch' again with an
+# 'object' argument which we can clone rather than executing the
+# actual fetch again. Fetching via filter plays a little havoc with
+# the security check and pre_fetch_action -- right now we've
+# duct-taped it but it should be fixed shortly...
+
 sub fetch {
     my ( $class, $id, $p ) = @_;
     $p ||= {};
@@ -110,29 +134,78 @@ sub fetch {
                           keys %{ $p } );
     return undef unless ( $id or $p->{filter} );
 
+    my $info = $class->_perform_prefetch( $p );
+
+    # Run the search
+
+    my $filter = ( $p->{no_filter} )
+                   ? '' : $p->{filter} || $class->create_id_filter( $id );
+    my $entry = $class->_fetch_single_entry({ connect_key => $p->{connect_key},
+                                              ldap        => $p->{ldap},
+                                              base        => $p->{base},
+                                              scope       => $p->{scope},
+                                              filter      => $filter });
+    unless ( $entry ) {
+        DEBUG() && _wm( 1, DEBUG, "No entry found matching object ID ($id)" );
+        return undef;
+    }
+    my $obj = $class->_perform_postfetch( $p, $info, $entry );
+    return $obj;
+}
+
+
+sub _perform_prefetch {
+    my ( $class, $p, $info ) = @_;
+    $info ||= {};
+
+    # If an ID was not passed in but a filter was, we need to delay
+    # security checks until after the object has already been fetched
+    # so we can grab the ID from the object
+
+    $info->{delay_security_check} = ( ! $p->{id} and $p->{filter} ) ? 1 : 0;
+
     # Let security errors bubble up
 
-    my $level = $p->{security_level};
-    unless ( $p->{skip_security} ) {
-        $level ||= $class->check_action_security({ id       => $id || $p->{filter},
-                                                   required => SEC_LEVEL_READ });
+    $info->{level} = $p->{security_level};
+    unless ( $info->{delay_security_check} or $p->{skip_security} ) {
+        $info->{level} ||= $class->check_action_security({ id       => $p->{id},
+                                                           required => SEC_LEVEL_READ });
     }
 
     # Do any actions the class wants before fetching -- note that if
     # any of the actions returns undef (false), we bail.
 
-    return undef unless ( $class->pre_fetch_action( { %{ $p }, id => $id } ) );
+    return undef unless ( $class->pre_fetch_action({ %{ $p }, id => $p->{id} }) );
+    DEBUG() && _wm( 1, DEBUG, "Pre fetch actions executed ok" );
+    return $info;
+}
 
-    # Run the search
 
+sub _perform_postfetch {
+    my ( $class, $p, $info, $entry ) = @_;
+    DEBUG() && _wm( 1, "Single entry found ok; setting values into object",
+                       "(Delay security: $info->{delay_security_check})" );
+    my $obj = $class->new;
+    $obj->_fetch_assign_row( undef, $entry );
+    if ( $info->{delay_security_check} && !  $p->{skip_security} ) {
+        $info->{level} ||= $class->check_action_security({ id       => $obj->id,
+                                                           required => SEC_LEVEL_READ })
+    }
+    $obj->_fetch_post_process( $p, $info->{level} );
+    return $obj;
+}
+
+
+sub _fetch_single_entry {
+    my ( $class, $p ) = @_;
     my $ldap = $p->{ldap} || $class->global_datasource_handle( $p->{connect_key} );
-    my $filter = $p->{filter} || join( '=', $class->id_field, $id );
-    DEBUG() && _wm( 1, DEBUG, "Base DN (", $class->base_dn( $p->{connect_key} ), ") and filter <<$filter>>",
-                      "being used to fetch single object" );
-    my $ldap_msg = $ldap->search( base   => $class->base_dn( $p->{connect_key} ),
-                                  scope  => 'sub',
-                                  filter => $filter );
-    $class->_check_error( $ldap_msg, 'Error trying to run LDAP search' );
+    DEBUG() && _wm( 1, DEBUG, "Base DN (", $class->base_dn( $p->{connect_key} ), ")",
+                              "and filter <<$p->{filter}>> being used to fetch single object" );
+    my %args = ( base   => $p->{base} || $class->base_dn( $p->{connect_key} ),
+                 scope  => $p->{scope} || 'sub' );
+    $args{filter} = $p->{filter} if ( $p->{filter} );
+    my $ldap_msg = $ldap->search( %args );
+    $class->_check_error( $ldap_msg, 'Error trying to run LDAP search for single object' );
 
     # Go ahead and use $count here since we've hopefully only
     # retrieved a single record and don't have to worry about blocking
@@ -140,35 +213,26 @@ sub fetch {
 
     my $count = $ldap_msg->count;
     if ( $count > 1 ) {
-        SPOPS::Error->set({ user_msg   => "More than one entry retrieved!\n",
+        SPOPS::Error->set({ user_msg   => "More than one entry retrieved!",
                             system_msg => "Trying to retrieve unique record, retrieved ($count)",
-                            extra      => { filter => $filter } });
+                            extra      => { filter => $p->{filter} } });
         die $SPOPS::Error::user_msg;
     }
-
     if ( $count == 0 ) {
-        DEBUG() && _wm( 1, DEBUG, "No entry found matching ($id) or filter ($p->{filter})" );
+        DEBUG() && _wm( 1, DEBUG, "No entry found matching filter ($p->{filter})" );
         return undef;
     }
-    my $obj = $class->new;
-    $obj->_fetch_assign_row( undef, $ldap_msg->entry( 0 ) );
-    $obj->_fetch_post_process( $p, $level );
-    return $obj;
+    return $ldap_msg->entry( 0 );
 }
 
 
 # Given a DN, return an object
 
-# TODO: Ensure the DN is correct (in the right place of the hierarchy, etc.)
-
 sub fetch_by_dn {
     my ( $class, $dn, $p ) = @_;
-    my ( $filter ) = split /\s*,\s*/, $dn;
-    my ( $field, $value ) = split /=/, $filter;
-    my $filter_field = $class->CONFIG->{id_value_field} ||
-                       $class->CONFIG->{id_field};
-    $p->{filter} = "$filter_field=$value";
-    DEBUG() && _wm( 1, DEBUG, "Using filter ($filter_field=$value) to find a ($class)\n" );
+    $p->{base}   = $dn;
+    $p->{scope}  = 'base';
+    $p->{filter} = '(objectclass=*)';
     return $class->fetch( undef, $p );
 }
 
@@ -207,7 +271,8 @@ ENTRY:
                       ? SEC_LEVEL_WRITE
                       : eval { $obj->check_action_security({ required => SEC_LEVEL_READ }) };
         if ( $@ ) {
-            DEBUG() && _wm( 1, DEBUG, "Security check for object in fetch_group() failed, skipping." );
+            DEBUG() && _wm( 1, DEBUG, "Security check for object (", $obj->dn, ")",
+                                      "in fetch_group() failed, skipping." );
             next ENTRY;
         }
 
@@ -259,7 +324,7 @@ sub _fetch_assign_row {
     $field_list ||= $self->field_list;
     foreach my $field ( @{ $field_list } ) {
         my @values = $entry->get_value( $field );
-        if ( $CONF->{multivalue}->{ $field } ) {
+        if ( $CONF->{multivalue}{ $field } ) {
             $self->{ $field } = \@values;
             DEBUG() && _wm( 1, DEBUG, sprintf( " ( multi) %-20s --> %s", $field, join( '||', @values ) ) );
         }
@@ -282,7 +347,7 @@ sub _fetch_post_process {
 
     $self->set_cached_object( $p );
 
-    # Execute any actions the class (or any parent) wants after 
+    # Execute any actions the class (or any parent) wants after
     # creating the object (see SPOPS.pm)
 
     return undef unless ( $self->post_fetch_action( $p ) );
@@ -293,7 +358,7 @@ sub _fetch_post_process {
     $self->has_save;
 
     # Set the security fetched from above into this object
-    # as a temporary property (see SPOPS::Tie for more info 
+    # as a temporary property (see SPOPS::Tie for more info
     # on temporary properties); note that this is set whether
     # we retrieve a cached copy or not
 
@@ -339,31 +404,20 @@ sub save {
 
     # Callback for objects to do something before they're saved
 
-    return undef unless ( $self->pre_save_action({ %{ $p }, 
+    return undef unless ( $self->pre_save_action({ %{ $p },
                                                    is_add => $is_add }) );
-
-    # Gather up the values currently in the object into a hash,
-    # particularly since we're doing a 'replace' with the update.
-
-    $p->{data} = {};
-    foreach my $field ( @{ $self->field_list } ) {
-        my $value = $self->{ $field };
-        $p->{data}->{ $field } = ( ref $value ) 
-                                   ? $value 
-                                   : ( defined $value ) 
-                                       ? [ $value ] : [];
-    }
 
     # Do the insert/update based on whether the object is new; don't
     # catch the die() that might be thrown -- let that percolate
 
-    if ( $is_add ) { $self->_save_insert( $p )  } 
+    if ( $is_add ) { $self->_save_insert( $p )  }
     else           { $self->_save_update( $p )  }
 
     # Do any actions that need to happen after you save the object
 
-    return undef unless ( $self->post_save_action({ %{ $p }, 
+    return undef unless ( $self->post_save_action({ %{ $p },
                                                     is_add => $is_add }) );
+    DEBUG() && _wm( 1, DEBUG, "Post save action executed ok." );
 
     # Save the newly-created/updated object to the cache
 
@@ -390,34 +444,89 @@ sub _save_insert {
     DEBUG && _wm( 1, DEBUG, 'Treating save as INSERT' );
     my $ldap = $p->{ldap} || $self->global_datasource_handle( $p->{connect_key} );
     $self->dn( $self->build_dn );
-    unless ( ref $p->{data}->{object_class} eq 'ARRAY' and 
-             scalar @{ $p->{data}->{object_class} } > 0) {
-        $self->{objectclass} = $p->{data}->{objectclass} = $self->ldap_object_class;
-        DEBUG && _w( 1, "Using object class from config in new object (",
-                        join( ', ', @{ $p->{data}->{objectclass} } ), ")" );
+    my $num_objectclass = ( ref $self->{objectclass} )
+                            ? @{ $self->{objectclass} } : 0;
+    if ( $num_objectclass == 0 ) {
+        $self->{objectclass} = $self->ldap_object_class;
+        DEBUG() && _wm( 1, DEBUG, "Using object class from config in new object (",
+                                  join( ', ', @{ $self->{objectclass} } ), ")" );
     }
     DEBUG && _wm( 1, DEBUG, "Trying to create record with DN: (", $self->dn, ")" );
-    DEBUG && _wm( 3, DEBUG, "Attributes for creation: ", Dumper( [ %{ $p->{data} } ] ) );
-    my $ldap_msg = $ldap->add( dn   => $self->dn, 
-                               attr => [ %{ $p->{data} } ]);
+    my %insert_data = ();
+    my $no_insert = $self->no_insert;
+    foreach my $attr ( @{ $self->field_list } ) {
+        next if ( $no_insert->{ $attr } );
+        $insert_data{ $attr } = $self->{ $attr };
+
+        # Trick LDAP to creating object with multivalue property that
+        # has no values
+
+        if ( ref $insert_data{ $attr } eq 'ARRAY'
+             and scalar @{ $insert_data{ $attr } } == 0 ) {
+            $insert_data{ $attr } = undef;
+        }
+    }
+    DEBUG() && _wm( 1, DEBUG, "Trying to create a record with:\n", Dumper( \%insert_data ) );
+    my $ldap_msg = $ldap->add( dn   => $self->dn,
+                               attr => [ %insert_data ]);
     $self->_check_error( $ldap_msg, 'Cannot create new LDAP record' );
+    DEBUG() && _wm( 1, DEBUG, "Record created ok." );
 }
 
 
 sub _save_update {
     my ( $self, $p ) = @_;
     $p ||= {};
-    DEBUG && _wm( 1, DEBUG, "Treating save as UPDATE with DN: (", $self->dn, ")" );
+    DEBUG() && _wm( 1, DEBUG, "Treating save as UPDATE with DN: (", $self->dn, ")" );
     my $ldap = $p->{ldap} || $self->global_datasource_handle( $p->{connect_key} );
-    DEBUG && _wm( 3, DEBUG, "Attributes for creation: ", Dumper( $p->{data} ) );
-    my $entry = Net::LDAP::Entry->new;
-    $entry->changetype( 'modify' );
-    foreach my $attr ( keys %{ $p->{data} } ) {
-        $entry->replace( $attr, $p->{data}->{ $attr } );
+    my $entry = $self->_fetch_single_entry({ filter => $self->create_id_filter,
+                                             ldap   => $ldap });
+    DEBUG() && _wm( 1, DEBUG, "Loaded entry for update:\n", Dumper( $entry ) );
+    my $no_update = $self->no_update;
+    my $only_changed = $self->ldap_update_only_changed;
+ATTRIB:
+    foreach my $attr ( @{ $self->field_list } ) {
+        next ATTRIB if ( $no_update->{ $attr } );
+        my $object_value = $self->{ $attr };
+        if ( $only_changed ) {
+            my @existing_values = $entry->get_value( $attr );
+            DEBUG() && _wm( 1, DEBUG, "Toggle for updating only changed values set.",
+                                      "Checking if ($attr) different: ", Dumper( $object_value ),
+                                      "vs.", Dumper( \@existing_values ) );
+            next ATTRIB if ( $self->_values_are_same( $object_value, \@existing_values ) );
+            DEBUG() && _wm( 1, DEBUG, "Values for ($attr) are different. Updating..." );
+        }
+
+        # Trick LDAP to updating object with multivalue property that
+        # has no values
+
+        if ( ref $object_value eq 'ARRAY' and scalar @{ $object_value } == 0 ) {
+            $object_value = undef;
+        }
+        $entry->replace( $attr, $object_value );
     }
-    $entry->dn( $self->dn );
-    my $ldap_msg = $entry->update( $ldap ); 
+    DEBUG() && _wm( 1, DEBUG, "Entry before Update:\n", Dumper( $entry ) );
+    my $ldap_msg = $entry->update( $ldap );
     $self->_check_error( $ldap_msg, 'Cannot update existing record' );
+    DEBUG() && _wm( 1, DEBUG, "Record updated ok." );
+}
+
+
+# Return true if the two values are the same, false if not.
+
+sub _values_are_same {
+    my ( $self, $val1, $val2 ) = @_;
+    $val1 = ( ref $val1 ) ? $val1 : [ $val1 ];
+    $val2 = ( ref $val2 ) ? $val2 : [ $val2 ];
+    my %v1 = map { $_ => 1 } @{ $val1 };
+    my %v2 = map { $_ => 1 } @{ $val2 };
+    foreach my $field ( keys %v1 ) {
+        return undef unless ( $v2{ $field } );
+    }
+    foreach my $field ( keys %v2 ) {
+        return undef unless ( $v1{ $field } );
+    }
+    return 1;
 }
 
 
@@ -588,8 +697,8 @@ SPOPS::LDAP - Implement object persistence in an LDAP datastore
 =head1 DESCRIPTION
 
 This class implements object persistence in an LDAP datastore. It is
-similar to L<SPOPS::DBI> but with some important differences -- LDAP
-gurus can certainly find more:
+similar to L<SPOPS::DBI|SPOPS::DBI> but with some important
+differences -- LDAP gurus can certainly find more:
 
 =over 4
 
@@ -607,91 +716,14 @@ particular branch.
 
 LDAP supports referrals, or punting a query off to another
 server. (SPOPS does not support referrals yet, but we fake it with
-L<SPOPS::LDAP::MultiDatasource>.)
+L<SPOPS::LDAP::MultiDatasource|SPOPS::LDAP::MultiDatasource>.)
 
 =back
 
 =head1 CONFIGURATION
 
-Configuration of an C<SPOPS::LDAP> data object is similar to that of
-other SPOPS objects, with a few modifications.
-
-=over 4
-
-=item *
-
-B<isa> (\@)
-
-Same as a normal SPOPS field, but it must have C<SPOPS::LDAP> in it.
-
-=item *
-
-B<base_dn> ($)
-
-DN in an LDAP tree where this object is located. For instance, the
-common 'inetOrgPerson' type of object might be located under:
-
-  base_dn  => 'ou=People,dc=MyCompany,dc=com'
-
-While 'printer' objects might be located under:
-
-  base_dn  => 'ou=Equipment,dc=MyCompany,dc=com'
-
-Note that L<SPOPS::LDAP::MultiDatasource> allows you to specify a
-partial DN on a per-datasource basis.
-
-=item *
-
-B<ldap_object_class> (\@)
-
-When you create a new object you can specify the LDAP object class
-yourself when creating the object or C<SPOPS::LDAP> can do it for you
-behind the scenes. If you specify one or more LDAP object class
-strings here they will be used whenever you create a new object and
-save it.
-
-Example:
-
- ldap_object_class => [ 'top', 'person', 'inetOrgPerson',
-                        'organizationalPerson' ]
-
-=item *
-
-B<ldap_fetch_object_class> ($) (optional)
-
-Specify an objectclass here to ensure your results are restricted
-properly. This is also used to do an 'empty' search and find all
-records of a particular class.
-
-NOTE: This is B<only> used with the C<fetch_group()> and
-C<fetch_iterator()> methods.
-
-Example:
-
- ldap_fetch_object_class => 'person'
-
-=item *
-
-B<multivalue> (\@) (optional)
-
-You B<must> list the fields here that may have multiple values in the
-directory. Otherwise the object will have only one of the values and,
-on saving the object, will probably wipe out all the others.
-
-Example:
-
- multivalue  => [ 'objectclass', 'cn' ]
-
-=item *
-
-B<id_value_field> ($) (optional)
-
-Returns the field used for the ID value (a string) in this object. By
-default this is the value stored in 'id_field', but there are cases
-where you may wish to use a particular fieldname for the DN of an
-object and the value from another field.
-
-=back
+See L<SPOPS::Manual::Configuration|SPOPS::Manual::Configuration> for
+the configuration fields used and LDAP-specific issues.
 
 =head1 METHODS
 
@@ -722,13 +754,15 @@ directory using the parameter 'ldap':
 
  my $object = Your::Object->fetch( 'blah', { ldap => $ldap });
 
-Should return: L<Net::LDAP> (or compatible) connection object that
-optionally maps to C<$connect_key>.
+Should return: L<Net::LDAP|Net::LDAP> (or compatible) connection
+object that optionally maps to C<$connect_key>.
 
 You can configure your objects to use multiple datasources when
 certain conditions are found. For instance, you can configure the
 C<fetch()> operation to cycle through a list of datasources until an
-object is found -- see L<SPOPS::LDAP::MultiDatasource> for an example.
+object is found -- see
+L<SPOPS::LDAP::MultiDatasource|SPOPS::LDAP::MultiDatasource> for an
+example.
 
 =head2 Class Initialization
 
@@ -763,7 +797,7 @@ methods:
 
 =item *
 
-B<ldap>: A L<Net::LDAP> connection object.
+B<ldap>: A L<Net::LDAP|Net::LDAP> connection object.
 
 =item *
 
@@ -803,7 +837,7 @@ Retrieve a group of objects
 B<fetch_iterator( \%params )>
 
 Instead of returning an arrayref of results, return an object of class
-L<SPOPS::Iterator::LDAP>.
+L<SPOPS::Iterator::LDAP|SPOPS::Iterator::LDAP>.
 
 Parameters are the same as C<fetch_group()>.
 
@@ -826,28 +860,28 @@ Moving an object from one DN to another is not currently supported.
 B<More Usage>
 
 I have only tested this on an OpenLDAP (version 2.0.11) server. Since
-we are using L<Net::LDAP> for the interface, we should (B<in theory>)
-have no problems connecting to other LDAP servers such as iPlanet
-Directory Server, Novell NDS or Microsoft Active Directory.
+we are using L<Net::LDAP|Net::LDAP> for the interface, we should (B<in
+theory>) have no problems connecting to other LDAP servers such as
+iPlanet Directory Server, Novell NDS or Microsoft Active Directory.
 
 It would also be good to test with a wider variety of schemas and
 objects.
 
 B<Expand LDAP Interfaces>
 
-Currently we use L<Net::LDAP> to interface with the LDAP directory,
-but Perl/C libraries may be faster and provide different
+Currently we use L<Net::LDAP|Net::LDAP> to interface with the LDAP
+directory, but Perl/C libraries may be faster and provide different
 features. Once this is needed, we will probably need to create
 implementation-specific subclasses. This should not be very difficult
 -- the actual calls to C<Net::LDAP> are minimal and straightforward.
 
 =head1 SEE ALSO
 
-L<Net::LDAP>
+L<Net::LDAP|Net::LDAP>
 
-L<SPOPS::Iterator::LDAP>
+L<SPOPS::Iterator::LDAP|SPOPS::Iterator::LDAP>
 
-L<SPOPS>
+L<SPOPS|SPOPS>
 
 =head1 COPYRIGHT
 

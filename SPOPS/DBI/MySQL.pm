@@ -1,14 +1,14 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 1.9 2001/08/22 10:51:45 lachoy Exp $
+# $Id: MySQL.pm,v 1.11 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 use SPOPS::Key::DBI::HandleField;
 
 @SPOPS::DBI::MySQL::ISA      = ();
-$SPOPS::DBI::MySQL::VERSION  = '1.8';
-$SPOPS::DBI::MySQL::Revision = substr(q$Revision: 1.9 $, 10);
+$SPOPS::DBI::MySQL::VERSION  = '1.90';
+$SPOPS::DBI::MySQL::Revision = substr(q$Revision: 1.11 $, 10);
 
 sub sql_current_date  { return 'NOW()' }
 
@@ -18,7 +18,7 @@ sub sql_current_date  { return 'NOW()' }
 # table. If so we call the post_fetch_id method from
 # SPOPS::Key::DBI::HandleField.
 
-sub post_fetch_id { 
+sub post_fetch_id {
     my ( $item, @args ) = @_;
     return undef unless ( $item->CONFIG->{increment_field} );
     $item->CONFIG->{handle_field} ||= 'mysql_insertid';
@@ -70,7 +70,11 @@ Nothing known.
 
 =head1 SEE ALSO
 
-L<DBD::mysql>, L<DBI>
+L<SPOPS::Key::HandleField|SPOPS::Key::HandleField>
+
+L<DBD::mysql|DBD::mysql>
+
+L<DBI|DBI>
 
 =head1 COPYRIGHT
 

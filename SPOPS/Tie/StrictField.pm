@@ -1,6 +1,6 @@
 package SPOPS::Tie::StrictField;
 
-# $Id: StrictField.pm,v 1.10 2001/08/22 10:51:45 lachoy Exp $
+# $Id: StrictField.pm,v 1.13 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use Carp       qw( carp );
@@ -8,8 +8,8 @@ use SPOPS::Tie qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP
                    IDX_CHECK_FIELDS $PREFIX_TEMP $PREFIX_INTERNAL );
 
 @SPOPS::Tie::StrictField::ISA      = qw( SPOPS::Tie );
-$SPOPS::Tie::StrictField::VERSION  = '1.8';
-$SPOPS::Tie::StrictField::Revision = substr(q$Revision: 1.10 $, 10);
+$SPOPS::Tie::StrictField::VERSION  = '1.90';
+$SPOPS::Tie::StrictField::Revision = substr(q$Revision: 1.13 $, 10);
 
 *_w    = *SPOPS::_w;
 *DEBUG = *SPOPS::DEBUG;
@@ -28,7 +28,7 @@ sub _field_check {
         unless ( ref $FIELDS{ $base_class } eq 'HASH' ) {
             foreach my $key ( @{ $p->{field} } ) {
                 $FIELDS{ $base_class }->{ lc $key } = 1;
-            }   
+            }
         }
         return 1;
     }
@@ -65,7 +65,7 @@ sub EXISTS {
     my ( $self, $key ) = @_;
     return $self->SUPER::EXISTS( $key ) unless ( $self->{ IDX_CHECK_FIELDS() } );
     DEBUG() && _w( 3, " tie: Checking for existence of ($key)\n" );
-    if ( $FIELDS{ $self->{class} }->{ lc $key } ) { 
+    if ( $FIELDS{ $self->{class} }->{ lc $key } ) {
         return exists $self->{ IDX_DATA() }->{ lc $key };
     }
     carp "Cannot check existence for field ($key): it is not a valid field";
@@ -100,28 +100,28 @@ SPOPS::Tie::StrictField - Enable field checking for SPOPS objects
  my @fields = qw( first_name last_name login birth_date );
  tie %data, 'SPOPS::Tie::StrictField', $class, \@fields;
 
- # Trigger warnings by trying to store a misspelled 
+ # Trigger warnings by trying to store a misspelled
  # or unknown property
 
  # 'login' is the correct field
- $data{login_name}  = 'cb';  
+ $data{login_name}  = 'cb';
 
  # not in @fields list
  $data{middle_name} = 'Amadeus';
 
 =head1 DESCRIPTION
 
-This class subclasses L<SPOPS::Tie>, adding field-checking
+This class subclasses L<SPOPS::Tie|SPOPS::Tie>, adding field-checking
 functionality. When you tie the hash, you also pass it a hashref of
 extra information, one key of which should be 'field'. The 'field'
 parameter specifies what keys may be used to access data in the
 hash. This is to ensure that when you set or retrieve a property it is
-properly spelled. 
+properly spelled.
 
 If you do not specify the 'field' parameter properly, you will get
-normal L<SPOPS::Tie> functionality, which might throw a monkey wrench
-into your application since you and any users will expect the system
-to not silently accept misspelled object keys.
+normal L<SPOPS::Tie|SPOPS::Tie> functionality, which might throw a
+monkey wrench into your application since you and any users will
+expect the system to not silently accept misspelled object keys.
 
 For instance:
 
@@ -139,7 +139,9 @@ since you have misspelled the property, which should be 'first_name'.
 
 =head1 SEE ALSO
 
-L<SPOPS::Tie>, L<perltie>
+L<SPOPS::Tie|SPOPS::Tie>
+
+L<perltie|perltie>
 
 =head1 COPYRIGHT
 

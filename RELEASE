@@ -1,6 +1,13 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.51 Sun Oct 14 20:23:59 EDT 2001
+
+  * Bugfixes, several to SPOPS::LDAP
+
+  * Added first draft of manual ('perldoc SPOPS::Manual')
+
+
 0.50 Tue Aug 28 16:59:39 EDT 2001
 
   * Added SPOPS::LDAP and accompanying modules.
@@ -55,4 +62,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 1.7 2001/08/28 21:09:54 lachoy Exp $
+$Id: RELEASE,v 1.8 2001/10/15 04:28:24 lachoy Exp $

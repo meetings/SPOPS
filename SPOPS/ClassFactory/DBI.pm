@@ -1,14 +1,14 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 1.6 2001/08/27 03:55:57 lachoy Exp $
+# $Id: DBI.pm,v 1.10 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR );;
 
 @SPOPS::ClassFactory::DBI::ISA      = ();
-$SPOPS::ClassFactory::DBI::VERSION  = '1.8';
-$SPOPS::ClassFactory::DBI::Revision = substr(q$Revision: 1.6 $, 10);
+$SPOPS::ClassFactory::DBI::VERSION  = '1.90';
+$SPOPS::ClassFactory::DBI::Revision = substr(q$Revision: 1.10 $, 10);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 
@@ -31,20 +31,23 @@ my $generic_linksto = <<'LINKSTO';
         $p->{select} = [ '%%LINKSTO_ID_FIELD%%' ];
         $p->{from}   = [ '%%LINKSTO_TABLE%%' ];
         my $id_clause = $self->id_clause( $self->id, 'noqualify', $p );
-        $p->{where}  = ( $p->{where} ) 
+        $p->{where}  = ( $p->{where} )
                          ? join ( ' AND ', $p->{where}, $id_clause ) : $id_clause;
         $p->{return} = 'list';
-        my $rows = eval { %%CLASS%%->db_select( $p ) };
+        $p->{db}   ||= %%LINKSTO_CLASS%%->global_datasource_handle;
+        my $rows = eval { %%LINKSTO_CLASS%%->db_select( $p ) };
         if ( $@ ) {
             $SPOPS::Error::user_msg = 'Cannot retrieve %%LINKSTO_ALIAS%% object(s)';
-            warn "$SPOPS::Error::user_msg -- $@";
-            die $SPOPS::Error::user_msg;
+            SPOPS::_w( 0, "$SPOPS::Error::user_msg -- $@" );
+            die $SPOPS::Error::system_msg;
         }
         my @obj = ();
         foreach my $info ( @{ $rows } ) {
             my $item = eval { %%LINKSTO_CLASS%%->fetch( $info->[0], $p ) };
             if ( $@ ) {
-                warn " --Cannot fetch linked object %%LINKSTO_ALIAS%% => $SPOPS::Error::system_msg ($@)\n";
+                SPOPS::_w( 0, " Cannot fetch linked object %%LINKSTO_ALIAS%% => ",
+                              "$SPOPS::Error::system_msg ($@). Continuing with others..." );
+                next;
             }
             push @obj, $item if ( $item );
         }
@@ -59,21 +62,22 @@ my $generic_linksto = <<'LINKSTO';
         $link_id_list = ( ref $link_id_list ) ? $link_id_list : [ $link_id_list ];
         my $added = 0;
         my @error_list = ();
+        $p->{db} ||= %%LINKSTO_CLASS%%->global_datasource_handle;
         foreach my $link_id ( @{ $link_id_list } ) {
             SPOPS::_wm( 1, $p->{DEBUG}, "Trying to add link to ID ($link_id)" );
-            eval { %%CLASS%%->db_insert({ table => '%%LINKSTO_TABLE%%',
-                                          field => [ '%%ID_FIELD%%', '%%LINKSTO_ID_FIELD%%' ],
-                                          value => [ $self->{%%ID_FIELD%%}, $link_id ],
-                                          db    => $p->{db},
-                                          DEBUG => $p->{DEBUG} }) };
+            eval { %%LINKSTO_CLASS%%->db_insert({ table => '%%LINKSTO_TABLE%%',
+                                                  field => [ '%%ID_FIELD%%', '%%LINKSTO_ID_FIELD%%' ],
+                                                  value => [ $self->{%%ID_FIELD%%}, $link_id ],
+                                                  db    => $p->{db},
+                                                  DEBUG => $p->{DEBUG} }) };
             if ( $@ ) {
                 my $count = scalar @error_list + 1;
-                my $value_list = ( ref $SPOPS::Error::extra->{value} ) 
+                my $value_list = ( ref $SPOPS::Error::extra->{value} )
                                    ? join( ' // ', @{ $SPOPS::Error::extra->{value} } )
                                    : 'none reported';
                 my $error_msg = "Error $count\n$@\n$SPOPS::Error::system_msg\n" .
                                 "SQL: $SPOPS::Error::extra->{sql}\nValues: $value_list";
-                push @error_list, $error_msg; 
+                push @error_list, $error_msg;
             }
             else {
                 $added++;
@@ -95,17 +99,18 @@ my $generic_linksto = <<'LINKSTO';
         $link_id_list = ( ref $link_id_list ) ? $link_id_list : [ $link_id_list ];
         my $removed = 0;
         my @error_list = ();
+        $p->{db} ||= %%LINKSTO_CLASS%%->global_datasource_handle;
         foreach my $link_id ( @{ $link_id_list } ) {
             SPOPS::_wm( 1, $p->{DEBUG}, "Trying to remove link to ID ($link_id)" );
             my $from_id_clause = $self->id_clause( undef, 'noqualify', $p  );
             my $to_id_clause   = %%LINKSTO_CLASS%%->id_clause( $link_id, 'noqualify', $p );
-            eval { %%CLASS%%->db_delete({ table => '%%LINKSTO_TABLE%%',
-                                          where => join( ' AND ', $from_id_clause, $to_id_clause ),
-                                          db    => $p->{db},
-                                          DEBUG => $p->{DEBUG} }) };
+            eval { %%LINKSTO_CLASS%%->db_delete({ table => '%%LINKSTO_TABLE%%',
+                                                  where => join( ' AND ', $from_id_clause, $to_id_clause ),
+                                                  db    => $p->{db},
+                                                  DEBUG => $p->{DEBUG} }) };
             if ( $@ ) {
                 my $count = scalar @error_list + 1;
-                my $value_list = ( ref $SPOPS::Error::extra->{value} ) 
+                my $value_list = ( ref $SPOPS::Error::extra->{value} )
                                    ? join( ' // ', @{ $SPOPS::Error::extra->{value} } )
                                    : 'none reported';
                 my $error_msg = "Error $count\n$@\n$SPOPS::Error::system_msg\n" .
@@ -142,13 +147,11 @@ sub conf_relate_links_to {
 
     # Process the 'links_to' aliases -- pretty straightforward (see pod)
 
-    if ( my $links_to = $config->{links_to} ) { 
+    if ( my $links_to = $config->{links_to} ) {
         while ( my ( $linksto_class, $table ) = each %{ $links_to } ) {
             my $linksto_config   = $linksto_class->CONFIG;
             my $linksto_alias    = $linksto_config->{main_alias};
             my $linksto_id_field = $linksto_config->{id_field};
-            DEBUG() && _w( 1, "Aliasing $linksto_alias, ${linksto_alias}_add and ",
-                              "${linksto_alias}_remove in $class"  );
             my $linksto_sub = $generic_linksto;
             $linksto_sub =~ s/%%ID_FIELD%%/$this_id_field/g;
             $linksto_sub =~ s/%%CLASS%%/$class/g;
@@ -156,7 +159,9 @@ sub conf_relate_links_to {
             $linksto_sub =~ s/%%LINKSTO_ALIAS%%/$linksto_alias/g;
             $linksto_sub =~ s/%%LINKSTO_ID_FIELD%%/$linksto_id_field/g;
             $linksto_sub =~ s/%%LINKSTO_TABLE%%/$table/g;
-            DEBUG() && _w( 2, "Now going to eval the routine:\n$linksto_sub" );
+            DEBUG() && _w( 2, "Trying to create links_to routines with ($class) links_to",
+                              "($linksto_class) using table ($table)" );
+            DEBUG() && _w( 5, "Now going to eval the routine:\n$linksto_sub" );
             {
                 local $SIG{__WARN__} = sub { return undef };
                 eval $linksto_sub;
@@ -191,7 +196,7 @@ SPOPS::ClassFactory::DBI - Define additional configuration methods
 =head1 DESCRIPTION
 
 This class implements a behavior for the 'links_to' slot as described
-in L<SPOPS::ClassFactory>.
+in L<SPOPS::ClassFactory|SPOPS::ClassFactory>.
 
 It is possible -- and perhaps desirable for the sake of clarity -- to
 create a method within I<SPOPS::DBI> that does all the work that this
@@ -218,8 +223,8 @@ linking functionality.
 Typical configuration:
 
   my $config = {
-        class => 'My::SPOPS',
-        isa   => [ 'SPOPS::DBI::Pg', 'SPOPS::DBI' ],
+        class    => 'My::SPOPS',
+        isa      => [ 'SPOPS::DBI::Pg', 'SPOPS::DBI' ],
         links_to => { 'My::Group' => 'link-table' },
   };
 
@@ -279,58 +284,6 @@ Examples:
 
  >> 3 // 5 // 7 // 9 // 23
 
-=head1 CONFIGURATION FIELDS EXPLAINED
-
-B<base_table> ($) (used by SPOPS::DBI)
-
-Table name for data to be stored.
-
-B<sql_defaults> (\@) (used by SPOPS::DBI)
-
-List of fields that have defaults defined in the SQL table. For
-instance:
-
-   active   CHAR(3) DEFAULT 'yes',
-
-After L<SPOPS::DBI> fetches a record, it then checks to see if there
-are any defaults for the record and if so it refetches the object to
-ensure that the data in the object and the data in the database are
-synced.
-
-B<field_alter> (\%) (used by SPOPS::DBI)
-
-Allows you to define different formatting behaviors for retrieving
-fields. For instance, if you want dates formatted in a certain manner
-in MySQL, you can do something like:
-
- field_alter => { posted_on => q/DATE_FORMAT( posted_on, '%M %e, %Y (%h:%i %p)' )/ }
-
-Which instead of the default time format:
-
- 2000-09-26 10:29:00
-
-will return something like:
-
- September 26, 2000 (10:29 AM)
-
-These are typically database-specific.
-
-=head2 Relationship Fields
-
-B<links_to> (\%)
-
-The 'links_to' field allows you to specify a SPOPS alias and specify
-which table is used to link the objects:
-
- {
-    'SPOPS-class' => 'table_name',
- }
-
-Note that this relationship assumes a link table that joins two
-separate tables. When you sever a link between two objects, you are
-only deleting the link rather than deleting an object. See L<TO DO>
-for another proposal.
-
 =head1 TO DO
 
 B<Make 'links_to' more flexible>
@@ -361,6 +314,6 @@ it under the same terms as Perl itself.
 
 Chris Winters  <chris@cwinters.com>
 
-See the L<SPOPS> module for the full author list.
+See the L<SPOPS|SPOPS> module for the full author list.
 
 =cut

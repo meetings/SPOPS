@@ -1,14 +1,14 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 1.9 2001/08/22 10:51:45 lachoy Exp $
+# $Id: Utility.pm,v 1.12 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use Date::Format  qw( time2str );
 use Date::Calc    ();
 
 @SPOPS::Utility::ISA      = qw();
-$SPOPS::Utility::VERSION  = '1.8';
-$SPOPS::Utility::Revision = substr(q$Revision: 1.9 $, 10);
+$SPOPS::Utility::VERSION  = '1.90';
+$SPOPS::Utility::Revision = substr(q$Revision: 1.12 $, 10);
 
 
 # Return a random code of length $length. If $opt is 'mixed', then the
@@ -69,7 +69,7 @@ sub today { return $_[0]->now( { format => '%Y-%m-%e' } ); }
 
 sub now_between_dates {
     my ( $class, $p ) = @_;
-    return undef unless ( $p->{begin} or $p->{end} ); 
+    return undef unless ( $p->{begin} or $p->{end} );
     my @now = Date::Calc::Today();
     my ( $begin_days, $end_days ) = undef;
     my ( $begin_date, $end_date );
@@ -81,7 +81,7 @@ sub now_between_dates {
         else {
             @{ $begin_date } = $p->{begin} =~ /^(\d+)\-(\d+)\-(\d+)/;
         }
-    
+
         # Good result: 1 (meaning 'begin' is one day before 'now')
 
         $begin_days = Date::Calc::Delta_Days( @{ $begin_date }, @now );
@@ -102,7 +102,7 @@ sub now_between_dates {
         return undef if ( $end_days < 0 );
     }
     return 1 unless ( defined $begin_days and defined $end_days );
-    
+
     my $spread_days = Date::Calc::Delta_Days( @{ $begin_date }, @{ $end_date } );
     return undef if ( $end_days - $begin_days > $spread_days );
     return 1;
@@ -133,7 +133,7 @@ sub list_process {
             delete $existing{ $new_id };
             push @k, $new_id;
         }
-    
+
         # otherwise, track it as an add
 
         else {
@@ -198,9 +198,9 @@ in, returns undef.
 B<now( \% )>
 
 Return the current time, formatted: yyyy-mm-dd hh:mm:ss. Since we use
-the L<Date::Format> module (which in turn uses standard strftime
-formatting strings), you can pass in a format for the date/time to fit
-your needs.
+the L<Date::Format|Date::Format> module (which in turn uses standard
+strftime formatting strings), you can pass in a format for the
+date/time to fit your needs.
 
 Parameters:
 
@@ -232,7 +232,7 @@ Returns 1 if 'now' is between the two dates (inclusive), undef
 otherwise.
 
 Examples:
- 
+
  # Today is '2000-10-31' in all examples
 
  SPOPS::Utility->now_between_days( { begin => '2000-11-01' } );
@@ -270,6 +270,6 @@ it under the same terms as Perl itself.
 
 Chris Winters <chris@cwinters.com>
 
-See the L<SPOPS> module for the full author list.
+See the L<SPOPS|SPOPS> module for the full author list.
 
 =cut

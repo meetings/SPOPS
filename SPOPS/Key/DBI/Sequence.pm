@@ -1,19 +1,19 @@
 package SPOPS::Key::DBI::Sequence;
 
-# $Id: Sequence.pm,v 1.9 2001/08/22 10:51:45 lachoy Exp $
+# $Id: Sequence.pm,v 1.12 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
 @SPOPS::Key::DBI::Sequence::ISA      = ();
-$SPOPS::Key::DBI::Sequence::VERSION  = '1.8';
-$SPOPS::Key::DBI::Sequence::Revision = substr(q$Revision: 1.9 $, 10);
+$SPOPS::Key::DBI::Sequence::VERSION  = '1.90';
+$SPOPS::Key::DBI::Sequence::Revision = substr(q$Revision: 1.12 $, 10);
 
 # Default SELECT statement to use to retrieve the sequence -- you can
 # override this in your config or in the parameters passed to
 # 'retrieve_sequence()'
 
-use constant SEQUENCE_CALL => q/SELECT NEXTVAL( '%s' )/;
+use constant DEFAULT_SEQUENCE_CALL => q/SELECT NEXTVAL( '%s' )/;
 
 # Retrieve the sequence value
 
@@ -30,16 +30,19 @@ sub retrieve_sequence {
     my $sequence_name = $p->{sequence_name} || $item->CONFIG->{sequence_name};
     unless ( $sequence_name ) {
         my $class_name = ( ref $item ) ? ref $item : $item;
-        _w( 0, "Cannot retrieve sequence without a sequence name! No sequence",
-               "name found in parameter or in object configuration. (Object: $class_name)" );
+        _w( 0, "Cannot retrieve sequence without a sequence name!",
+               "No sequence name found in parameter or in object",
+               "configuration. (Object: $class_name)" );
         return undef;
     }
 
-    $p->{db} ||= $item->global_db_handle();
+    $p->{db} ||= $item->global_datasource_handle();
     return undef unless ( ref $p->{db} );
 
     DEBUG() && _w( 2, "Trying to get value from sequence ($sequence_name)" );
-    my $sequence_call  = $p->{sequence_call} || $item->CONFIG->{sequence_call} || SEQUENCE_CALL;
+    my $sequence_call  = $p->{sequence_call} ||
+                         $item->CONFIG->{sequence_call} ||
+                         DEFAULT_SEQUENCE_CALL;
     my $sql = sprintf( $sequence_call, $sequence_name );
     DEBUG() && _w( 2, "SQL used to retrieve sequence:\n$sql" );
     my ( $sth );
@@ -80,8 +83,9 @@ SPOPS::Key::DBI::Sequence -- Retrieve sequence values from a supported DBI datab
    },
  };
 
- # Note: Other classes (such as 'SPOPS::DBI::Pg' use this class
- # without requiring you to specify it).
+ # Note: Other classes (such as 'SPOPS::DBI::Pg') use this class
+ # without requiring you to specify it or any of the configuration
+ # information.
 
 =head1 DESCRIPTION
 
@@ -107,7 +111,7 @@ This class comes with the default sequence call of:
  SELECT NEXTVAL( '$sequence_name' )
 
 If you need to change this for your database, it should be in a form
-accessible by L<sprintf> so we can plugin the sequence name. For
+accessible by C<sprintf> so we can plugin the sequence name. For
 instance:
 
  sequence_name => 'myseq',
@@ -144,7 +148,7 @@ Nothing known.
 
 =head1 SEE ALSO
 
-L<DBI>, PostgreSQL and Oracle databases, both of which have sequences.
+L<DBI|DBI>, PostgreSQL and Oracle databases, both of which have sequences.
 
 =head1 COPYRIGHT
 

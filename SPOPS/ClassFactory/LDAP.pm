@@ -1,14 +1,68 @@
 package SPOPS::ClassFactory::LDAP;
 
-# $Id: LDAP.pm,v 1.12 2001/08/27 15:18:07 lachoy Exp $
+# $Id: LDAP.pm,v 1.18 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
 @SPOPS::ClassFactory::LDAP::ISA      = ();
-$SPOPS::ClassFactory::LDAP::VERSION  = '1.8';
-$SPOPS::ClassFactory::LDAP::Revision = substr(q$Revision: 1.12 $, 10);
+$SPOPS::ClassFactory::LDAP::VERSION  = '1.90';
+$SPOPS::ClassFactory::LDAP::Revision = substr(q$Revision: 1.18 $, 10);
+
+
+########################################
+# BEHAVIOR: read_code
+########################################
+
+my $generic_common_relate = <<'COMMONRELATE';
+
+    sub %%CLASS%%::_ldap_get_linked_objects {
+        my ( $self, $item_list, $item_class, $p ) = @_;
+        $item_list  = ( ref $item_list ) ? $item_list : [ $item_list ];
+        my ( @object_list, @error_list );
+LINK_ITEM:
+        foreach my $item ( @{ $item_list } ) {
+            if ( ref $item ) {
+                push @object_list, $item;
+                SPOPS::_wm( 2, $p->{DEBUG}, "Found linked object", "(", $item->id, ")" );
+                next LINK_ITEM;
+            }
+
+            # First fetch the thing we're linking to, then put it in
+            # the list
+
+            my $item_obj = eval { $item_class->fetch( $item, $p ) };
+            if ( $@ or ! $item_obj ) {
+                my $err = ( $@ ) ? $SPOPS::Error::system_msg : 'Object not found';
+                my $msg = "Cannot fetch linked object with ID ($item)\nError: $err";
+                SPOPS::_wm( 1, $p->{DEBUG}, $msg );
+                push @error_list, $msg;
+                next LINK_ITEM;
+            }
+            SPOPS::_wm( 2, $p->{DEBUG}, "Found linked object to ID (", $item_obj->id, ")" );
+            push @object_list, $item_obj;
+        }
+        return ( \@object_list, \@error_list );
+    }
+
+COMMONRELATE
+
+
+sub conf_read_code {
+    my ( $class ) = @_;
+    my $common_relate = $generic_common_relate;
+    $common_relate =~ s/%%CLASS%%/$class/g;
+    {
+        local $SIG{__WARN__} = sub { return undef };
+        eval $common_relate;
+    }
+    if ( $@ ) {
+        return ( ERROR, "Cannot create common relationship routine ($class): $@" );
+    }
+    DEBUG() && _w( 1, "Finished adding LDAP read_code sub for ($class)" );
+    return ( OK, undef );
+}
 
 
 ########################################
@@ -16,21 +70,82 @@ $SPOPS::ClassFactory::LDAP::Revision = substr(q$Revision: 1.12 $, 10);
 ########################################
 
 my $generic_hasa = <<'HASA';
-
     sub %%CLASS%%::%%HASA_ALIAS%% {
         my ( $self, $p ) = @_;
         die "Cannot call from unsaved object or class!" unless ( $self->dn );
         my @object_list = ();
         my $conf_other = %%HASA_CLASS%%->CONFIG;
         my $hasa_value = $self->{%%HASA_FIELD%%};
-        $hasa_value = ( ref $hasa_value eq 'ARRAY' ) ? $hasa_value : [ $hasa_value ];
+        $hasa_value = ( ref $hasa_value eq 'ARRAY' )
+                        ? $hasa_value : [ $hasa_value ];
         foreach my $other_dn ( @{ $hasa_value } ) {
-            SPOPS::_wm( 1, $p->{DEBUG}, "Trying to retrieve linked %%HASA_ALIAS%% with DN ($other_dn)" );
-            my $object = %%HASA_CLASS%%->fetch_by_dn( $other_dn );
+            SPOPS::_wm( 2, $p->{DEBUG}, "Trying to retrieve linked %%HASA_ALIAS%%",
+                                        "with DN ($other_dn)" );
+            my $object = eval { %%HASA_CLASS%%->fetch_by_dn( $other_dn, $p ) };
+            if ( $@ ) {
+                SPOPS::_w( 1, "Could not retrieve linked %%HASA_ALIAS%% with DN ($other_dn): $@" );
+                next;
+            }
+            SPOPS::_wm( 2, $p->{DEBUG}, "Fetched: ", ( ref $object )
+                                                       ? "object with ID (" . $object->id . ")"
+                                                       : "nothing" );
             push @object_list, $object if ( $object );
         }
         return \@object_list;
     }
+
+
+    sub %%CLASS%%::%%HASA_ALIAS%%_add {
+        my ( $self, $link_item_list, $p ) = @_;
+        my ( $has_a_objects, $error_list ) =
+                         $self->_ldap_get_linked_objects( $link_item_list,
+                                                          '%%HASA_CLASS%%', $p );
+        my $link_dn = $self->dn;
+        my $added   = 0;
+
+        foreach my $has_a ( @{ $has_a_objects } ) {
+            $self->{%%HASA_FIELD%%} = $has_a->dn;
+            $added++;
+            SPOPS::_wm( 2, $p->{DEBUG}, "Will add has_a object:", $has_a->dn );
+        }
+        eval { $self->save( $p ) };
+        if ( $@ ) {
+            die "Could not save object (", $self->id, ") after link additions in %%HASA_FIELD\n",
+                "Error: $@ / $SPOPS::Error::system_msg";
+        }
+        return $added;
+    }
+
+
+    sub %%CLASS%%::%%HASA_ALIAS%%_remove {
+        my ( $self, $link_item_list, $p ) = @_;
+        my ( $has_a_objects, $error_list ) =
+                         $self->_ldap_get_linked_objects( $link_item_list,
+                                                          '%%HASA_CLASS%%', $p );
+        my $link_dn = $self->dn;
+        my $removed = 0;
+
+        my $old_members = ( ref $self->{%%HASA_FIELD%%} )
+                            ? $self->{%%HASA_FIELD%%} : [ $self->{%%HASA_FIELD%%} ];
+        foreach my $has_a ( @{ $has_a_objects } ) {
+            $self->{%%HASA_FIELD%%} = ( ref $self->{%%HASA_FIELD%%} )
+                                        ? { remove => $has_a->dn } : undef;
+            $removed++;
+            SPOPS::_wm( 2, $p->{DEBUG}, "Will remove has_a object:", $has_a->dn );
+
+        }
+        eval { $self->save( $p ) };
+        if ( $@ ) {
+            my $new_members = ( ref $self->{%%HASA_FIELD%%} )
+                                ? $self->{%%HASA_FIELD%%} : [ $self->{%%HASA_FIELD%%} ];
+            die "Could not save object (", $self->id, ") after link removals for %%HASA_FIELD%%\n",
+                "Old members: ", join( " || ", @{ $old_members } ), "\n",
+                "New members: ", join( " || ", @{ $new_members } ), "\n",
+                "Error: $SPOPS::Error::system_msg";
+        }
+        return $removed;
+    }
+
 HASA
 
 
@@ -55,7 +170,10 @@ sub conf_relate_has_a {
             $hasa_sub =~ s/%%HASA_CLASS%%/$hasa_class/g;
             $hasa_sub =~ s/%%HASA_ALIAS%%/$hasa_alias/g;
             $hasa_sub =~ s/%%HASA_FIELD%%/$hasa_field/g;
-            DEBUG() && _w( 2, "Now going to eval the routine:\n$hasa_sub" );
+            DEBUG() && _w( 2, "Trying to create has_a routines with ($class) has_a",
+                              "($hasa_class) using field ($hasa_field)" );
+            DEBUG() && _w( 5, "Now going to eval the routine:\n$hasa_sub" );
+#            warn "Trying\n$hasa_sub";
             {
                 local $SIG{__WARN__} = sub { return undef };
                 eval $hasa_sub;
@@ -79,35 +197,22 @@ sub conf_relate_has_a {
 my $generic_linksto = <<'LINKSTO';
 
     sub %%CLASS%%::%%LINKSTO_ALIAS%% {
-        my ( $self ) = @_;
-        my $filter = "(%%LINKSTO_FIELD%%=" . $self->dn . ")";
-        return %%LINKSTO_CLASS%%->fetch_group({ filter => $filter });
+        my ( $self, $p ) = @_;
+        $p ||= {};
+        $p->{filter} = "(%%LINKSTO_FIELD%%=" . $self->dn . ")";
+        return %%LINKSTO_CLASS%%->fetch_group( $p );
     }
 
 
     sub %%CLASS%%::%%LINKSTO_ALIAS%%_add {
-        my ( $self, $link_id_list, $p ) = @_;
+        my ( $self, $link_item_list, $p ) = @_;
+        my ( $link_to_objects, $error_list ) =
+                         $self->_ldap_get_linked_objects( $link_item_list,
+                                                          '%%LINKSTO_CLASS%%', $p );
+        my $link_dn = $self->dn;
+        my $added   = 0;
 
-        # Allow user to pass only one ID to add (scalar) or an arrayref (ref)
-
-        $link_id_list  = ( ref $link_id_list ) ? $link_id_list : [ $link_id_list ];
-        my $link_dn    = $self->dn;
-        my $added      = 0;
-        my @error_list = ();
-
-LINK_ITEM:
-        foreach my $link_id ( @{ $link_id_list } ) {
-            SPOPS::_wm( 1, $p->{DEBUG}, "Trying to add link to ID ($link_id)" );
-
-            # First fetch the thing we're linking to
-
-            my $link_to = eval { %%LINKSTO_CLASS%%->fetch( $link_id, $p ) };
-            if ( $@ or ! $link_to ) {
-               my $err = ( $@ ) ? $SPOPS::Error::system_msg : 'Object not found';
-               push @error_list, "Could not fetch link object with ID ($link_id)\n" .
-                                 "Error: $err";
-               next LINK_ITEM;
-            }
+        foreach my $link_to ( @{ $link_to_objects } ) {
 
             # Now add the DN for the linker -- this should work
             # whether it's multivalue or not
@@ -115,15 +220,15 @@ LINK_ITEM:
             $link_to->{%%LINKSTO_FIELD%%} = $link_dn;
             eval { $link_to->save( $p ) };
             if ( $@ ) {
-                push @error_list, "Could not save link object ($link_id)\n" .
-                                  "Error: $@ / $SPOPS::Error::system_msg";
+                push @{ $error_list }, "Could not save link object (", $link_to->dn,
+                                       ")\nError: $@ / $SPOPS::Error::system_msg";
             }
             else {
                 $added++;
             }
         }
-        if ( scalar @error_list ) {
-            $SPOPS::Error::system_msg = join "\n\n", @error_list;
+        if ( scalar @{ $error_list } ) {
+            $SPOPS::Error::system_msg = join "\n\n", @{ $error_list };
             die 'Add %%LINKSTO_ALIAS%% failed for one or more items';
         }
         return $added;
@@ -131,31 +236,14 @@ LINK_ITEM:
 
 
     sub %%CLASS%%::%%LINKSTO_ALIAS%%_remove {
-        my ( $self, $link_id_list, $p ) = @_;
+        my ( $self, $link_item_list, $p ) = @_;
+        my ( $link_to_objects, $error_list ) =
+                         $self->_ldap_get_linked_objects( $link_item_list,
+                                                          '%%LINKSTO_CLASS%%', $p );
+        my $link_dn = $self->dn;
+        my $removed = 0;
 
-        # Allow user to pass only one ID to add (scalar) or an arrayref (ref)
-
-        $link_id_list  = ( ref $link_id_list ) ? $link_id_list : [ $link_id_list ];
-        my $link_dn    = $self->dn;
-        my $removed    = 0;
-        my @error_list = ();
-
-LINK_ITEM:
-        foreach my $link_id ( @{ $link_id_list } ) {
-            SPOPS::_wm( 1, $p->{DEBUG}, "Trying to remove link to ID ($link_id)" );
-
-            # First fetch the thing we're removing the link from
-
-            my $link_to = eval { %%LINKSTO_CLASS%%->fetch( $link_id, $p ) };
-            if ( $@ or ! $link_to ) {
-               my $err = ( $@ ) ? $SPOPS::Error::system_msg : 'Object not found';
-               push @error_list, "Could not fetch link object with ID ($link_id)\n" .
-                                 "Error: $err";
-               next LINK_ITEM;
-            }
-
-            # Now remove the DN for the linker
-
+        foreach my $link_to ( @{ $link_to_objects } ) {
             my $current_value = $link_to->{%%LINKSTO_FIELD%%};
             if ( ref $current_value ) {
                 $link_to->{%%LINKSTO_FIELD%%} = { remove => $link_dn };
@@ -165,16 +253,16 @@ LINK_ITEM:
             }
             eval { $link_to->save( $p ) };
             if ( $@ ) {
-                push @error_list, "Could not save link object ($link_id)\n" .
-                                  "Error: $SPOPS::Error::system_msg";
+                push @{ $error_list }, "Could not remove link object (", $link_to->dn,
+                                       ")\nError: $@ / $SPOPS::Error::system_msg";
             }
             else {
                 $removed++;
             }
         }
-        if ( scalar @error_list ) {
-            $SPOPS::Error::system_msg = join "\n\n", @error_list;
-            die 'Remove %%LINKSTO_ALIAS%% failed for one or more items';
+        if ( scalar @{ $error_list } ) {
+            $SPOPS::Error::system_msg = join "\n\n", @{ $error_list };
+            die 'Add %%LINKSTO_ALIAS%% failed for one or more items';
         }
         return $removed;
     }
@@ -201,7 +289,9 @@ sub conf_relate_links_to {
             $linksto_sub =~ s/%%LINKSTO_CLASS%%/$linksto_class/g;
             $linksto_sub =~ s/%%LINKSTO_ALIAS%%/$linksto_alias/g;
             $linksto_sub =~ s/%%LINKSTO_FIELD%%/$linksto_field/g;
-            DEBUG() && _w( 2, "Now going to eval the routine:\n$linksto_sub" );
+            DEBUG() && _w( 2, "Trying to create links_to routines with ($class) links_to",
+                              "($linksto_class) using field ($linksto_field)" );
+            DEBUG() && _w( 5, "Now going to eval the routine:\n$linksto_sub" );
             {
                 local $SIG{__WARN__} = sub { return undef };
                 eval $linksto_sub;
@@ -258,53 +348,8 @@ In configuration:
 
 This class implements two types of relationships: 'has_a' and 'links_to'.
 
-The 'has_a' relationship exists where one object has the information
-for one or more objects of another type in its own properties. The
-DN(s) for the other object(s) are held in one of the object
-properties.
-
-For instance, one of the objects represented in the standard LDAP
-schema is a group. This has the object class 'groupOfUniqueNames' and
-a property 'uniquemember' which may have zero, one or more DNs for
-member objects.
-
-The 'links_to' relationship exists where one object is related to one
-or more objects of another type, but the information is held in the
-property of the other object. So a member of one or more groups would
-use a 'links_to' relationship to find all the groups to which the
-member belongs.
-
-As an example of both of these, take the canonical relationship of
-users to groups. The group object 'has_a' zero or more user objects
-since it is a 'groupOfUniqueNames' and has the property
-'uniquemember'. So we would define it:
-
- group => {
-    class    => 'My::Group',
-    isa      => [ 'SPOPS::LDAP' ],
-    has_a    => { 'My::User' => 'uniquemember' },
- },
-
-So a group that had the following DNs in its 'uniquemember' field:
-
-  cn=Fred Flintstone,ou=People,dc=hanna-barberra,dc=com
-  cn=Wilma Flintstone,ou=People,dc=hanna-barberra,dc=com
-  cn=Dino,ou=People,dc=hanna-barberra,dc=com
-
-would return user objects for Fred, Wilma and Dino.
-
-The user object might be defined:
-
- user => {
-    class    => 'My::User',
-    isa      => [ 'SPOPS::LDAP' ],
-    links_to => { 'My::Group' => 'uniquemember' },
- },
-
-And would find all groups that had its DN in the field 'uniquemember'
-of the group objects.
-
-This is generally more straightforward than the DBI equivalent.
+See L<SPOPS::Manual::Configuration|SPOPS::Manual::Configuration> for a
+discussion of the configuration parameters.
 
 =head1 METHODS
 
@@ -313,8 +358,6 @@ they are not class methods. The parameter refers to the class into
 which the behaviors will be installed.
 
 B<conf_relate_has_a( $class )>
-
-See above for an explanation of how to configure this.
 
 The 'a' part of the 'has_a' term is a bit of a misnomer -- this works
 whether the property has one or more DNs. It creates a single method
@@ -336,9 +379,29 @@ Would create a method 'user' so you could do:
       print "DN: ", $user->dn, "\n";
   }
 
+=over 4
+
+=item *
+
+C<$alias>: Returns an arrayref of objects to which this object is linked.
+
+=item *
+
+C<$alias_add( \@item_list )>: Adds links for this object to every
+object specified in C<\@item_list>.
+
+=item *
+
+C<$alias_remove>: Removes links to this object from every object
+specified in C<\@item_list>.
+
+=back
+
 B<conf_relate_links_to( $class )>
 
-This creates three methods for every entry.
+This creates three methods for every entry -- note that C<\@item_list>
+can be either ID values of objects to add/remove or the objects
+themselves.
 
 =over 4
 
@@ -348,13 +411,13 @@ C<$alias>: Returns an arrayref of objects to which this object is linked.
 
 =item *
 
-C<$alias_add( \@id_list )>: Adds links for this object to every object
-specified in C<\@id_list>.
+C<$alias_add( \@item_list )>: Adds links for this object to every
+object specified in C<\@item_list>.
 
 =item *
 
 C<$alias_remove>: Removes links to this object from every object
-specified in C<\@id_list>.
+specified in C<\@item_list>.
 
 =back
 
@@ -375,11 +438,11 @@ Implement 'fetch_by' functionality.
 
 =head1 SEE ALSO
 
-L<SPOPS::LDAP>
+L<SPOPS::LDAP|SPOPS::LDAP>
 
-L<Net::LDAP>
+L<Net::LDAP|Net::LDAP>
 
-L<SPOPS>
+L<SPOPS|SPOPS>
 
 =head1 COPYRIGHT
 

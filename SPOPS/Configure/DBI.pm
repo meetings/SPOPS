@@ -1,13 +1,13 @@
 package SPOPS::Configure::DBI;
 
-# $Id: DBI.pm,v 1.14 2001/08/24 21:25:21 lachoy Exp $
+# $Id: DBI.pm,v 1.16 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS::Configure;
 
 @SPOPS::Configure::DBI::ISA      = qw( SPOPS::Configure );
-$SPOPS::Configure::DBI::VERSION  = '1.8';
-$SPOPS::Configure::DBI::Revision = substr(q$Revision: 1.14 $, 10);
+$SPOPS::Configure::DBI::VERSION  = '1.90';
+$SPOPS::Configure::DBI::Revision = substr(q$Revision: 1.16 $, 10);
 
 1;
 
@@ -19,18 +19,19 @@ SPOPS::Configure::DBI - DEPRECATED
 
 =head1 SYNOPSIS
 
-See L<SPOPS::ClassFactory>
+See L<SPOPS::ClassFactory|SPOPS::ClassFactory>
 
 =head1 DESCRIPTION
 
 THIS CLASS IS DEPRECATED. As of SPOPS 0.50 it has been entirely
-replaced by L<SPOPS::ClassFactory> and its behaviors -- see
-L<SPOPS::ClassFactory::DBI> for replicated behaviors from
-C<SPOPS::Configure::DBI>.
+replaced by L<SPOPS::ClassFactory|SPOPS::ClassFactory> and its
+behaviors -- see L<SPOPS::ClassFactory::DBI|SPOPS::ClassFactory::DBI>
+for replicated behaviors from C<SPOPS::Configure::DBI>.
 
 The main interface into this class (C<process_config()>) which was
 inherited from C<SPOPS::Configure> is still inherited, but that method
-simply forwards the call to L<SPOPS::ClassFactory>. In the near future
+simply forwards the call to
+L<SPOPS::ClassFactory|SPOPS::ClassFactory>. In the near future
 (probably as of SPOPS 0.60) all classes in the C<SPOPS::Configure>
 tree will be removed entirely.
 

@@ -1,13 +1,13 @@
 package SPOPS::Initialize;
 
-# $Id: Initialize.pm,v 1.11 2001/08/22 11:10:04 lachoy Exp $
+# $Id: Initialize.pm,v 1.13 2001/10/12 21:00:26 lachoy Exp $
 
 use strict;
 use SPOPS        qw( _w DEBUG );
 use SPOPS::ClassFactory;
 
-$SPOPS::Initialize::VERSION   = '1.8';
-$SPOPS::Initialize::Revision  = substr(q$Revision: 1.11 $, 10);
+$SPOPS::Initialize::VERSION   = '1.90';
+$SPOPS::Initialize::Revision  = substr(q$Revision: 1.13 $, 10);
 
 # Main interface -- take the information read in from 'read_config()'
 # and create SPOPS classes, then initialize them
@@ -208,7 +208,7 @@ Ensure that the classes used by SPOPS are 'require'd.
 
 =item 3.
 
-Build the SPOPS class, using L<SPOPS::ClassFactory>.
+Build the SPOPS class, using L<SPOPS::ClassFactory|SPOPS::ClassFactory>.
 
 =item 4.
 
@@ -302,7 +302,7 @@ to match all the files ending in '.perl' and read them in.
 
 =head1 SEE ALSO
 
-L<SPOPS::ClassFactory>
+L<SPOPS::ClassFactory|SPOPS::ClassFactory>
 
 =head1 COPYRIGHT
 

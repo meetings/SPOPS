@@ -1,6 +1,6 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 1.16 2001/08/22 10:51:45 lachoy Exp $
+# $Id: Tie.pm,v 1.19 2001/10/15 00:00:53 lachoy Exp $
 
 use strict;
 use vars         qw( $PREFIX_TEMP $PREFIX_INTERNAL );
@@ -12,8 +12,8 @@ require Exporter;
 @SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_INTERNAL IDX_TEMP  
                              IDX_CHECK_FIELDS IDX_LAZY_LOADED
                              $PREFIX_TEMP $PREFIX_INTERNAL );
-$SPOPS::Tie::VERSION   = '1.8';
-$SPOPS::Tie::Revision  = substr(q$Revision: 1.16 $, 10);
+$SPOPS::Tie::VERSION   = '1.90';
+$SPOPS::Tie::Revision  = substr(q$Revision: 1.19 $, 10);
 
 use constant IDX_DATA          => '_dat';
 use constant IDX_CHANGE        => '_chg';
@@ -93,6 +93,7 @@ sub _field_check { return undef; }
 
 sub FETCH {
     my ( $self, $key ) = @_;
+    return unless ( $key );
     my $cmp_key = lc $key;
     DEBUG() && _w( 3, " tie: Trying to retrieve value for ($key)\n" );
     return $self->{ IDX_CHANGE() }                 if ( $key eq IDX_CHANGE );
@@ -332,7 +333,7 @@ for the '_changed' key from the C<tied()> object:
 
 Note that this state is automatically tracked based on whether you set
 any property of the object, so you should never need to do this. See
-L<SPOPS> for more information about the I<changed> methods.
+L<SPOPS|SPOPS> for more information about the I<changed> methods.
 
 =head2 Tracking Temporary Variables
 
@@ -382,9 +383,9 @@ typically only used in the internal SPOPS mechanisms -- temporary
 variables are often used to store computed results or other
 information for display rather than internal use.
 
-For example, the L<SPOPS::DBI> module could allow you to create
-validating subroutines to ensure that your data conform to some sort
-of specification:
+For example, the L<SPOPS::DBI|SPOPS::DBI> module could allow you to
+create validating subroutines to ensure that your data conform to some
+sort of specification:
 
  push @{ $obj->{_internal_validate} }, \&ensure_consistent_date;
 
@@ -409,8 +410,8 @@ the objects more palatable:
                                        printing       => 'PNUM',
                                        classification => 'CLSF' } };
 
-(See the L<SPOPS> documentation for how to declare this in your SPOPS
-configuration.)
+(See the L<SPOPS|SPOPS> documentation for how to declare this in your
+SPOPS configuration.)
 
 So your web designers can use the objects:
 
@@ -418,7 +419,7 @@ So your web designers can use the objects:
        "Title: $book->{title}\n";
 
 But the data are actually stored in the object (and retrieved by an
-L<each> query on the object -- be careful) using the old, ugly names
+C<each> query on the object -- be careful) using the old, ugly names
 'AUTH', 'TTL', 'PNUM' and 'CLSF'.
 
 This can be extremely helpful not only to rename fields for aesthetic
@@ -558,8 +559,8 @@ You can also get the same result with:
 
 =head1 METHODS
 
-See L<Tie::Hash> or L<perltie> for details of what the different
-methods do.
+See L<Tie::Hash|Tie::Hash> or L<perltie> for details of what the
+different methods do.
 
 =head1 TO DO
 
@@ -573,7 +574,7 @@ None known.
 
 =head1 SEE ALSO
 
-L<perltie>
+L<perltie|perltie>
 
 =head1 COPYRIGHT
 
