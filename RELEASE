@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.52 Thu Oct 25 23:19:43 EDT 2001
+
+  * Bugfixes, enhancements. Nothing major.
+
+
 0.51 Sun Oct 14 20:23:59 EDT 2001
 
   * Bugfixes, several to SPOPS::LDAP
@@ -62,4 +67,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 1.8 2001/10/15 04:28:24 lachoy Exp $
+$Id: RELEASE,v 1.9 2001/10/26 03:22:27 lachoy Exp $

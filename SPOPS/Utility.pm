@@ -1,14 +1,15 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 1.12 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Utility.pm,v 1.13 2001/10/22 15:13:03 lachoy Exp $
 
 use strict;
+use Class::Date   qw();
 use Date::Format  qw( time2str );
 use Date::Calc    ();
 
 @SPOPS::Utility::ISA      = qw();
 $SPOPS::Utility::VERSION  = '1.90';
-$SPOPS::Utility::Revision = substr(q$Revision: 1.12 $, 10);
+$SPOPS::Utility::Revision = substr(q$Revision: 1.13 $, 10);
 
 
 # Return a random code of length $length. If $opt is 'mixed', then the
@@ -43,7 +44,7 @@ sub crypt_it {
 # Return a { time } (or the current time) formatted with { format }
 #
 # Signature: $time_string = $class->now( [ { format => $strftime_format, 
-#                                            time => $time_in_seconds } ] );
+#                                            time   => $time_in_seconds } ] );
 
 sub now {
     my ( $class, $p ) = @_;
@@ -51,6 +52,15 @@ sub now {
     $p->{time}   ||= time;
     return time2str( $p->{format}, $p->{time} );
 }
+
+
+# Class::Date version...
+#sub now {
+#    my ( $class, $p ) = @_;
+#    $p->{format} ||= '%Y-%m-%d %T';
+#    $p->{time}   ||= time;
+#    return Class::Date::new( $p->{time} )->strftime( $p->{format} );
+#}
 
 
 # Return the current time formatted 'yyyy-mm-dd'

@@ -1,6 +1,6 @@
 package SPOPS::Iterator::DBI;
 
-# $Id: DBI.pm,v 1.8 2001/10/12 21:00:26 lachoy Exp $
+# $Id: DBI.pm,v 1.9 2001/10/22 11:51:30 lachoy Exp $
 
 use strict;
 use SPOPS           qw( _w DEBUG );
@@ -9,7 +9,7 @@ use SPOPS::Secure   qw( :level );
 
 @SPOPS::Iterator::DBI::ISA      = qw( SPOPS::Iterator );
 $SPOPS::Iterator::DBI::VERSION  = '1.90';
-$SPOPS::Iterator::DBI::Revision = substr(q$Revision: 1.8 $, 10);
+$SPOPS::Iterator::DBI::Revision = substr(q$Revision: 1.9 $, 10);
 
 # Keys with _DBI at the beginning are specific to this implementation;
 # keys without _DBI at the begining are used in all iterators.
@@ -72,7 +72,7 @@ sub fetch_object {
 
         # It's ok to create the object now
 
-        $obj = $object_class->new;
+        $obj = $object_class->new({ skip_default_values => 1 });
         $obj->_fetch_assign_row( $self->{_FIELDS}, $row );
 
         # Check security on the row unless overridden. If the security

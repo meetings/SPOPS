@@ -1,16 +1,16 @@
 # -*-perl-*-
 
-# $Id: 20_gdbm.t,v 1.2 2001/09/12 14:00:10 lachoy Exp $
+# $Id: 20_gdbm.t,v 1.3 2001/10/23 12:15:33 lachoy Exp $
 
 use strict;
-
 use constant GDBM_FILE => 't/test.gdbm';
 use constant NUM_TESTS => 15;
 
 sub cleanup  { unlink GDBM_FILE }
 sub new_object {
-    eval { GDBMTest->new({ name    => 'MyProject', 
-                           version => 1.14, 
+    eval { GDBMTest->new({ name    => 'MyProject',
+                           version => 1.14,
+                           url     => 'http://www.cwinters.com/',
                            author  => 'La Choy (lachoy@cwinters.com)' }) };
 }
 
@@ -110,11 +110,11 @@ sub new_object {
     {
         my $obj = eval { GDBMTest->fetch( 'MyProject-1.14' ) };
         ok( ! $@, 'Fetch object' );
-        ok( $obj->{name} eq 'MyProject', 'Fetch object (content check)' );
+        is( $obj->{name}, 'MyProject', 'Fetch object (content check)' );
 
         my $new_obj = eval { $obj->clone({ name => 'YourProject', version => 1.02 }) };
         ok( ! $@, 'Clone object' );
-        ok( $new_obj->{name} ne $obj->{name}, 'Clone object (override content)' );
+        isnt( $new_obj->{name}, $obj->{name}, 'Clone object (override content)' );
 
         eval { $new_obj->save };
         ok( ! $@, 'Save object' );

@@ -1,13 +1,14 @@
 package SPOPS::LDAP::MultiDatasource;
 
-# $Id: MultiDatasource.pm,v 1.7 2001/10/12 21:00:26 lachoy Exp $
+# $Id: MultiDatasource.pm,v 1.9 2001/10/25 12:08:57 lachoy Exp $
 
 use strict;
+use SPOPS qw( DEBUG _w );
 use SPOPS::LDAP;
 
 @SPOPS::LDAP::MultiDatasource::ISA       = qw( SPOPS::LDAP );
 $SPOPS::LDAP::MultiDatasource::VERSION   = '1.90';
-$SPOPS::LDAP::MultiDatasource::Revision  = substr(q$Revision: 1.7 $, 10);
+$SPOPS::LDAP::MultiDatasource::Revision  = substr(q$Revision: 1.9 $, 10);
 
 use constant DEFAULT_CONNECT_KEY => 'main';
 
@@ -43,39 +44,50 @@ sub get_connect_key {
 sub fetch {
     my ( $class, $id, $p ) = @_;
 
-    my $R = OpenInteract::Request->instance;
-
     # If passed in a handle, we will always use only that
 
     if ( $p->{ldap} ) {
         return $class->SUPER::fetch( $id, $p );
     }
 
-    my $ds_list = $class->CONFIG->{datasource};
+    my @ds_list = $class->_get_datasource_list( 'fetch', $id, $p );
 
-    # If only one datasource is specified in the configuration, then
-    # use it
+    # Step through the datasource listing and try to retrieve each one
+    # in turn
 
-    unless ( ref $ds_list eq 'ARRAY' and scalar @{ $ds_list } ) {
-        return $class->SUPER::fetch( $id, $p );
-    }
-
-    # Otherwise step through the datasource listing and try to
-    # retrieve each one in turn
-
-    foreach my $ds ( @{ $ds_list } ) {
-        $R->scrib( 1, "Trying to use datasource ($ds) for class ($class)" );
+    foreach my $ds ( @ds_list ) {
+        DEBUG && _w( 1, "(fetch) Trying to use datasource ($ds) for class ($class)" );
         $p->{connect_key} = $ds;
-
-        # Trap security errors; if we don't fetch an object, we'll
-        # just return undef.
-
         my $object = eval { $class->SUPER::fetch( $id, $p ) };
-        return $object if ( $object );
+        if ( $object ) {
+            $object->{_datasource} = $ds;
+            return $object;
+        }
     }
     return undef;
 }
 
+
+sub fetch_by_dn {
+    my ( $class, $dn, $p ) = @_;
+    if ( $p->{ldap} ) {
+        return $class->SUPER::fetch_by_dn( $dn, $p );
+    }
+    my @ds_list = $class->_get_datasource_list( 'fetch_by_dn', $dn, $p );
+
+    # Step through the datasource listing and try to retrieve each one
+    # in turn
+
+    foreach my $ds ( @ds_list ) {
+        DEBUG && _w( 1, "(fetch_by_dn) Trying to use datasource ($ds) for class ($class)" );
+        $p->{connect_key} = $ds;
+        my $object = eval { $class->SUPER::fetch_by_dn( $dn, $p ) };
+        if ( $object ) {
+            $object->{_datasource} = $ds;
+            return $object
+        }
+    }
+}
 
 sub fetch_group_all {
     my ( $class, $p ) = @_;
@@ -83,17 +95,60 @@ sub fetch_group_all {
     if ( $p->{ldap} ) {
         return $class->SUPER::fetch_group( $p );
     }
-    my $ds_list = $class->CONFIG->{datasource};
-    unless ( ref $ds_list eq 'ARRAY' and scalar @{ $ds_list } ) {
-        return $class->SUPER::fetch_group( $p );
-    }
+    my @ds_list = $class->_get_datasource_list( 'fetch_group', $p );
     my @all_objects = ();
-    foreach my $ds ( @{ $ds_list } ) {
+    foreach my $ds ( @ds_list ) {
         $p->{connect_key} = $ds;
+        DEBUG && _w( 1, "Trying to fetch from datasource ($ds)" );
         my $object_list = $class->SUPER::fetch_group( $p );
-        push @all_objects, @{ $object_list } if ( $object_list and ref $object_list eq 'ARRAY' );
+        if ( $object_list and ref $object_list eq 'ARRAY' ) {
+            foreach my $object ( @{ $object_list } ) {
+                $object->{_datasource} = $ds;
+                push @all_objects, $object;
+            }
+        }
     }
     return \@all_objects;
+}
+
+
+# Just be sure we grab the right LDAP handle before saving or removing
+# -- if people pass in a handle, we'll defer to their judgement that
+# they know what they're doing
+
+sub save {
+    my ( $self, $p ) = @_;
+    $p->{ldap} ||= $self->global_datasource_handle( $self->{_datasource} );
+    return $self->SUPER::save( $p );
+}
+
+
+sub remove {
+    my ( $self, $p ) = @_;
+    $p->{ldap} ||= $self->global_datasource_handle( $self->{_datasource} );
+    return $self->SUPER::remove( $p );
+}
+
+
+# Retrieve a datasource list from the class configuration. If it
+# doesn't work (no list or the list is empty), run a specified method
+# in the parent class.
+
+sub _get_datasource_list {
+    my ( $class, $method, @args ) = @_;
+    my $ds_list = $class->CONFIG->{datasource};
+
+    # If there are not multiple datasources specified, then bounce
+    # back to the SPOPS::LDAP-version of th method we were trying to
+    # call in the first place.
+
+    unless ( ref $ds_list eq 'ARRAY' and scalar @{ $ds_list } ) {
+        DEBUG && _w( 1, "No datasources in configuration for ($class).",
+                        "Using SPOPS::LDAP->$method()" );
+        my $full_method = "SUPER::$method";
+        return $class->$full_method( @args );
+    }
+    return @{ $ds_list };
 }
 
 1;
@@ -110,9 +165,15 @@ SPOPS::LDAP::MultiDatasource -- SPOPS::LDAP functionality but fetching objects f
 
  # In your configuration
  my $config = {
+    class      => 'My::LDAPThings',
     datasource => [ 'main', 'secondary', 'tertiary' ],
-    isa => [ ... 'SPOPS::LDAP::MultiDatasource' ],
+    isa        => [ ... 'SPOPS::LDAP::MultiDatasource' ],
  };
+
+ # Fetch an object and see where it came from
+
+ my $object = My::LDAPThings->fetch( 'superuser' );
+ print "My DN is ", $object->dn, " and I came from $object->{_datasource}";
 
 =head1 DESCRIPTION
 
@@ -122,6 +183,11 @@ you have got objects dispersed among multiple directories -- for
 instance, your 'Accounting' department is on one LDAP server and your
 'Development' department on another. One class can (more or less --
 see below) link the two LDAP servers.
+
+Every object is tagged with the datasource it came from (in the
+C<_datasource> property, if you ever need it), and any calls to
+C<save()> or C<remove()> will use this datasource to retrieve the
+proper connection for the object.
 
 =head2 Caveats
 
@@ -283,6 +349,16 @@ caution.
 
 Returns: Arrayref of SPOPS objects.
 
+B<save( \%params )>
+
+Just pass along the right handle to the actual C<save()> method in
+L<SPOPS::LDAP|SPOPS::LDAP>.
+
+B<remove( \%params )>
+
+Just pass along the right handle to the actual C<remove()> method in
+L<SPOPS::LDAP|SPOPS::LDAP>.
+
 B<base_dn( $connect_key )>
 
 Returns the B<full> base DN associated with C<$connect_key>.
@@ -308,6 +384,8 @@ Test some more.
 =head1 SEE ALSO
 
 L<SPOPS::LDAP|SPOPS::LDAP>
+
+Example in SPOPS distribution: eg/ldap_multidatasource.pl
 
 =head1 COPYRIGHT
 

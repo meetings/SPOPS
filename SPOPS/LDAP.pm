@@ -1,21 +1,19 @@
 package SPOPS::LDAP;
 
-# $Id: LDAP.pm,v 1.30 2001/10/12 21:00:26 lachoy Exp $
+# $Id: LDAP.pm,v 1.32 2001/10/23 14:23:27 lachoy Exp $
 
 use strict;
 use Data::Dumper     qw( Dumper );
 use Net::LDAP        qw();
 use Net::LDAP::Entry qw();
 use Net::LDAP::Util  qw();
-use SPOPS            qw( _w _wm );
+use SPOPS            qw( DEBUG _w );
 use SPOPS::Error     qw();
 use SPOPS::Secure    qw( :level );
 
-use constant DEBUG => 0;
-
 @SPOPS::LDAP::ISA       = qw( SPOPS );
 $SPOPS::LDAP::VERSION   = '1.90';
-$SPOPS::LDAP::Revision  = substr(q$Revision: 1.30 $, 10);
+$SPOPS::LDAP::Revision  = substr(q$Revision: 1.32 $, 10);
 
 
 ########################################
@@ -66,7 +64,7 @@ sub connection_info          { return undef }
 sub behavior_factory {
     my ( $class ) = @_;
     require SPOPS::ClassFactory::LDAP;
-    DEBUG() && _wm( 2, DEBUG, "Installing SPOPS::LDAP behaviors for ($class)" );
+    DEBUG && _w( 2, "Installing SPOPS::LDAP behaviors for ($class)" );
     return { read_code => \&SPOPS::ClassFactory::LDAP::conf_read_code,
              has_a     => \&SPOPS::ClassFactory::LDAP::conf_relate_has_a,
              links_to  => \&SPOPS::ClassFactory::LDAP::conf_relate_links_to,
@@ -128,9 +126,9 @@ sub create_id_filter {
 sub fetch {
     my ( $class, $id, $p ) = @_;
     $p ||= {};
-    DEBUG() && _wm( 2, DEBUG, "Trying to fetch an item of $class with ID $id and params ",
-                      join " // ",
-                      map { $_ . ' -> ' . ( defined( $p->{$_} ) ? $p->{$_} : '' ) }
+    DEBUG && _w( 2, "Trying to fetch an item of $class with ID $id and params ",
+                    join " // ",
+                    map { $_ . ' -> ' . ( defined( $p->{$_} ) ? $p->{$_} : '' ) }
                           keys %{ $p } );
     return undef unless ( $id or $p->{filter} );
 
@@ -146,7 +144,7 @@ sub fetch {
                                               scope       => $p->{scope},
                                               filter      => $filter });
     unless ( $entry ) {
-        DEBUG() && _wm( 1, DEBUG, "No entry found matching object ID ($id)" );
+        DEBUG && _w( 1, "No entry found matching object ID ($id)" );
         return undef;
     }
     my $obj = $class->_perform_postfetch( $p, $info, $entry );
@@ -176,16 +174,16 @@ sub _perform_prefetch {
     # any of the actions returns undef (false), we bail.
 
     return undef unless ( $class->pre_fetch_action({ %{ $p }, id => $p->{id} }) );
-    DEBUG() && _wm( 1, DEBUG, "Pre fetch actions executed ok" );
+    DEBUG && _w( 1, "Pre fetch actions executed ok" );
     return $info;
 }
 
 
 sub _perform_postfetch {
     my ( $class, $p, $info, $entry ) = @_;
-    DEBUG() && _wm( 1, "Single entry found ok; setting values into object",
-                       "(Delay security: $info->{delay_security_check})" );
-    my $obj = $class->new;
+    DEBUG && _w( 1, "Single entry found ok; setting values into object",
+                    "(Delay security: $info->{delay_security_check})" );
+    my $obj = $class->new({ skip_default_values => 1 });
     $obj->_fetch_assign_row( undef, $entry );
     if ( $info->{delay_security_check} && !  $p->{skip_security} ) {
         $info->{level} ||= $class->check_action_security({ id       => $obj->id,
@@ -199,8 +197,8 @@ sub _perform_postfetch {
 sub _fetch_single_entry {
     my ( $class, $p ) = @_;
     my $ldap = $p->{ldap} || $class->global_datasource_handle( $p->{connect_key} );
-    DEBUG() && _wm( 1, DEBUG, "Base DN (", $class->base_dn( $p->{connect_key} ), ")",
-                              "and filter <<$p->{filter}>> being used to fetch single object" );
+    DEBUG && _w( 1, "Base DN (", $class->base_dn( $p->{connect_key} ), ")",
+                    "and filter <<$p->{filter}>> being used to fetch single object" );
     my %args = ( base   => $p->{base} || $class->base_dn( $p->{connect_key} ),
                  scope  => $p->{scope} || 'sub' );
     $args{filter} = $p->{filter} if ( $p->{filter} );
@@ -219,7 +217,7 @@ sub _fetch_single_entry {
         die $SPOPS::Error::user_msg;
     }
     if ( $count == 0 ) {
-        DEBUG() && _wm( 1, DEBUG, "No entry found matching filter ($p->{filter})" );
+        DEBUG && _w( 1, "No entry found matching filter ($p->{filter})" );
         return undef;
     }
     return $ldap_msg->entry( 0 );
@@ -242,14 +240,14 @@ sub fetch_by_dn {
 sub fetch_iterator {
     my ( $class, $p ) = @_;
     require SPOPS::Iterator::LDAP;
-    DEBUG() && _wm( 1, DEBUG, "Trying to create an Iterator with: ", Dumper( $p ) );
+    DEBUG && _w( 1, "Trying to create an Iterator with: ", Dumper( $p ) );
     $p->{class}                    = $class;
     ( $p->{offset}, $p->{max} )    = $class->fetch_determine_limit( $p->{limit} );
     unless ( ref $p->{id_list} ) {
         $p->{ldap_msg} = $class->_execute_multiple_record_query( $p );
         $class->_check_error( $p->{ldap_msg}, 'Error trying to run LDAP search' );
     }
-    return SPOPS::Iterator::LDAP->new( $p );
+    return SPOPS::Iterator::LDAP->new( { %{ $p }, skip_default_values => 1 });
 }
 
 
@@ -265,14 +263,14 @@ sub fetch_group {
     my @group = ();
 ENTRY:
     while ( my $entry = $ldap_msg->shift_entry ) {
-        my $obj = $class->new;
+        my $obj = $class->new({ skip_default_values => 1 });
         $obj->_fetch_assign_row( undef, $entry );
         my $level = ( $p->{skip_security} )
                       ? SEC_LEVEL_WRITE
                       : eval { $obj->check_action_security({ required => SEC_LEVEL_READ }) };
         if ( $@ ) {
-            DEBUG() && _wm( 1, DEBUG, "Security check for object (", $obj->dn, ")",
-                                      "in fetch_group() failed, skipping." );
+            DEBUG && _w( 1, "Security check for object (", $obj->dn, ")",
+                            "in fetch_group() failed, skipping." );
             next ENTRY;
         }
 
@@ -304,12 +302,12 @@ sub _execute_multiple_record_query {
 
     if ( ( my $fetch_oc = $class->ldap_fetch_object_class ) and $filter !~ /objectclass/ ) {
         my $oc_filter = "(objectclass=$fetch_oc)";
-        DEBUG() && _wm( 2, DEBUG, "Adding filter for object class ($fetch_oc)" );
+        DEBUG && _w( 2, "Adding filter for object class ($fetch_oc)" );
         $filter = ( $filter ) ? "(&$oc_filter$filter)" : $oc_filter;
     }
     my $ldap = $p->{ldap} || $class->global_datasource_handle( $p->{connect_key} );
-    DEBUG() && _wm( 1, DEBUG, "Base DN (", $class->base_dn( $p->{connect_key} ), ")\nFilter <<$filter>>\n",
-                      "being used to fetch one or more objects" );
+    DEBUG && _w( 1, "Base DN (", $class->base_dn( $p->{connect_key} ), ")\nFilter <<$filter>>\n",
+                    "being used to fetch one or more objects" );
     return $ldap->search( base   => $class->base_dn( $p->{connect_key} ),
                           scope  => 'sub',
                           filter => $filter );
@@ -318,7 +316,7 @@ sub _execute_multiple_record_query {
 
 sub _fetch_assign_row {
     my ( $self, $field_list, $entry ) = @_;
-    DEBUG() && _wm( 1, DEBUG, "Setting data from row into", ref $self, "using DN of entry ", $entry->dn  );
+    DEBUG && _w( 1, "Setting data from row into", ref $self, "using DN of entry ", $entry->dn  );
     $self->clear_all_loaded();
     my $CONF = $self->CONFIG;
     $field_list ||= $self->field_list;
@@ -326,11 +324,11 @@ sub _fetch_assign_row {
         my @values = $entry->get_value( $field );
         if ( $CONF->{multivalue}{ $field } ) {
             $self->{ $field } = \@values;
-            DEBUG() && _wm( 1, DEBUG, sprintf( " ( multi) %-20s --> %s", $field, join( '||', @values ) ) );
+            DEBUG && _w( 1, sprintf( " ( multi) %-20s --> %s", $field, join( '||', @values ) ) );
         }
         else {
             $self->{ $field } = $values[0];
-            DEBUG() && _wm( 1, DEBUG, sprintf( " (single) %-20s --> %s", $field, $values[0] ) );
+            DEBUG && _w( 1, sprintf( " (single) %-20s --> %s", $field, $values[0] ) );
         }
         $self->set_loaded( $field );
     }
@@ -363,9 +361,9 @@ sub _fetch_post_process {
     # we retrieve a cached copy or not
 
     $self->{tmp_security_level} = $security_level;
-    DEBUG() && _wm( 1, DEBUG, ref $self, "(", $self->id, ") : cache set (if available),",
-                      "post_fetch_action() done, change flag cleared and save ",
-                      "flag set. Security: $security_level" );
+    DEBUG && _w( 1, ref $self, "(", $self->id, ") : cache set (if available),",
+                    "post_fetch_action() done, change flag cleared and save ",
+                    "flag set. Security: $security_level" );
     return $self;
 }
 
@@ -377,7 +375,7 @@ sub _fetch_post_process {
 sub save {
     my ( $self, $p ) = @_;
     my $id = $self->id;
-    DEBUG && _wm( 1, DEBUG, "Trying to save a (", ref $self, ") with ID ($id)" );
+    DEBUG && _w( 1, "Trying to save a (", ref $self, ") with ID ($id)" );
 
     # We can force save() to be an INSERT by passing in a true value
     # for the is_add parameter; otherwise, we rely on the flag within
@@ -389,7 +387,7 @@ sub save {
     # anything.
 
     unless ( $is_add or $self->changed ) {
-        DEBUG && _wm( 1, DEBUG, "This object exists and has not changed. Exiting." );
+        DEBUG && _w( 1, "This object exists and has not changed. Exiting." );
         return $self;
     }
 
@@ -400,7 +398,7 @@ sub save {
         $level = $self->check_action_security({ required => SEC_LEVEL_WRITE,
                                                 is_add   => $is_add });
     }
-    DEBUG && _wm( 1, DEBUG, "Security check passed ok. Continuing." );
+    DEBUG && _w( 1, "Security check passed ok. Continuing." );
 
     # Callback for objects to do something before they're saved
 
@@ -417,7 +415,7 @@ sub save {
 
     return undef unless ( $self->post_save_action({ %{ $p },
                                                     is_add => $is_add }) );
-    DEBUG() && _wm( 1, DEBUG, "Post save action executed ok." );
+    DEBUG && _w( 1, "Post save action executed ok." );
 
     # Save the newly-created/updated object to the cache
 
@@ -441,17 +439,17 @@ sub save {
 sub _save_insert {
     my ( $self, $p ) = @_;
     $p ||= {};
-    DEBUG && _wm( 1, DEBUG, 'Treating save as INSERT' );
+    DEBUG && _w( 1, 'Treating save as INSERT' );
     my $ldap = $p->{ldap} || $self->global_datasource_handle( $p->{connect_key} );
     $self->dn( $self->build_dn );
     my $num_objectclass = ( ref $self->{objectclass} )
                             ? @{ $self->{objectclass} } : 0;
     if ( $num_objectclass == 0 ) {
         $self->{objectclass} = $self->ldap_object_class;
-        DEBUG() && _wm( 1, DEBUG, "Using object class from config in new object (",
-                                  join( ', ', @{ $self->{objectclass} } ), ")" );
+        DEBUG && _w( 1, "Using object class from config in new object (",
+                        join( ', ', @{ $self->{objectclass} } ), ")" );
     }
-    DEBUG && _wm( 1, DEBUG, "Trying to create record with DN: (", $self->dn, ")" );
+    DEBUG && _w( 1, "Trying to create record with DN: (", $self->dn, ")" );
     my %insert_data = ();
     my $no_insert = $self->no_insert;
     foreach my $attr ( @{ $self->field_list } ) {
@@ -466,22 +464,22 @@ sub _save_insert {
             $insert_data{ $attr } = undef;
         }
     }
-    DEBUG() && _wm( 1, DEBUG, "Trying to create a record with:\n", Dumper( \%insert_data ) );
+    DEBUG && _w( 1, "Trying to create a record with:\n", Dumper( \%insert_data ) );
     my $ldap_msg = $ldap->add( dn   => $self->dn,
                                attr => [ %insert_data ]);
     $self->_check_error( $ldap_msg, 'Cannot create new LDAP record' );
-    DEBUG() && _wm( 1, DEBUG, "Record created ok." );
+    DEBUG && _w( 1, "Record created ok." );
 }
 
 
 sub _save_update {
     my ( $self, $p ) = @_;
     $p ||= {};
-    DEBUG() && _wm( 1, DEBUG, "Treating save as UPDATE with DN: (", $self->dn, ")" );
+    DEBUG && _w( 1, "Treating save as UPDATE with DN: (", $self->dn, ")" );
     my $ldap = $p->{ldap} || $self->global_datasource_handle( $p->{connect_key} );
     my $entry = $self->_fetch_single_entry({ filter => $self->create_id_filter,
                                              ldap   => $ldap });
-    DEBUG() && _wm( 1, DEBUG, "Loaded entry for update:\n", Dumper( $entry ) );
+    DEBUG && _w( 1, "Loaded entry for update:\n", Dumper( $entry ) );
     my $no_update = $self->no_update;
     my $only_changed = $self->ldap_update_only_changed;
 ATTRIB:
@@ -490,11 +488,11 @@ ATTRIB:
         my $object_value = $self->{ $attr };
         if ( $only_changed ) {
             my @existing_values = $entry->get_value( $attr );
-            DEBUG() && _wm( 1, DEBUG, "Toggle for updating only changed values set.",
-                                      "Checking if ($attr) different: ", Dumper( $object_value ),
-                                      "vs.", Dumper( \@existing_values ) );
+            DEBUG && _w( 1, "Toggle for updating only changed values set.",
+                            "Checking if ($attr) different: ", Dumper( $object_value ),
+                            "vs.", Dumper( \@existing_values ) );
             next ATTRIB if ( $self->_values_are_same( $object_value, \@existing_values ) );
-            DEBUG() && _wm( 1, DEBUG, "Values for ($attr) are different. Updating..." );
+            DEBUG && _w( 1, "Values for ($attr) are different. Updating..." );
         }
 
         # Trick LDAP to updating object with multivalue property that
@@ -505,10 +503,10 @@ ATTRIB:
         }
         $entry->replace( $attr, $object_value );
     }
-    DEBUG() && _wm( 1, DEBUG, "Entry before Update:\n", Dumper( $entry ) );
+    DEBUG && _w( 1, "Entry before Update:\n", Dumper( $entry ) );
     my $ldap_msg = $entry->update( $ldap );
     $self->_check_error( $ldap_msg, 'Cannot update existing record' );
-    DEBUG() && _wm( 1, DEBUG, "Record updated ok." );
+    DEBUG && _w( 1, "Record updated ok." );
 }
 
 
@@ -546,7 +544,7 @@ sub remove {
         $level = $self->check_action_security({ required => SEC_LEVEL_WRITE });
     }
 
-    DEBUG && _wm( 1, DEBUG, "Security check passed ok. Continuing." );
+    DEBUG && _w( 1, "Security check passed ok. Continuing." );
 
     # Allow members to perform an action before getting removed
 

@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 1.51 2001/10/12 21:00:26 lachoy Exp $
+# $Id: DBI.pm,v 1.53 2001/10/23 02:38:38 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -13,7 +13,7 @@ use SPOPS::Tie    qw( $PREFIX_INTERNAL );
 
 @SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
 $SPOPS::DBI::VERSION   = '1.90';
-$SPOPS::DBI::Revision  = substr(q$Revision: 1.51 $, 10);
+$SPOPS::DBI::Revision  = substr(q$Revision: 1.53 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -168,7 +168,7 @@ sub id_clause {
     my $use_id_field = ( $opt eq 'noqualify' )
                          ? $id_field
                          : join( '.', $item->table_name, $id_field );
-    return join(' = ', $use_id_field, $db->quote( $id, $type_info->{ $id_field } ) );
+    return join(' = ', $use_id_field, $db->quote( $id, $type_info->{ lc $id_field } ) );
 }
 
 
@@ -225,8 +225,8 @@ sub fetch {
     # If we were passed the data for an object, go ahead and create
     # it; if not, check to see if we can whip up a cached object
 
-    if ( $p->{data} ) {
-        $obj = $class->new( $p->{data} );
+    if ( ref $p->{data} eq 'HASH' ) {
+        $obj = $class->new({ %{ $p->{data} }, skip_default_values => 1 });
     }
     else {
         $obj = $class->get_cached_object({ %{ $p }, id => $id });
@@ -267,7 +267,7 @@ sub fetch {
         # method (e.g., the optional 'field_alter') is not the same as
         # a parameter of an object -- THAT would be fun to debug...
 
-        $obj = $class->new( { id => $id, %{ $p } } );
+        $obj = $class->new( { id => $id, skip_default_values => 1, %{ $p } } );
         $obj->_fetch_assign_row( $raw_fields, $row, $p );
     }
     return $obj->_fetch_post_process( $p, $level );
@@ -302,7 +302,7 @@ sub fetch_group {
     my $row_count = 0;
 ROW:
     while ( my $row = $sth->fetchrow_arrayref ) {
-        my $obj = $class->new;
+        my $obj = $class->new({ skip_default_values => 1 });
         $obj->_fetch_assign_row( $p->{raw_fields}, $row, $p );
         next ROW unless ( $obj );
 
@@ -351,9 +351,15 @@ sub _construct_group_select {
     my ( $raw_fields, $select_fields ) = $class->_fetch_select_fields( $p );
     my @select = ();
     for ( my $i = 0; $i < scalar @{ $raw_fields }; $i++ ) {
-        push @select, ( $raw_fields->[ $i ] eq $select_fields->[ $i ] )
-                        ? join( '.', $table_name, $raw_fields->[ $i ] )
-                        : $select_fields->[ $i ];
+	if ( $raw_fields->[ $i ] ne $select_fields->[ $i ] ) {
+	    push @select, $select_fields->[ $i ];
+	}
+	elsif ( $raw_fields->[ $i ] =~ /^$table_name/ ) {
+	    push @select, $select_fields->[ $i ];
+	}
+	else {
+	    push @select, join( '.', $table_name, $raw_fields->[ $i ] );
+	}
     }
     return ( $raw_fields, \@select );
 }

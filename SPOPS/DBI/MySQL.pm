@@ -1,14 +1,15 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 1.11 2001/10/12 21:00:26 lachoy Exp $
+# $Id: MySQL.pm,v 1.13 2001/10/24 02:51:24 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
+use SPOPS::ClassFactory qw( OK NOTIFY );
 use SPOPS::Key::DBI::HandleField;
 
 @SPOPS::DBI::MySQL::ISA      = ();
 $SPOPS::DBI::MySQL::VERSION  = '1.90';
-$SPOPS::DBI::MySQL::Revision = substr(q$Revision: 1.11 $, 10);
+$SPOPS::DBI::MySQL::Revision = substr(q$Revision: 1.13 $, 10);
 
 sub sql_current_date  { return 'NOW()' }
 
@@ -24,6 +25,43 @@ sub post_fetch_id {
     $item->CONFIG->{handle_field} ||= 'mysql_insertid';
     DEBUG() && _w( 1, "Setting to handle field: $item->CONFIG->{handle_field}" );
     return SPOPS::Key::DBI::HandleField::post_fetch_id( $item, @args );
+}
+
+
+# Code generation behavior -- find defaults if asked
+
+sub behavior_factory {
+    my ( $class ) = @_;
+    DEBUG() && _w( 1, "Installing MySQL default discovery for ($class)" );
+    return { manipulate_configuration => \&find_mysql_defaults };
+}
+
+
+sub find_mysql_defaults {
+    my ( $class ) = @_;
+    my $CONFIG = $class->CONFIG;
+    return ( OK, undef ) unless ( $CONFIG->{find_defaults} and $CONFIG->{find_defaults} eq 'yes' );
+    my $dbh = $class->global_datasource_handle( $CONFIG->{datasource} );
+    unless ( $dbh ) {
+      return ( NOTIFY, "Cannot find defaults because no DBI database " .
+                       "handle available to class ($class)" );
+    }
+
+    my $sql = "DESCRIBE $CONFIG->{base_table}";
+    my ( $sth );
+    eval {
+        $sth = $dbh->prepare( $sql );
+        $sth->execute;
+    };
+    if ( $@ ) {
+      return ( NOTIFY, "Cannot find defaults because there was an error " .
+                       "executing ($sql): $@. Class: $class" );
+    }
+    while ( my $row = $sth->fetchrow_arrayref ) {
+        my $default = $row->[4];
+        next unless ( $default );
+        $CONFIG->{default_values}{ $row->[0] } = $default;
+    }
 }
 
 1;

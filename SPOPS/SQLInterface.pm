@@ -1,6 +1,6 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 1.25 2001/10/12 21:00:26 lachoy Exp $
+# $Id: SQLInterface.pm,v 1.26 2001/10/23 02:34:03 lachoy Exp $
 
 use strict;
 use Data::Dumper qw( Dumper );
@@ -9,7 +9,7 @@ use SPOPS        qw( _w _wm DEBUG );
 
 @SPOPS::SQLInterface::ISA      = ();
 $SPOPS::SQLInterface::VERSION  = '1.90';
-$SPOPS::SQLInterface::Revision = substr(q$Revision: 1.25 $, 10);
+$SPOPS::SQLInterface::Revision = substr(q$Revision: 1.26 $, 10);
 
 use constant DEBUG_SELECT     => 0;
 use constant DEBUG_INSERT     => 0;
@@ -274,13 +274,14 @@ sub db_insert {
         my $count = 0;
         foreach my $field ( @{ $p->{field} } ) {
             next unless ( $field );
-            $DEBUG && _wm( 1, $DEBUG, "Trying to add value <<$p->{value}->[$count]>> with ",
-                                      "field <<$field>> and type info <<$type_info->{ $field }>>" );
+            $DEBUG && _wm( 1, $DEBUG, "Trying to add value ($p->{value}->[$count]) with ",
+                                      "field <<$field>> and type info ($type_info->{ lc $field })" );
 
             # Quote the value unless the user asked us not to
             my $value = ( $p->{no_quote}{ $field } )
                           ? $p->{value}->[ $count ]
-                          : $class->sql_quote( $p->{value}->[ $count ], $type_info->{ $field }, $db );
+                          : $class->sql_quote( $p->{value}->[ $count ],
+					       $type_info->{ lc $field }, $db );
             push @value_list, $value;
             $count++;
         }
@@ -369,14 +370,14 @@ sub db_update {
         my $count  = 0;
         $p->{no_quote} ||= {};
         foreach my $field ( @{ $p->{field} } ) {
-            $DEBUG && _wm( 1, $DEBUG, "Trying to add value <<$p->{value}->[$count]>> with ",
-                                      "field <<$field>> and type info <<$type_info->{ $field }>>" );
+            $DEBUG && _wm( 1, $DEBUG, "Trying to add value ($p->{value}->[$count]) with ",
+                                      "field ($field) and type info ($type_info->{ lc $field })" );
 
             # Quote the value unless the user asked us not to
 
             my $value = ( $p->{no_quote}{ $field } )
                           ? $p->{value}->[ $count ]
-                          : $class->sql_quote( $p->{value}->[ $count ], $type_info->{ $field }, $db );
+                          : $class->sql_quote( $p->{value}->[ $count ], $type_info->{ lc $field }, $db );
             push @update, "$field = $value";
             $count++;
         }
@@ -468,7 +469,7 @@ sub db_discover_types {
 
     my $db       = $p->{db} || $class->global_datasource_handle;
     my $type_idx = join( '-', lc $db->{Name}, lc $table );
-    $DEBUG && _wm( 2, $DEBUG, "Type index used to discover data types: $type_idx" );
+    $DEBUG && _wm( 2, $DEBUG, "Type index used to discover data types: ($type_idx)" );
 
     # If we've already discovered the types, get the cached copy
 
@@ -490,7 +491,7 @@ sub db_discover_types {
         }
         foreach my $field ( keys %{ $dbi_info } ) {
             DEBUG() && _w( 1, "Set $field: $dbi_info->{ $field }" );
-            $TYPE_INFO{ $type_idx }{ $field } = $dbi_info->{ $field };
+            $TYPE_INFO{ $type_idx }{ lc $field } = $dbi_info->{ $field };
         }
         return $TYPE_INFO{ $type_idx };
   }
@@ -522,7 +523,7 @@ sub db_discover_types {
     my $types  = $sth->{TYPE};
     DEBUG() && _w( 1, "List of fields: ", join( ", ", @{ $fields } ) );
     for ( my $i = 0; $i < scalar @{ $fields }; $i++ ) {
-        $TYPE_INFO{ $type_idx }{ $fields->[ $i ] } = $types->[ $i ];
+        $TYPE_INFO{ $type_idx }{ lc $fields->[ $i ] } = $types->[ $i ];
     }
     return $TYPE_INFO{ $type_idx };
 }

@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 1.11 2001/10/15 04:27:39 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 1.12 2001/10/15 22:00:04 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
@@ -8,7 +8,7 @@ use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
 @SPOPS::ClassFactory::DefaultBehavior::ISA       = ();
 $SPOPS::ClassFactory::DefaultBehavior::VERSION   = '1.90';
-$SPOPS::ClassFactory::DefaultBehavior::Revision  = substr(q$Revision: 1.11 $, 10);
+$SPOPS::ClassFactory::DefaultBehavior::Revision  = substr(q$Revision: 1.12 $, 10);
 
 my @PARSE_INTO_HASH = qw( field no_insert no_update skip_undef multivalue );
 
@@ -320,9 +320,10 @@ sub conf_add_rules {
     }
 
     # Now find all the classes that have the method RULESET_METHOD
+    # (and 'ruleset_add' for backwards compatibility)
 
     my $rule_classes = $CONFIG->{rules_from} || [];
-    my $subs = SPOPS::ClassFactory->find_parent_methods( $class, $rule_classes, RULESET_METHOD );
+    my $subs = SPOPS::ClassFactory->find_parent_methods( $class, $rule_classes, RULESET_METHOD, 'ruleset_add' );
     foreach my $sub_info ( @{ $subs } ) {
         $sub_info->[1]->( $class, $class->RULESET );
         DEBUG() && _w( 2, "Calling ruleset generation for ($class) from ($sub_info->[0])" );

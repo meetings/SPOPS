@@ -2,17 +2,22 @@ README: SPOPS/eg
 ========================================
 
 This directory contains sample SPOPS code and classes you can use for
-users, groups and security, along with a simple class to test them
-out. Plus one class that's useful anywhere.
+users, groups and security, along with sample scripts to test them
+out. Plus two classes that are useful anywhere.
 
 
-For the class that's useful anywhere:
+For the classes that are useful anywhere:
 
  My/DiscoverField.pm
 
      - class that implements an SPOPS::ClassFactory rule so that you
      do not need to specify fields in your object configuration if
      you're using all fields in the table. (Extremely handy!)
+
+ My/DBI/FieldDefaults.pm
+
+     - class that retrieves the information for a particular record to
+     use as defaults.
 
 
 The remainder of the files are to demonstrate user, group and security
@@ -120,4 +125,4 @@ Object classes:
      - sample user object
 
 ========================================
-$Id: README,v 1.7 2001/10/15 04:46:13 lachoy Exp $
+$Id: README,v 1.8 2001/10/22 05:39:17 lachoy Exp $

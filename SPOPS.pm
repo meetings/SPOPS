@@ -1,20 +1,21 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 1.50 2001/10/12 19:59:09 lachoy Exp $
+# $Id: SPOPS.pm,v 1.54 2001/10/26 03:22:27 lachoy Exp $
 
 use strict;
-use Data::Dumper  qw( Dumper );
+use Data::Dumper    qw( Dumper );
 require Exporter;
 use SPOPS::Error;
-use SPOPS::Tie    qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
-use SPOPS::Secure qw( SEC_LEVEL_WRITE );
-use Storable      qw( store retrieve nstore );
+use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
+use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
+use SPOPS::Utility  qw();
+use Storable        qw( store retrieve nstore );
 
 $SPOPS::AUTOLOAD  = '';
 @SPOPS::ISA       = qw( Exporter Storable );
 @SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
-$SPOPS::VERSION   = '0.51';
-$SPOPS::Revision  = substr(q$Revision: 1.50 $, 10);
+$SPOPS::VERSION   = '0.52';
+$SPOPS::Revision  = substr(q$Revision: 1.54 $, 10);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -118,10 +119,40 @@ sub new {
     DEBUG() && _w( 1, "Creating new object of class ($class) with tie class ",
                       "($tie_class); lazy loading ($params->{is_lazy_load});",
                       "field mapping ($params->{is_field_map})" );
+
     my ( %data );
     my $int = tie %data, $tie_class, $class, $params;
     DEBUG() && _w( 4, "Internal tie structure of new object: ", Dumper( $int ) );
     my $self = bless( \%data, $class );
+
+    # Set defaults if set, unless NOT specified
+
+    my $defaults = $p->{default_values} || $CONFIG->{default_values};
+    if ( ref $defaults eq 'HASH' and ! $p->{skip_default_values} ) {
+        foreach my $field ( keys %{ $defaults } ) {
+            if ( ref $defaults->{ $field } eq 'HASH' ) {
+                my $default_class  = $defaults->{ $field }{class};
+                my $default_method = $defaults->{ $field }{method};
+                unless ( $default_class and $default_method ) {
+                    _w( 0, "Cannot set default for ($field) without a class ",
+                           "AND method being defined." );
+                    next;
+                }
+                $self->{ $field } = eval { $default_class->$default_method( $field ) };
+                if ( $@ ) {
+                    _w( 0, "Cannot set default for ($field) in ($class) using",
+                           "($default_class) ($default_method): $@" );
+                }
+            }
+            elsif ( $defaults->{ $field } eq 'NOW' ) {
+                $self->{ $field } = SPOPS::Utility->now;
+            }
+            else {
+                $self->{ $field } = $defaults->{ $field };
+            }
+        }
+    }
+
     $self->initialize( $p );
     return $self;
 }
@@ -142,17 +173,18 @@ sub clone {
     my $class = $p->{_class} || ref $self;
     DEBUG() && _w( 1, "Cloning new object of class ($class) from old ",
                        "object of class (", ref $self, ")" );
-    my $clone = $class->new;
+    my %initial_data = ();
     my $id_field = $class->id_field;
     if ( $id_field ) {
-        my $new_id = $p->{ $id_field } || $p->{id};
-        $clone->{ $id_field } = $new_id   if ( $new_id );
+        $initial_data{ $id_field } = $p->{ $id_field } || $p->{id};
     }
+
     while ( my ( $k, $v ) = each %{ $self } ) {
         next if ( $id_field and $k eq $id_field );
-        $clone->{ $k } = $p->{ $k } || $v;
+        $initial_data{ $k } = $p->{ $k } || $v;
     }
-    return $clone;
+
+    return $class->new({ %initial_data, skip_default_values => 1 });
 }
 
 
@@ -791,6 +823,9 @@ parameter name specifying an object ID. For instance:
 In this case, we do not need to know the name of the ID field used by
 the MyUser class.
 
+You can also pass in default values to use for the object in the
+'default_values' key.
+
 We use a number of parameters from your object configuration. These
 are:
 
@@ -828,6 +863,33 @@ the fieldnames in the existing table.
 
 All you need to do is create a field map, defining the interface
 property names as the keys and the database field names as the values.
+
+=item *
+
+B<default_values> (\%) (optional)
+
+Hashref of field names and default values for the fields when the
+object is initialized with C<new()>.
+
+Normally the values of the hashref are the defaults to which you want
+to set the fields. However, there are two special cases of values:
+
+B<'NOW'> This string will insert the current timestamp in the format
+C<yyyy-mm-dd hh:mm:ss>.
+
+B<\%> A hashref with the keys 'class' and 'method' will get executed
+as a class method and be passed the name of the field for which we
+want a default. The method should return the default value for this
+field.
+
+One problem with setting default values in your object configuration
+B<and> in your database is that the two may become unsynchronized,
+resulting in many pulled hairs in debugging.
+
+To get around the synchronization issue, you can set this dynamically
+using various methods with
+L<SPOPS::ClassFactory|SPOPS::ClassFactory>. (A sample,
+C<My::DBI::FindDefaults>, is shipped with SPOPS.)
 
 =back
 
@@ -1549,3 +1611,4 @@ L<SPOPS::Iterator::LDAP|SPOPS::Iterator::LDAP>.
 =back
 
 =cut
+<

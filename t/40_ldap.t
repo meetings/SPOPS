@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 40_ldap.t,v 1.10 2001/09/20 14:56:17 lachoy Exp $
+# $Id: 40_ldap.t,v 1.11 2001/10/26 03:18:37 lachoy Exp $
 
 use strict;
 use constant NUM_TESTS => 37;
@@ -87,11 +87,11 @@ my @USER_DATA = (
 
     # Tests: 7 - 8
 
-    my $ldap = Net::LDAP->new( $config->{LDAP_host}, 
+    my $ldap = Net::LDAP->new( $config->{LDAP_host},
                                port    => $config->{LDAP_port} );
     ok( $ldap, 'Connect to directory' );
-    my @bind_args = ( $config->{LDAP_bind_dn} ) 
-                      ? ( $config->{LDAP_bind_dn}, password => $config->{LDAP_bind_password} ) 
+    my @bind_args = ( $config->{LDAP_bind_dn} )
+                      ? ( $config->{LDAP_bind_dn}, password => $config->{LDAP_bind_password} )
                       : ();
     my $ldap_msg = $ldap->bind( @bind_args );
     ok( ! $ldap_msg->code, 'Bind to directory' ); # && die "Cannot bind! Error: ", $msg->error, "\n";
@@ -223,7 +223,10 @@ my @USER_DATA = (
     }
     is( scalar @USER_DATA, $iter_count, 'Iterate through objects' );
 
-    # Now add two groups
+    # Now add two groups - it looks like Convert::ASN1 whines a little
+    # under -w because we're setting uniquemember to an empty list,
+    # but we have to do that so the group will meet its schema
+    # requirements...
 
     my $public_group = eval { $GROUP_LDAP_CLASS->new({ cn          => 'public',
                                                        description => 'Public Group',

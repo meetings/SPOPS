@@ -1,5 +1,84 @@
 Revision history for Perl extension SPOPS.
 
+0.52  Thu Oct 25 23:19:43 EDT 2001
+
+Overall:
+
+   - You can now specify defaults for objects so when you instantiate
+   one via new() the values get automatically filled in. There are
+   different ways to set these defaults -- see
+   SPOPS::Manual::Configuration and SPOPS::Manual::CodeGeneration for
+   examples and ideas.
+
+   - Enhancements to SPOPS::LDAP::Multidatasource
+
+   - Bugfixes, including one in SPOPS::ClassFactory::DefaultBehavior
+   that broke old apps using rules
+
+Individual:
+
+   * eg/find_defaults_demo.pl:
+
+     - Self-contained script used to demonstrate how
+     My::DBI::FindDefaults works.
+
+   * eg/ldap_multidatasource.pl:
+
+     - Added script to demonstrate (along with eg/My/LDAPConnect.pm)
+     how multiple datasources work with SPOPS::LDAP::MultiDatasource
+
+   * eg/My/DBI/FindDefaults.pm:
+
+     - Example of a SPOPS::ClassFactory behavior that retrieves the
+     information from a particular record to use as defaults.
+
+   * eg/My/LDAPConnect.pm:
+
+     - Example of an LDAP connection manager that works with multiple
+     datasources.
+
+   * SPOPS.pm
+
+     - Enable default values to be set via the object configuration
+     (or dynamically, via ClassFactory) that are used to fill up an
+     object created with new(). You can also use the key 'NOW' to
+     specify the current date/time or a class and method to deal with
+     more complicated tasks.
+
+     (Accompanying this, modified all implementations -- DBI, LDAP and
+     GDBM -- plus the iterators -- DBI and GDBM -- to pass a
+     'skip_default_values => 1' when creating a new object to be
+     filled with a fetch() or fetch_group().)
+
+   * SPOPS/DBI/MySQL.pm:
+
+     - Added SPOPS::ClassFactory behavior so we can tell MySQL to find
+     defaults for fields.
+
+   * SPOPS/ClassFactory/DefaultBehavior.pm:
+
+     - Bugfix: rulesets used to be generated using the method
+     'ruleset_add'. We now use 'ruleset_factory' since it's more
+     descriptive and consistent with the behavior generation
+     code. However, we forgot to keep the old method enabled for a few
+     versions. Fixed. (Thanks to Peter Beardsley
+     <pbeardsley@appropriatesolutions.com> for the report.)
+
+  * SPOPS/LDAP/MultiDatasource.pm:
+
+    - Make datasources sticky -- each object should be able to find
+    out where it came from (modified fetch() and fetch_group_all()
+    with this).
+
+    - Override save() and remove() so that we first grab the right
+    handle (from the datasource put into the object) and pass it along
+    to the method that does the real work.
+
+    - Create fetch_by_dn() so you can actually store in a group the
+    DNs for objects that reside on multiple servers. (Cool!) Thanks to
+    Andreas Nolte <andreas.nolte@bertelsmann.de> for testing this out.
+
+
 0.51  Sun Oct 14 20:23:59 EDT 2001
 
 Overall:

@@ -68,7 +68,7 @@ guideline 1 states the rules can be executed in any order, changing
 data for use in a separate rule would create a dependency between
 them.
 
-NOTE: This item is up for debate (as of 0.40).
+NOTE: This item is up for debate
 
 =item 3.
 
@@ -126,7 +126,7 @@ B<post_fetch_action( \% )>
 Called after a fetch has been successfully completed, including after
 a positive cache hit.
 
-B<pre_save_action(  is_add =E<gt>; bool })>
+B<pre_save_action({ is_add =E<gt> bool })>
 
 Called before a save has been attempted. If this is an add operation
 (versus an update), we pass in a true value for the 'is_add' parameter.
@@ -153,9 +153,7 @@ then the actual rules.
 
 =head2 Rule Factory
 
-B<ruleset_add( $class, \%class_ruleset )>
-
-NOTE: THIS METHOD MIGHT BE RENAMED TO 'rule_factory()'
+B<ruleset_factory( $class, \%class_ruleset )>
 
 Interface for adding rules to a class. The first argument is the class
 to which we want to add the ruleset, the second is the ruleset for the
@@ -171,7 +169,7 @@ we want to submit the object contents to our indexing routine. When
 the object has been removed successfully, we want to remove the object
 from our index:
 
-  sub ruleset_add {
+  sub ruleset_factory {
     my ( $class, $rs_table ) = @_;
     my $obj_class = ref $class || $class;
     push @{ $rs_table->{post_save_action} }, \&reindex_object;
@@ -184,8 +182,18 @@ rule(s) into the ruleset. This enables the module that creates the
 class (L<SPOPS::Configure::Ruleset|SPOPS::Configure::Ruleset>) to
 ensure that the same rule does not get entered multiple times.
 
-NOTE: THIS INTERFACE MAY BE CHANGED TO INSTEAD RETURN THE NAMES
-(PACKAGE + METHOD) OF ALL ROUTINES ADDED TO THE RULESET.
+B<POSSIBLE CHANGES>
+
+Instead of the above, we may change to something like:
+
+  sub ruleset_factory {
+    my ( $class ) = @_;
+    return { post_save_action   => \&reindex_object,
+             post_remove_action => \&remove_object_from_index };
+  }
+
+This is simpler, easier to follow and more consistent with how we
+discover behaviors to execute during the code generation process.
 
 =head2 Rule Processor
 

@@ -1,6 +1,6 @@
 package SPOPS::Iterator::LDAP;
 
-# $Id: LDAP.pm,v 1.7 2001/10/12 21:00:26 lachoy Exp $
+# $Id: LDAP.pm,v 1.8 2001/10/22 11:51:30 lachoy Exp $
 
 use strict;
 use SPOPS           qw( _w DEBUG );
@@ -9,7 +9,7 @@ use SPOPS::Secure   qw( :level );
 
 @SPOPS::Iterator::LDAP::ISA = qw( SPOPS::Iterator );
 $SPOPS::Iterator::LDAP::VERSION  = '1.90';
-$SPOPS::Iterator::LDAP::Revision = substr(q$Revision: 1.7 $, 10);
+$SPOPS::Iterator::LDAP::Revision = substr(q$Revision: 1.8 $, 10);
 
 # Keys with _LDAP at the beginning are specific to this implementation;
 # keys without _LDAP at the begining are used in all iterators.
@@ -72,7 +72,7 @@ sub fetch_object {
 
         # It's ok to create the object now
 
-        $obj = $object_class->new;
+        $obj = $object_class->new({ skip_default_values => 1 });
         $obj->_fetch_assign_row( undef, $entry );
 
         # Check security on the row unless overridden. If the security

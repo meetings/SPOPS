@@ -63,6 +63,8 @@ t/config.pl
 t/hash_file_test.perl
 eg/README
 eg/fetch_doodads.pl
+eg/find_defaults_demo.pl
+eg/ldap_multidatasource.pl
 eg/stock_doodads.pl
 eg/stock_user_group.pl
 eg/users_groups_clear.sql
@@ -73,5 +75,7 @@ eg/My/DiscoverField.pm
 eg/My/Doodad.pm
 eg/My/Common.pm
 eg/My/Group.pm
+eg/My/LDAPConnect.pm
 eg/My/Security.pm
 eg/My/User.pm
+eg/My/DBI/FindDefaults.pm

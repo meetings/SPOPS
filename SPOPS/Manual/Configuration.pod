@@ -55,16 +55,16 @@ B<class> ($)
 
 The name of the class SPOPS will build.
 
-B<code_class> (\@)
+B<code_class> (\@) (optional)
 
 An arrayref of class names that will be read in as additional
 behaviors to the SPOPS-generated class.
 
-B<field> (\@)
+B<field> (\@) (optional if setting dynamically)
 
 An arrayref of fieldnames used in this object.
 
-B<strict_field> (bool)
+B<strict_field> (bool) (optional)
 
 A flag indicating whether to use strict field checking.
 
@@ -75,7 +75,7 @@ generated class. These classes are examined for class factory
 behaviors and object rules during the code generating process, and
 they're also used in the normal ISA fashion as class ancestors.
 
-B<rules_from> (\@)
+B<rules_from> (\@) (optional)
 
 An arrayref of classes to read class factory behaviors and object
 rules from. These classes are not used as ancestors of the class, and
@@ -87,13 +87,13 @@ B<id_field> ($)
 The name of the field used as the ID (or primary key) field for the
 object. Currently, multi-field primary keys are not supported.
 
-B<column_group> (\%)
+B<column_group> (\%) (optional)
 
 Used by the lazy loading process to determine the group-to-fieldname
 mappings. See L<SPOPS::Manual::Object|SPOPS::Manual::Object> for more
 information on lazy loading.
 
-B<field_map> (\%)
+B<field_map> (\%) (optional)
 
 A hashref of field-to-field relationships so you can make an object
 appear as another one. For instance, if you have a legacy datastore
@@ -102,36 +102,61 @@ intelligible object. See
 L<SPOPS::Manual::Object|SPOPS::Manual::Object> for more information on
 field mapping.
 
-B<multivalue> (\@)
+B<default_values> (\%) (optional)
+
+Hashref of field names and default values for the fields when the
+object is initialized with C<new()>.
+
+Normally the values of the hashref are the defaults to which you want
+to set the fields. However, there are two special cases of values:
+
+B<'NOW'> This string will insert the current timestamp in the format
+C<yyyy-mm-dd hh:mm:ss>.
+
+B<\%> A hashref with the keys 'class' and 'method' will get executed
+as a class method and be passed the name of the field for which we
+want a default. The method should return the default value for this
+field.
+
+One problem with setting default values in your object configuration
+B<and> in your database is that the two may become unsynchronized,
+resulting in many pulled hairs when debugging.
+
+To get around the synchronization issue, you can set this dynamically
+using various methods with
+L<SPOPS::ClassFactory|SPOPS::ClassFactory>. (A sample,
+C<My::DBI::FindDefaults>, is shipped with SPOPS.)
+
+B<multivalue> (\@) (optional)
 
 List all fieldnames that can hold multiple values. Currently the only
 native support for this is in L<SPOPS::LDAP|SPOPS::LDAP>, but you can
 also use it along with some object rules to fake relationships.
 
-B<no_insert> (\@)
+B<no_insert> (\@) (optional)
 
 List of fields not to use when creating a new object in the datastore.
 
-B<no_update> (\@)
+B<no_update> (\@) (optional)
 
 List of fields not to update when saving a previously saved object.
 
-B<skip_undef> (\@)
+B<skip_undef> (\@) (optional)
 
 You can elect not to include a field that's undefined when saving or
 updating an object by including it in this list.
 
-B<creation_security> (\%)
+B<creation_security> (\%) (required if you're using security)
 
 If you're using security, specify here what security the object will
 have when it's first created.
 
-B<no_security> (bool)
+B<no_security> (bool) (optional)
 
 If true, the object won't use security even if
 L<SPOPS::Secure|SPOPS::Secure> is in the C<isa>.
 
-B<no_cache> (bool)
+B<no_cache> (bool) (optional)
 
 If true, the object won't be cached even if the application specifies
 that it should. (Currently unused.)
@@ -155,18 +180,18 @@ A URL specifying how to display an instance of an object. The
 C<object_description()> method uses a base URL then appends relevant
 query information to it.
 
-B<as_string_order> (\@)
+B<as_string_order> (\@) (optional)
 
 Ordered list of object fields to use when the C<as_string()> method is
 called. If you don't specify this SPOPS will use the object fields as
 listed in the C<field> configuration key.
 
-B<as_string_label> (\%)
+B<as_string_label> (\%) (optional)
 
 Hashref of object field-to-label mappings used when the C<as_string()>
 method is called.
 
-B<has_a> (\%)
+B<has_a> (\%) (optional)
 
 Metadata for SPOPS to use when building a relationship from one object
 to another. This generally means that the object itself has the
@@ -176,7 +201,7 @@ objects.
 See L<SPOPS::Manual::Relationships|SPOPS::Manual::Relationships> for
 more information.
 
-B<fetch_by> (\@)
+B<fetch_by> (\@) (optional)
 
 A list of fields that tell SPOPS you want to create special methods
 for retrieving objects based on a the value of particular field. For
@@ -199,14 +224,14 @@ B<isa> (\@)
 Same as a normal SPOPS field, but it must have
 L<SPOPS::DBI|SPOPS::DBI> in it.
 
-B<base_table> ($)
+B<base_table> ($) 
 
 Table name for data to be stored. This may be modified during the
 configuration process to be a fully qualified name (e.g.,
 'user.table') where necessary. The value is always available via the
 C<table_name()> class method.
 
-B<sql_defaults> (\@)
+B<sql_defaults> (\@) (optional)
 
 List of fields that have defaults defined in the SQL table. For
 instance:
@@ -217,8 +242,7 @@ After L<SPOPS::DBI|SPOPS::DBI> fetches a record, it then checks to see
 if there are any defaults for the record and if so it refetches the
 object to ensure that the data in the object and the data in the
 database are synced.
-
-B<field_alter> (\%)
+B<field_alter> (\%) (optional)
 
 Allows you to define different formatting behaviors for retrieving
 fields. For instance, if you want dates formatted in a certain manner
@@ -240,7 +264,7 @@ These are typically database-specific.
 
 =head2 General Relationship Fields
 
-B<links_to> (\%)
+B<links_to> (\%) (optional)
 
 The 'links_to' field allows you to specify a SPOPS alias and specify
 which table is used to link the objects:

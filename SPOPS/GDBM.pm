@@ -1,6 +1,6 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 1.13 2001/10/12 21:00:26 lachoy Exp $
+# $Id: GDBM.pm,v 1.15 2001/10/23 12:16:01 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -9,7 +9,7 @@ use SPOPS         qw( _w DEBUG );
 
 @SPOPS::GDBM::ISA      = qw( SPOPS );
 $SPOPS::GDBM::VERSION  = '1.90';
-$SPOPS::GDBM::Revision = substr(q$Revision: 1.13 $, 10);
+$SPOPS::GDBM::Revision = substr(q$Revision: 1.15 $, 10);
 
 # Make this the default for everyone -- they can override it
 # themselves...
@@ -18,7 +18,7 @@ sub class_initialize {
     my ( $class, $CONFIG ) = @_;
     my $C = $class->CONFIG;
     if ( ref $C->{field} eq 'HASH' ) {
-        $C->{field_list}  = [ sort{ $C->{field}->{$a} <=> $C->{field}->{$b} } keys %{ $C->{field} } ];
+        $C->{field_list}  = [ sort{ $C->{field}{$a} <=> $C->{field}{$b} } keys %{ $C->{field} } ];
     }
     $class->_class_initialize( $CONFIG ); # allow subclasses to do their own thing
 
@@ -35,7 +35,7 @@ sub class_initialize {
 
 # Dummy for subclasses to override
 
-sub _class_initialize { return 1; }
+sub _class_initialize { return 1 }
 
 # Override the default SPOPS initialize call so we can use mixed-case
 # fields
@@ -59,19 +59,21 @@ sub initialize {
         delete $p->{id};
     }
 
-    # Use all lowercase to allow people to give us fieldnames in mixed
-    # case (we are very nice)
+    # Go through the field list and set any that are passed in
 
-    my %data = map { lc $_ => $p->{ $_ } } keys %{ $p };
-    foreach my $key ( keys %data ) {
-        $self->{ $key } = $data{ $key };
+    foreach my $field ( @{ $self->field_list } ) {
+        next unless ( $p->{ $field } );
+        $self->{ $field } = $p->{ $field };
+        DEBUG && _w( 2, "Initialized ($field) to ($self->{ $field })" );
     }
     return $self;
 }
 
 # Override this to get the db handle from somewhere else, if necessary
 
-sub global_gdbm_tie {
+sub global_gdbm_tie { my $item = shift; return $item->global_datasource_handle( @_ ) }
+
+sub global_datasource_handle {
     my ( $item, $p ) = @_;
     return $p->{db}    if ( ref $p->{db} );
 
@@ -80,14 +82,14 @@ sub global_gdbm_tie {
         if ( ref $item ) {
             $gdbm_filename   = $item->{tmp_gdbm_filename};
         }
-        if ( $item->CONFIG->{gdbm_info}->{file_fragment} and $p->{directory} ) {
+        if ( $item->CONFIG->{gdbm_info}{file_fragment} and $p->{directory} ) {
             DEBUG() && _w( 1, "Found file fragent and directory" );
-            $gdbm_filename ||= join( '/', $p->{directory}, $item->CONFIG->{gdbm_info}->{file_fragment} );
+            $gdbm_filename ||= join( '/', $p->{directory}, $item->CONFIG->{gdbm_info}{file_fragment} );
         }
-        $gdbm_filename ||= $item->CONFIG->{gdbm_info}->{filename};
-        $gdbm_filename ||= $item->global_config->{gdbm_info}->{filename};
+        $gdbm_filename ||= $item->CONFIG->{gdbm_info}{filename};
+        $gdbm_filename ||= $item->global_config->{gdbm_info}{filename};
     }
-    DEBUG() && _w( 1, "Trying file $gdbm_filename to connect" );
+    DEBUG() && _w( 1, "Trying file ($gdbm_filename) to connect" );
     unless ( $gdbm_filename ) {
         die "Insufficient/incorrect information to tie to GDBM file! ($gdbm_filename)\n";
     }
@@ -120,23 +122,25 @@ sub id {
     return $self->CONFIG->{create_id}->( $self );
 }
 
+
 sub object_key {
     my ( $self, $id ) = @_;
     $id ||= $self->id  if ( ref $self );
     die "Cannot create object key without object or id!\n"  unless ( $id );
     my $class = ref $self || $self;
-    return join '--', $class, $id;
+    return join( '--', $class, $id );
 }
+
 
 # Given a key, return the data structure from the db file
 
 sub _return_structure_for_key {
     my ( $class, $key, $p ) = @_;
-    my $db    = $class->global_gdbm_tie( $p );
+    my $db    = $class->global_datasource_handle( $p );
     my $item_info = $db->{ $key };
     return undef unless ( $item_info );
     my $data = undef;
-    { 
+    {
         no strict 'vars';
         $data = eval $item_info;
     }
@@ -144,19 +148,22 @@ sub _return_structure_for_key {
     return $data;
 }
 
-# Retreive an object 
+
+# Retreive an object
 
 sub fetch {
     my ( $class, $id, $p ) = @_;
-    my $data = $p->{data};
-    unless ( $data ) {
+    DEBUG && _w( 2, "Trying to fetch ID ($id)" );
+    my $data = $p->{data} || {};
+    unless ( scalar keys %{ $data } ) {
         return undef unless ( $id and $id !~ /^tmp/ );
         return undef unless ( $class->pre_fetch_action( { id => $id } ) );
-        $data = $class->_return_structure_for_key( $class->object_key( $id ), 
-                                                   { filename => $p->{filename}, 
+        $data = $class->_return_structure_for_key( $class->object_key( $id ),
+                                                   { filename  => $p->{filename},
                                                      directory => $p->{directory} } );
-    } 
-    my $obj = $class->new( $data );
+        DEBUG && _w( 2, "Returned data from GDBM: ", Dumper( $data ) );
+    }
+    my $obj = $class->new({ %{ $data }, skip_default_values => 1 });
     $obj->clear_change;
     return undef unless ( $class->post_fetch_action );
     return $obj;
@@ -166,7 +173,7 @@ sub fetch {
 
 sub fetch_group {
     my ( $item, $p ) = @_;
-    my $db = $item->global_gdbm_tie( $p );
+    my $db = $item->global_datasource_handle( $p );
     my $class = ref $item || $item;
     DEBUG() && _w( 1, "Trying to find keys beginning with ($class)" );
     my @object_keys = grep /^$class/, keys %{ $db };
@@ -176,7 +183,7 @@ sub fetch_group {
         my $data = eval { $class->_return_structure_for_key( $key, { db => $db } ) };
         next unless ( $data );
         push @objects, $class->fetch( undef, { data => $data } );
-    } 
+    }
     return \@objects;
 }
 
@@ -193,17 +200,17 @@ sub save {
         return $id;
     }
     return undef unless ( $self->pre_save_action( { is_add => $is_add } ) );
-  
+ 
     # Build the data and dump to string
 
     my %data = %{ $self };
     local $Data::Dumper::Indent = 0;
     my $obj_string = Data::Dumper->Dump( [ \%data ], [ 'data' ] );
-  
+ 
     # Save to DB
 
     my $obj_index  = $self->object_key;
-    my $db = $self->global_gdbm_tie( $p );
+    my $db = $self->global_datasource_handle( $p );
     $db->{ $obj_index } = $obj_string;
 
     return undef unless ( $self->post_save_action( { is_add => $is_add } ) );
@@ -216,7 +223,7 @@ sub save {
 sub remove {
     my ( $self, $p ) = @_;
     my $obj_index  = $self->object_key;
-    my $db = $self->global_gdbm_tie({ perm => 'write', %{ $p } });
+    my $db = $self->global_datasource_handle({ perm => 'write', %{ $p } });
     $self->clear_change;
     $self->clear_save;
     return delete $db->{ $obj_index };
@@ -242,21 +249,22 @@ SPOPS::GDBM - Store SPOPS objects in a GDBM database
 =head1 DESCRIPTION
 
 Implements SPOPS persistence in a GDBM database. Currently the
-interface is not as robust or powerful as the C<SPOPS::DBI>
+interface is not as robust or powerful as the L<SPOPS::DBI|SPOPS::DBI>
 implementation, but if you want more robust data storage, retrieval
-and searching needs you should probably be using a SQL database anyway.
+and searching needs you should probably be using a SQL database
+anyway.
 
-This is also a little different than the C<SPOPS::DBI> module in that
-you have a little more flexibility as to how you refer to the actual
-GDBM file required. Instead of defining one database throughout the
-operation, you can change in midstream. (To be fair, you can also do
-this with the C<SPOPS::DBI> module, it is just a little more
-difficult.) For example:
+This is also a little different than the L<SPOPS::DBI|SPOPS::DBI>
+module in that you have a little more flexibility as to how you refer
+to the actual GDBM file required. Instead of defining one database
+throughout the operation, you can change in midstream. (To be fair,
+you can also do this with the L<SPOPS::DBI|SPOPS::DBI> module, it is
+just a little more difficult.) For example:
 
  # Read objects from one database, save to another
- my @objects = Object::Class->fetch_group( { filename => '/tmp/object_old.gdbm' } );
+ my @objects = Object::Class->fetch_group({ filename => '/tmp/object_old.gdbm' });
  foreach my $obj ( @objects ) {
-   $obj->save( { is_add => 1, gdbm_filename => '/tmp/object_new.gdbm' } );
+     $obj->save({ is_add => 1, gdbm_filename => '/tmp/object_new.gdbm' });
  }
 
 =head1 METHODS
@@ -279,9 +287,12 @@ new object:
 
  my $obj = Object::Class->new( { GDBM_FILENAME = '/tmp/mydata.gdbm' } );
 
-B<global_gdbm_tie( \%params )>
+B<global_datasource_handle( \%params )>
 
-Returns a tied hashref if successful. 
+Returns a tied hashref if successful.
+
+Note: This is renamed from C<global_gdbm_tie()>. The old method will
+still work for a while.
 
 There are many different ways of creating a filename used for
 GDBM. You can define a default filename in your package configuration;
@@ -303,10 +314,10 @@ permissions: 'GDBM_READER', 'GDBM_WRITER', 'GDBM_WRCREAT' (for
 creating and having write access to the file). You only need to pass
 'read', 'write', or 'create' instead of these constants.
 
-If you pass nothing, C<SPOPS::GDBM> will assume 'read'. Also note that
-on some GDBM implementations, specifying 'write' permission to a file
-that has not yet been created still creates it, so 'create' might be
-redundant on your system.
+If you pass nothing, L<SPOPS::GDBM|SPOPS::GDBM> will assume
+'read'. Also note that on some GDBM implementations, specifying
+'write' permission to a file that has not yet been created still
+creates it, so 'create' might be redundant on your system.
 
 B<filename> ($) (optional)
 
@@ -336,7 +347,7 @@ quite simple:
  ...
 
 In the config file just joins the 'name' and 'version' parameters of
-an object and returns the result. 
+an object and returns the result.
 
 B<object_key>
 
