@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.2 2001/02/20 04:50:55 lachoy Exp $
+# $Id: Makefile.PL,v 1.4 2001/06/03 23:06:19 lachoy Exp $
 
 use ExtUtils::MakeMaker;
 
@@ -35,7 +35,7 @@ sub _set_sybase_env {
 
  # Available SPOPS DBI drivers (when we start testing with more databases, 
  # we add them here)
- my %dbd_drivers = ( mysql => 1, ASAny => 1, Sybase => \&_set_sybase_env );
+ my %dbd_drivers = ( mysql => 1, ASAny => 1, Pg => 1, Sybase => \&_set_sybase_env );
 
  # Find out about a DBI test
  my ( $dbi_test, $gdbm_test, $dbi_driver, $dbi_dsn, $dbi_user, $dbi_password, $remove_conf );
@@ -69,7 +69,7 @@ sub _set_sybase_env {
      print "\n";
 
      $dbi_dsn = _get_response( "Please enter the tail end of the DSN to use for the driver you chose\n" .
-                               "(DBI:$dbi_driver will be prepended unless you specify a full DSN)\n",
+                               "('DBI:$dbi_driver:' will be prepended unless you specify a full DSN)\n",
                                $ENV{DBI_DSN} );
      unless ( $dbi_dsn ) {
        print "Skipping DBI tests since DSN not fully specified\n";
@@ -126,7 +126,7 @@ CONFIG
 # the contents of the Makefile that is written.
 WriteMakefile(
     'NAME'	=> 'SPOPS',
-    'VERSION_FROM' => 'VERSION',
+    'VERSION_FROM' => 'SPOPS.pm',
     'AUTHOR' => 'Chris Winters <chris@cwinters.com>',
     'ABSTRACT' => 'Data abstraction layer used for object persistence and security',
     'PREREQ_PM' => { 'Storable'     => 1.00,

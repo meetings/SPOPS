@@ -1,17 +1,18 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 1.1.1.1 2001/02/02 06:08:34 lachoy Exp $
+# $Id: Hierarchy.pm,v 1.10 2001/06/10 18:37:43 lachoy Exp $
 
 use strict;
 use vars          qw( $ROOT_OBJECT_NAME );
-use SPOPS         qw( _w );
+use SPOPS         qw( _w DEBUG );
 use SPOPS::Secure qw( :scope :level $EMPTY );
 use Data::Dumper  qw( Dumper );
 require Exporter;
 
-$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Secure::Hierarchy::ISA       = qw( Exporter SPOPS::Secure );
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
+$SPOPS::Secure::Hierarchy::VERSION   = '1.7';
+$SPOPS::Secure::Hierarchy::Revision  = substr(q$Revision: 1.10 $, 10);
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 
@@ -25,37 +26,40 @@ sub get_security {
 
   # Find object info for debugging and for passing to the
   # fetch_by_object method later
-
-  my ( $class, $oid ) = $item->_get_object_info_for_security( $item, $p->{oid} );
-  _w( 1, "Checking security for $class ($oid)" );
+  my $object_id = $p->{oid} || $p->{object_id};
+  my ( $class, $oid ) = $item->_get_object_info_for_security( 
+                                             $item, $object_id );
+  DEBUG() && _w( 1, "Checking security for $class ($oid)" );
 
   # Punt the request back to our parent if we're getting security
   # explicitly for the ROOT_OBJECT, which generally only happens when
   # we're editing its security
-  
+
   if ( $oid eq $ROOT_OBJECT_NAME ) {
-    _w( 1, "Object ID == ROOT_OBJECT_NAME: punting to parent" );
-    return SUPER->get_security( { %{ $p }, class => $class, oid => $oid } );
+    DEBUG() && _w( 1, "Object ID == ROOT_OBJECT_NAME: punting to parent" );
+    return SUPER->get_security({ %{ $p }, 
+                                 class     => $class, 
+                                 object_id => $oid });
   }
-  
+
   unless ( exists $p->{user} and exists $p->{group} ) {
     ( $p->{user}, $p->{group} ) = $item->get_security_scopes( $p );
   }
 
   # superuser (record with user_id 1) can do anything
-  
+
   if ( my $security_info = $item->_check_superuser( $p->{user}, $p->{group} ) ) {
-    _w( 1, "Superuser is logged in" );
+    DEBUG() && _w( 1, "Superuser is logged in" );
     return $security_info;
   }
-  
+
   my ( $all_levels, $first_level ) = $item->get_hierarchy_levels( $p );
-  _w( 1, "First level with security ($first_level)" );
+  DEBUG() && _w( 1, "First level with security ($first_level)" );
 
   # Dereference $EMPTY so there's no chance of anyone putting
   # information into the ref and screwing up the package variable...
-  
-  return $all_levels->{ $first_level } || \%{ $EMPTY }; 
+
+  return $all_levels->{ $first_level } || \%{ $EMPTY };
 }
 
 
@@ -63,10 +67,11 @@ sub get_hierarchy_levels {
   my ( $item, $p ) = @_;
 
   # Grab hierarchy config info from the params or from the object
-  
+
+  my $object_id = $p->{oid} || $p->{object_id};
   my $h_info = $item->_get_hierarchy_parameters({ 
                                %{ $p }, 
-	   					       hierarchy_value => $p->{oid} });
+	   					       hierarchy_value => $object_id });
 
   # Ensure we have necessary info
 
@@ -86,22 +91,22 @@ sub get_hierarchy_levels {
   # default generated list (splitting the value by the separator) or
   # create a subroutine to do it for us, passing it in via
   # 'hierarchy_manip' in the toutine arameters or in our object config.
-  
-  my $check_list = $h_info->{hierarchy_manip}->( $h_info->{hierarchy_sep}, 
+
+  my $check_list = $h_info->{hierarchy_manip}->( $h_info->{hierarchy_sep},
                                                  $h_info->{hierarchy_value} );
 
   return $item->_fetch_hierarchy_levels({ %{ $p }, 
-					 check_list => $check_list,
-					 ordered    => 1  });
+                                          check_list => $check_list,
+                                          ordered    => 1  });
 }
 
 
 sub create_root_object_security {
   my ( $item, $p ) = @_;
   my ( $class, $oid ) = $item->_get_object_info_for_security( $p->{class} );
-  return $class->set_multiple_security( { oid   => $ROOT_OBJECT_NAME,
-                                          scope => $p->{scope},
-                                          level => $p->{security} } );
+  return $class->set_security({ object_id      => $ROOT_OBJECT_NAME,
+                                scope          => $p->{scope},
+                                security_level => $p->{level} });
 }
 
 
@@ -114,40 +119,43 @@ sub create_root_object_security {
 sub _fetch_hierarchy_levels {
   my ( $item, $p ) = @_;
   my $class = $p->{class} || ref $item || $item;
-  my $so_class = $p->{security_object_class} || $class->global_security_object_class;
+  my $so_class = $p->{security_object_class} || 
+                 $class->global_security_object_class;
 
   my $first_found = undef;
   my $level_track = {};
   my @ordered     = ();
 
   unless ( $p->{class} ) {
-    ( $p->{class}, $p->{oid} ) = $item->_get_object_info_for_security( $p->{class}, $p->{oid} );
-    _w( 1, "Checking security for $p->{class} ($p->{oid})" );
+    my $object_id = $p->{oid} || $p->{object_id};
+    ( $p->{class}, $p->{oid} ) = $item->_get_object_info_for_security( 
+                                                  $p->{class}, $object_id );
+    DEBUG() && _w( 1, "Checking security for $p->{class} ($p->{oid})" );
   }
-  
+
   # Yes, I know, grep in a void context...
 
   unless ( grep /^$ROOT_OBJECT_NAME$/, @{ $p->{check_list} } ) {
     push @{ $p->{check_list} }, $ROOT_OBJECT_NAME;
-   _w( 1, "$ROOT_OBJECT_NAME not found in checklist" );
+    DEBUG() && _w( 1, "$ROOT_OBJECT_NAME not found in checklist; added manually" );
   }
-  
+
 SECVALUE:
   foreach my $security_check ( @{ $p->{check_list} } ) {
-    _w( 1, "Find value for $p->{class} ($security_check)" );
+    DEBUG() && _w( 1, "Find value for $p->{class} ($security_check)" );
     push @ordered, $security_check  if ( $p->{ordered} );
-    my $sec_listing = eval { $so_class->fetch_by_object( 
-                                 $p->{class}, 
-                                 { oid   => $security_check,
-                                   user  => $p->{user}, 
-                                   group => $p->{group} }) };
-    _w( 1, "Security found for ($security_check):\n", Dumper( $sec_listing ) );
+    my $sec_listing = eval { $so_class->fetch_by_object(
+                                 $p->{class},
+                                 { object_id => $security_check,
+                                   user      => $p->{user},
+                                   group     => $p->{group} }) };
+    DEBUG() && _w( 1, "Security found for ($security_check):\n", Dumper( $sec_listing ) );
     if ( $@ ) {
       $SPOPS::Error::user_msg = "Cannot retrieve security listing for hierarchy value $security_check";
       _w( 0, "Error found when checking ($security_check): $@" );
       die $SPOPS::Error::user_msg;
     }
-   
+
     $first_found ||= $security_check if ( $sec_listing );
     $level_track->{ $security_check } = $sec_listing;
   }
@@ -156,12 +164,11 @@ SECVALUE:
   # security for this class's root object.
 
   unless ( $first_found ) {
-    _w( 1, "Cannot find ANY security for $p->{class} ($p->{oid}) -- ",
-           "creating root object security" );
-    $item->create_root_object_security({ 
-               class    => $p->{class},
-               scope    => [ SEC_SCOPE_WORLD ],
-               security => { SEC_SCOPE_WORLD() => SEC_LEVEL_NONE } });   
+    DEBUG() && _w( 1, "Cannot find ANY security for $p->{class} ($p->{oid}) -- ",
+                    "creating extremely stringent root object security" );
+    $item->create_root_object_security({ class  => $p->{class},
+                                         scope  => SEC_SCOPE_WORLD,
+                                         level  => SEC_LEVEL_NONE });
   }
   return ( $level_track, $first_found ) unless ( $p->{ordered} );
   return ( $level_track, $first_found, \@ordered );
@@ -182,7 +189,7 @@ sub _get_hierarchy_parameters {
   $h_info->{hierarchy_field} = $p->{hierarchy_field};
   $h_info->{hierarchy_sep}   = $p->{hierarchy_separator};
   $h_info->{hierarchy_manip} = $p->{hierarchy_manip};
-  
+
   my $class = $p->{class} || ref $item || $item;
   my $CONF = eval { $class->CONFIG };
   if ( ref $CONF ) {
@@ -194,17 +201,19 @@ sub _get_hierarchy_parameters {
   # Only use the default check_list maker if there is a hierarchy
   # separator
 
-  $h_info->{hierarchy_manip} ||= \&_make_check_list  if ( $h_info->{hierarchy_sep} );
-  
+  if ( $h_info->{hierarchy_sep} ) {
+    $h_info->{hierarchy_manip} ||= \&_make_check_list;
+  }
+
   # If this is an object, find the hierarchy value from the object
-  
+
   $h_info->{hierarchy_value} = $p->{hierarchy_value};
   if ( ref $item ) {
-    _w( 1, "Getting value from object" );
+    DEBUG() && _w( 1, "Getting value from object" );
     $h_info->{hierarchy_value} ||= $item->{ $h_info->{hierarchy_field} };
   }
-  
-  _w( 1, "Found parameters:\n", Dumper( $h_info ) );
+
+  DEBUG() && _w( 1, "Found parameters:\n", Dumper( $h_info ) );
   return $h_info;
 }
 
@@ -238,7 +247,7 @@ SPOPS::Secure::Hierarchy - Define hierarchical security
  # In your SPOPS configuration
  'myobj' => {
     'class' => 'My::FileObject',
-    'isa' => [ qw/ ... SPOPS::Secure::Hierarchy  ... / ],    
+    'isa' => [ qw/ ... SPOPS::Secure::Hierarchy  ... / ],
     'hierarchy_separator' => '/',
     'hierarchy_field'     => 'myobj_id',
     ...
@@ -248,9 +257,8 @@ SPOPS::Secure::Hierarchy - Define hierarchical security
  # check using '/' as a separator on the value of the object parameter
  # 'myobj_id'
 
-  my $file_object = eval { My::FileObject->fetch( 
-                               '/docs/release/devel-only/v1.3/mydoc.html'
-                    ) };
+  my $file_object = eval { My::FileObject->fetch(
+                             '/docs/release/devel-only/v1.3/mydoc.html' ) };
 
  # You can also use it as a standalone service. Note that the 'class'
  # in this example is controlled by you and used as an identifier
@@ -258,12 +266,11 @@ SPOPS::Secure::Hierarchy - Define hierarchical security
 
  my $level = eval { SPOPS::Secure::Hierarchy->check_security({ 
                            class => 'My::Nonexistent::File::Class',
-                           user => $my_user, group => $my_group_list,
+                           user => $my_user, 
+                           group => $my_group_list,
                            security_object_class => 'My::SecurityObject',
-                           oid   => '/docs/release/devel-only/v1.3/mydoc.html',
-                           hierarchy_separator => '/',
-                    })
-             };
+                           object_id   => '/docs/release/devel-only/v1.3/mydoc.html',
+                           hierarchy_separator => '/' }) };
 
 =head1 DESCRIPTION
 
@@ -282,8 +289,8 @@ You have the following parents:
 
  /docs/release/devel-only/v1.3
  /docs/release/devel-only
- /docs/release/
- /docs/
+ /docs/release
+ /docs
  <ROOT OBJECT> (explained below)
 
 What this module does is check the security of each parent in the
@@ -298,12 +305,12 @@ If the security were defined like this:
 representation):
 
  <ROOT OBJECT> => 
-      { world => SEC_LEVEL_READ, 
+      { world => SEC_LEVEL_READ,
         group => { admin => SEC_LEVEL_WRITE } }
 
  /docs/release/devel-only =>
 
-      { world => SEC_LEVEL_NONE, 
+      { world => SEC_LEVEL_NONE,
         group => { devel => SEC_LEVEL_WRITE } }
 
 And our sample file is:
@@ -336,15 +343,15 @@ For the file:
  /docs/release/public/v1.2/mydoc.html
 
 All three users would have SEC_LEVEL_READ access since the permissions
-inherit from the E<lt>ROOT OBJECTE<gt>.
+inherit from the C<ROOT OBJECT>.
 
 =head2 What is the ROOT OBJECT?
 
 If you have a hierarchy of security, you are going to need one object
 from which all security flows. No matter what kind of identifiers,
-separators, etc. that you're using, the root object always has the
+separators, etc. that you are using, the root object always has the
 same object ID (For the curious, this object ID is available as the
-exported scalar C<$ROOT_OBJECT_NAME> from this module).
+exported scalar C<$ROOT_OBJECT_NAME> from this module.)
 
 If you do not create security for the root object manually,
 C<SPOPS::Secure::Hierarchy> will do so for you. However, you should be
@@ -357,7 +364,7 @@ Here is how to create such security:
  $class->create_root_object_security({ 
           scope => [ SEC_SCOPE_WORLD, SEC_SCOPE_GROUP ],
           level => { SEC_SCOPE_WORLD() => SEC_LEVEL_READ,
-                   , SEC_SCOPE_GROUP() => { 3 => SEC_LEVEL_WRITE } } 
+                     SEC_SCOPE_GROUP() => { 3 => SEC_LEVEL_WRITE } }
  });
 
 Now, every object created in your class will default to having READ
@@ -366,8 +373,8 @@ permissions for WORLD and WRITE permissions for group ID 3.
 =head1 METHODS
 
 Most of the functionality in this class is found in
-L<SPOPS::Secure>. We override one of its methods and add one specific
-to the functionality of this module.
+L<SPOPS::Secure>. We override one of its methods and add another to
+implement the functionality of this module.
 
 B<get_hierarchy_levels( \%params )>
 
@@ -379,7 +386,7 @@ scalar with the key of the first item encountered which actually had
 security.
 
 Example:
- 
+
  my ( $all_levels, $first ) = $obj->get_hierarchy_levels();
  print "Level Info:\n", Data::Dumper::Dumper( $all_levels );
 
@@ -387,7 +394,7 @@ Example:
  > $VAR1 = {
  >  '/docs/release/devel-only/v1.3/mydoc.html' => undef,
  >  '/docs/release/devel-only/v1.3' => undef,
- >  '/docs/release/devel-only' => { u => 4, g => undef, w => 8 },   
+ >  '/docs/release/devel-only' => { u => 4, g => undef, w => 8 },
  >  '/docs/release/' => undef,
  >  '/docs/' => undef,
  >  'ROOT_OBJECT' => { u => undef, g => undef, w => 4 }
@@ -403,51 +410,81 @@ Returns: hashref of security information indexed by the scopes.
 
 Parameters:
 
- class ($) (not required if calling from object)
-   Class (or generic identifier) for which we would like to check
-   security
+=over 4
 
- oid ($) (not required if calling from object)
-   Unique identifier for the object (or generic thing) needing to be
-   checked.
+=item *
 
- hierarchy_field ($) (only required if calling from object with no
- configuration)
-   Field to be used for the hierarchy check. Most (all?) of the time
-   this will be the same as your configured 'id_field' in your SPOPS
-   configuration.
+B<class> ($) (not required if calling from object) 
 
- hierarchy_separator ($) (not required if calling from object with
- configuration)
-   Character or characters used to split the hierarchy value into
-   pieces.
+Class (or generic identifier) for which we would like to check
+security
 
- hierarchy_manip (optional)
-   Code reference that, given the value to be broken into chunks, will
-   return a hashref of information that describe the ways the
-   hierarchy information can be used.
+=item *
+
+B<object_id> ($) (not required if calling from object)
+
+Unique identifier for the object (or generic thing) needing to be
+checked.
+
+=item *
+
+B<hierarchy_field> ($) (only required if calling from object with no
+configuration)
+
+Field to be used for the hierarchy check. Most (all?) of the time this
+will be the same as your configured 'id_field' in your SPOPS
+configuration.
+
+=item *
+
+B<hierarchy_separator> ($) (not required if calling from object with
+configuration)
+
+Character or characters used to split the hierarchy value into pieces.
+
+=item *
+
+B<hierarchy_manip> (optional)
+
+Code reference that, given the value to be broken into chunks, will
+return a hashref of information that describe the ways the hierarchy
+information can be used.
+
+=back
 
 B<create_root_object_security( \%params )>
 
-If you're trying to retrofit this security system into a class with
+If you are trying to retrofit this security system into a class with
 already existing objects, you will need a way to bootstrap it so that
 you can perform the actions you like. This method will create initial
 security for you.
 
 Parameters:
 
- scope (\@ or $)
-   One or more SPOPS::Secure SCOPE constants that define the scopes
-   that you are defining security for.
+=over 4
 
- level (\% or $)
-   If you have specified more than one item in the 'scope' parameter,
-   this is a hashref, the keys of which are the scopes defined. The
-   value may be a SPOPS::Secure LEVEL constant if the matching scope
-   is WORLD, or a hashref of object-id - LEVEL pairs if the matching
-   scope is USER or GROUP. (See L<What is the ROOT OBJECT?> above.)
+=item *
+
+B<scope> (\@ or $)
+
+One or more SPOPS::Secure C<SEC_SCOPE_*> constants that define the
+scopes that you are defining security for.
+
+=item *
+
+B<level> (\% or $)
+
+If you have specified more than one item in the 'scope' parameter,
+this is a hashref, the keys of which are the scopes defined. The value
+may be a SPOPS::Secure LEVEL constant if the matching scope is WORLD,
+or a hashref of object-id - LEVEL pairs if the matching scope is USER
+or GROUP. (See L<What is the ROOT OBJECT?> above.)
+
+=back
 
 =head1 BUGS
+
+None known.
 
 =head1 TO DO
 

@@ -1,24 +1,26 @@
 package SPOPS::Configure;
 
-# $Id: Configure.pm,v 1.2 2001/02/20 04:46:36 lachoy Exp $
+# $Id: Configure.pm,v 1.7 2001/06/03 22:43:34 lachoy Exp $
 
 use strict;
-use SPOPS qw( _w );
+use Data::Dumper  qw( Dumper );
+use SPOPS         qw( _w DEBUG );
 use SPOPS::Error;
 use SPOPS::Configure::Ruleset;
-use Data::Dumper  qw( Dumper );
 
 @SPOPS::Configure::ISA       = ();
-$SPOPS::Configure::VERSION   = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
-
-use constant DEBUG => 0;
+$SPOPS::Configure::VERSION   = '1.7';
+$SPOPS::Configure::Revision  = substr(q$Revision: 1.7 $, 10);
 
 my $DEFAULT_META = { 
     parse_into_hash => [ qw/ field no_insert no_update skip_undef / ] 
 };
 
+
 sub process_config {
   my ( $class, $p ) = @_;
+  return unless ( ref $p->{config} eq 'HASH' );
+
   $p->{alias_list} ||= [ keys %{ $p->{config} } ];
 
   # So we can keep track of the classes we require/eval
@@ -28,30 +30,55 @@ sub process_config {
   # First process all of the class-creation and config-creation
   # stuff...
 
+  # It would be nice to have an iterator here which automatically
+  # skips entries beginning with '_'...
+
   foreach my $alias ( @{ $p->{alias_list} } ) { 
-
-    # skip meta stuff, which always begins with '_'
     next if ( $alias =~ /^_/ );
-    $p->{config}->{ $alias }->{main_alias} = $alias;
-    _w( 1, "Setting $p->{config}->{ $alias }->{class} to $alias");
-    my $create_class = $class->create_spops_class( 
-                                   $p, $p->{config}->{ $alias } );
-    my $parse_class  = $class->parse_config( $p, $p->{config}->{ $alias } );
+    my $class_info = $p->{config}->{ $alias };
+    $class_info->{main_alias} = $alias;
+    DEBUG() && _w( 1, "Setting $class_info->{class} to $alias");
 
-   # just in case...
-    push @class_list, $create_class  if ( $create_class eq $parse_class ); 
+    # Put the _meta settings into this class (determines how certain
+    # configuration items get parsed)
+
+    $class_info->{_meta} = $p->{meta} || $p->{config}->{_meta} || $DEFAULT_META;
+
+    # Bring in all the classes in ISA if requested. We should do this
+    # before creating the class :-)
+
+    if ( $p->{require_isa} ) {
+      $class->require_isa( $class_info );
+    }
+
+    my $config_class  = $class->find_config_class( $class_info, $p->{default_config_class} );
+    my $create_class  = $config_class->create_spops_class( $class_info );
+    my $install_class = $config_class->install_class_config( $class_info );
+
+    # Ensure that the class was actually created and that the
+    # create/install classes are the same before we push them into the
+    # return value
+
+    if ( $create_class and $create_class eq $install_class ) {
+      push @class_list, $create_class; 
+    }
   }
 
   # Once everything is read in, then create the relationships among
   # the classes
 
+  # It would be nice to have an iterator here which automatically
+  # skips entries beginning with '_'...
+
   foreach my $alias ( @{ $p->{alias_list} } ) { 
-
-   # skip meta stuff, which always begins with a '_'
-
     next if ( $alias =~ /^_/ );
-    $class->create_relationship( $p->{config}->{ $alias } );
+    my $class_info = $p->{config}->{ $alias };
+    my $config_class = $class->find_config_class( $class_info );
+    $config_class->create_relationship( $class_info );
   }
+
+  # Return the list of classes created properly
+
   return \@class_list;
 }
 
@@ -73,85 +100,94 @@ my $GENERIC_TEMPLATE = <<'PACKAGE';
 
 PACKAGE
 
+
+
 sub create_spops_class {
-  my ( $class, $p, $info ) = @_;
+  my ( $class, $class_info ) = @_;
   
   # Create the class on-the-fly (yee-haw!); just substitute our
   # keywords (currently only the class name) for the items in the
   # generic template above. Note that there really is not too much
   # stuff there
   
-  _w( 1, "Creating $info->{class} on-the-fly." );
+  DEBUG() && _w( 1, "Creating $class_info->{class} on-the-fly." );
   my $module      = $GENERIC_TEMPLATE;
-  $module        =~ s/%%CLASS%%/$info->{class}/g;
-  my $isa_listing = join( ' ', @{ $info->{isa} } );
+  $module        =~ s/%%CLASS%%/$class_info->{class}/g;
+  my $isa_listing = join( ' ', @{ $class_info->{isa} } );
   $module        =~ s/%%ISA%%/$isa_listing/g;
+
+  # Capture 'warn' calls that get triggered as a result of warnings,
+  # redefined subroutines or whatnot; these get dumped to STDERR and
+  # we want to be as quiet as possible -- or at least control our
+  # noise!
+
   { 
     local $SIG{__WARN__} = sub { return undef };
     eval $module;
   }
-  die "Could not create <<$info->{class}>> on the fly!\nError: $@"  if ( $@ );
-
-  if ( $p->{require_isa} ) {
-    foreach my $isa_class ( @{ $info->{isa} } ) {
-      eval "require $isa_class";
-      warn "--Could not require the class ($isa_class). Error: $@\n"  if ( $@ );
-    }
+  if ( $@ ) {
+    die "Could not create <<$class_info->{class}>> on the fly!\n",
+        "Error: $@";
   }
 
-  # Now that the class is created, see if we can leech some 
-  # code from a concrete class specified in the config
+  # Now that the class is created, see if we can leech some code from
+  # one or more concrete classes specified in the config
 
-  if ( $info->{code_class} ) {
-    $class->_read_code_class( $info->{class}, $info->{code_class} );
+  if ( $class_info->{code_class} ) {
+    $class->read_code_class( $class_info->{class}, $class_info->{code_class} );
   }
-  return $info->{class};
+  return $class_info->{class};
 }
 
-sub parse_config {
-  my ( $class, $p, $info ) = @_;
-  my $meta = $p->{meta} || $p->{config}->{_meta} || $DEFAULT_META;
-  my $this_class = $info->{class};
 
- # $MC should now be the (empty) configuration hashref for 
- # the class $this_class
+# Ensure our new class has access to its configuration information
+
+sub install_class_config {
+  my ( $class, $class_info ) = @_;
+  my $this_class = $class_info->{class};
+
+ # $CLASS_CONFIG should now be the (empty) configuration hashref for 
+ # the class $this_class and retrievable by ->CONFIG
   
-  my $MC = $this_class->CONFIG;
+  my $CLASS_CONFIG = $this_class->CONFIG;
   
   # We need to track the alias this initially used (particularly for
   # establishing relationships, see 'create_relationship' below)
   
-  $MC->{main_alias} = $info->{alias};
+  $CLASS_CONFIG->{main_alias} = $class_info->{alias};
   
   # When we change a listref to a hashref, keep the order
   # by maintaining a count; that way they can be re-ordered
   # if desired.
   
-  foreach my $item ( @{ $meta->{parse_into_hash} } ) {
-    next unless ( ref $info->{ $item } eq 'ARRAY' );
-    my $count = 1;
-    foreach my $subitem ( @{ $info->{ $item } } ) {
-      $MC->{ $item }->{ $subitem } = $count;
-      $count++;
+  $class_info->{_meta} ||= {};
+  if ( ref $class_info->{_meta}->{parse_into_hash} eq 'ARRAY' ) {
+    foreach my $item ( @{ $class_info->{_meta}->{parse_into_hash} } ) {
+      next unless ( ref $class_info->{ $item } eq 'ARRAY' );
+      my $count = 1;
+      foreach my $subitem ( @{ $class_info->{ $item } } ) {
+        $CLASS_CONFIG->{ $item }->{ $subitem } = $count;
+        $count++;
+      }
+      delete $class_info->{ $item };
     }
-    delete $info->{ $item };
   }
    
- # Dereference all arrayrefs and hashrefs! Otherwise we might get
- # some deeply weird stuff going on because the classes'
- # configuration information would point to the original config 
- # object created here ($conf)
+  # Dereference all arrayrefs and hashrefs! Otherwise we might get
+  # some deeply weird stuff going on because the class's
+  # configuration information would point to the original config 
+  # object created here ($conf).
   
-  foreach my $item ( keys %{ $info } ) {
-    next unless ( $info->{ $item } );
-    my $type = ref $info->{ $item };
-    if ( $type eq 'ARRAY' ) { $MC->{ $item } = \@{ $info->{ $item } }; next }
-    if ( $type eq 'HASH' )  { $MC->{ $item } = \%{ $info->{ $item } }; next }
-    $MC->{ $item } = $info->{ $item }; # does CODE, scalar, object
+  foreach my $item ( keys %{ $class_info } ) {
+    next unless ( $class_info->{ $item } );
+    my $type = ref $class_info->{ $item };
+    if ( $type eq 'ARRAY' ) { $CLASS_CONFIG->{ $item } = \@{ $class_info->{ $item } }; next }
+    if ( $type eq 'HASH' )  { $CLASS_CONFIG->{ $item } = \%{ $class_info->{ $item } }; next }
+    $CLASS_CONFIG->{ $item } = $class_info->{ $item }; # does CODE, scalar, object
   }
   
-  _w( 2, "Configuration information for $this_class is:\n", 
-      Dumper( $this_class->CONFIG ) );
+  DEBUG() && _w( 2, "Configuration information for $this_class is:\n", 
+                  Dumper( $this_class->CONFIG ) );
   return $this_class;
 }
 
@@ -184,29 +220,56 @@ my $GENERIC_FETCH_BY = <<'FETCHBY';
 FETCHBY
 
 
+# Create a 'has_a' relationship between two SPOPS objects
+
 sub create_relationship {
-  my ( $class, $info ) = @_;
-  my $this_class = $info->{class};
+  my ( $class, $class_info ) = @_;
+  my $this_class = $class_info->{class};
   
   # First do the 'has_a' aliases; see POD documentation on this (below)
   
-  $info->{has_a} ||= {};
-  foreach my $hasa_class ( keys %{ $info->{has_a} } ) {
-    _w( 1, "Try to alias $this_class hasa $hasa_class" );
+  $class_info->{has_a} ||= {};
+  foreach my $hasa_class ( keys %{ $class_info->{has_a} } ) {
+    DEBUG() && _w( 1, "Try to alias $this_class hasa $hasa_class" );
     my $hasa_config   = $hasa_class->CONFIG;
     my $hasa_id_field = $hasa_config->{id_field};
     my $hasa_sub = $GENERIC_HASA;
     $hasa_sub =~ s/%%CLASS%%/$this_class/g;
     $hasa_sub =~ s/%%HASA_CLASS%%/$hasa_class/g;
 
-    my $id_fields = ( ref $info->{has_a}->{ $hasa_class } eq 'ARRAY' )
-                       ? $info->{has_a}->{ $hasa_class } 
-                       : [ $info->{has_a}->{ $hasa_class } ];
+    # Each defined relationship can be between more than one instance
+    # of another class, each of which is linked to a separate ID
+    # field.. For instance, if my SPOPS objects had two user_id fields
+    # in it (say, 'created_by' and 'last_updated_by'), then I need to
+    # create *two* links from this class to the user class.
+
+    # Example:
+    
+    # This specification has two links to one class:
+
+    #   has_a => { 'MySPOPS::User' => [ 'created_by', 'updated_by' ], ... }
+
+    # This specification has one link to one class:
+
+    #   has_a => { 'MySPOPS::User' => 'created_by', ... }
+
+    my $id_fields = ( ref $class_info->{has_a}->{ $hasa_class } eq 'ARRAY' )
+                       ? $class_info->{has_a}->{ $hasa_class } 
+                       : [ $class_info->{has_a}->{ $hasa_class } ];
     my $num_id_fields = scalar @{ $id_fields };
     foreach my $usea_id_info ( @{ $id_fields } ) {
       my ( $hasa_alias, $usea_id_field ) = '';
+
+      # This can be a hash when we want to specify the alias name in
+      # the configuration rather than let SPOPS create it for
+      # us. Something like the following where we want use the alias
+      # 'creator' rather than the alias SPOPS will create,
+      # 'created_by_user':
+
+      # has_a => { 'MySPOPS::User' => [ { 'created_by' => 'creator' }, ... ], ... }
+
       if ( ref $usea_id_info eq 'HASH' ) {
-        $usea_id_field = (keys %{ $usea_id_field })[0];
+        $usea_id_field = ( keys %{ $usea_id_field } )[0];
         $hasa_alias    = $usea_id_info->{ $usea_id_field };
       }
       else {
@@ -222,15 +285,15 @@ sub create_relationship {
       my $this_hasa_sub = $hasa_sub;
       $this_hasa_sub =~ s/%%HASA_ALIAS%%/$hasa_alias/g;
       $this_hasa_sub =~ s/%%HASA_ID_FIELD%%/$usea_id_field/g;
-      _w( 1, "Aliasing ($hasa_class) with field ($usea_id_field) ",
-             "using alias ($hasa_alias) within ($this_class)" );
-      _w( 2, "Now going to eval the routine:\n$this_hasa_sub" );
+      DEBUG() && _w( 1, "Aliasing ($hasa_class) with field ($usea_id_field) ",
+                      "using alias ($hasa_alias) within ($this_class)" );
+      DEBUG() && _w( 3, "Now going to eval the routine:\n$this_hasa_sub" );
       {
         local $SIG{__WARN__} = sub { return undef };
         eval $this_hasa_sub;
       }
       if ( $@ ) {
-        die " (Configure/create_relationship): Cannot eval has_a clause into $this_class. ",
+        die "Cannot eval has_a clause into $this_class.\n",
             "Error: $@\nRoutine: $this_hasa_sub";
       }
     }
@@ -238,64 +301,45 @@ sub create_relationship {
   
   # Next, process the 'fetch_by' fields
   
-  $info->{fetch_by} ||= [];
-  foreach my $fetch_by_field ( @{ $info->{fetch_by} } ) {
-    _w( 1, "Creating routine for fetch_by_$fetch_by_field" );
+  $class_info->{fetch_by} ||= [];
+  foreach my $fetch_by_field ( @{ $class_info->{fetch_by} } ) {
+    DEBUG() && _w( 1, "Creating routine for fetch_by_$fetch_by_field" );
     my $fetch_by_sub = $GENERIC_FETCH_BY;
     $fetch_by_sub    =~ s/%%CLASS%%/$this_class/g;
     $fetch_by_sub    =~ s/%%FETCH_BY_FIELD%%/$fetch_by_field/g;
-    _w( 2, "Now going to eval the routine:\n$fetch_by_sub" );
+    DEBUG() && _w( 3, "Now going to eval the routine:\n$fetch_by_sub" );
     {
       local $SIG{__WARN__} = sub { return undef };
       eval $fetch_by_sub;
     }
     if ( $@ ) {
-      die " (Configure/create_relationship): Cannot eval fetch_by routine into ",
-          "$this_class using $fetch_by_field\nError: $@\nRoutine: $fetch_by_sub\n";
+      die "Cannot eval fetch_by routine into $this_class using $fetch_by_field\n",
+          "Error: $@\n",
+          "Routine: $fetch_by_sub";
     }
   }
 
   # Next, process the ruleset information, which is in a separate
   # module (maybe we should bring them back here...)
   
-  SPOPS::Configure::Ruleset->create_relationship( $info );
+  SPOPS::Configure::Ruleset->create_relationship( $class_info );
   return $this_class;
 }
 
-#
-# Usage $class->_read_code_class( 'MyApp::Object', 'OriginalClass::Object') 
-# 
 
-# Locates and reads in the file specified by the code class, changes
-# the class's package then eval's the text so that the subroutines are
-# all installed to the package we've just created on the fly rather
-# than the package we originally used for the code. For instance, if
-# you want to use the 'Interact::User' class, you need in your
-# 'spops.perl' file something like:
+#
+# Usage $class->read_code_class( 'MyApp::Object', 'OriginalClass::Object') 
 # 
-# 'class'      => 'MyApp::User',
-# 'code_class' => 'Interact::User', 
-#
-# So we find the 'Interact::User' file (somewhere in @ISA), open it up
-# and as we read it in replace the old package name ('Interact::User')
-# with the new one ('MyApp::User'). We don't change the file, just the
-# text that's read into memory. Once that's done, we eval it and it
-# becomes part of the library!
-#
-#
-# Note that 'code_class' can also be an arrayref of classes, each of
-# which has its subroutines read into the main class
-#
 # Returns: arrayref of files used
 
-sub _read_code_class {
+sub read_code_class {
   my ( $class, $this_class, $code_class ) = @_;
   my @files_used = ();
   unless ( ref $code_class eq 'ARRAY' ) {
     $code_class = [ $code_class ];
   }
   foreach my $read_code_class ( @{ $code_class } ) {
-    _w( 1, "Trying to read code from $read_code_class to $this_class" );
+    DEBUG() && _w( 1, "Trying to read code from $read_code_class to $this_class" );
     my $filename = $read_code_class;
     $filename =~ s|::|/|g;
     my $final_filename = undef;
@@ -303,14 +347,14 @@ sub _read_code_class {
 PREFIX:
     foreach my $prefix ( @INC ) {
       my $full_filename = "$prefix/$filename.pm";
-      _w( 2, "Try file: $full_filename" );
+      DEBUG() && _w( 2, "Try file: $full_filename" );
       if (-f $full_filename ) {
         $final_filename = $full_filename;
         last PREFIX;
       }
     }
     
-    _w( 1, "File ($final_filename) will be used for $read_code_class" );
+    DEBUG() && _w( 1, "File ($final_filename) will be used for $read_code_class" );
     if ( $final_filename ) {
       open( PKG, $final_filename ) || die $!;
       my $code_pkg = undef;
@@ -320,7 +364,7 @@ CODEPKG:
       while ( <PKG> ) {
         if ( s/^\s*package $read_code_class\s*;\s*$/package $this_class;/ ) {
           $code_pkg .= $_;
-          _w( 1, " Package $read_code_class will be read in as $this_class" );
+          DEBUG() && _w( 1, " Package $read_code_class will be read in as $this_class" );
           last CODEPKG;
         }
         $code_pkg .= $_;
@@ -335,13 +379,14 @@ CODEPKG:
         $code_pkg .= <PKG>;
       }
       close( PKG );
-      _w( 2, "Going to eval code:\n\n$code_pkg" );
+      DEBUG() && _w( 3, "Going to eval code:\n\n$code_pkg" );
       {
         local $SIG{__WARN__} = sub { return undef };
         eval $code_pkg;
         if ( $@ ) {
-          die "(Configure/read_code_class): Could not read $code_class into $this_class\n",
-              "Error: $@\n$code_pkg\n\n"; 
+          die "Could not read $code_class into $this_class\n",
+              "Error: $@\n",
+              "$code_pkg"; 
         }
       }
     }
@@ -351,6 +396,28 @@ CODEPKG:
   }
   return \@files_used;
 }
+
+sub find_config_class {
+  my ( $class, $class_info ) = @_;
+  my $config_class = __PACKAGE__;
+  my %isa_map = map { $_ => 1 } @{ $class_info->{isa} };
+  if ( $isa_map{'SPOPS::DBI'} ) { $config_class = 'SPOPS::Configure::DBI'; }
+  if ( $config_class ne __PACKAGE__ ) { eval "require $config_class"; }
+  return $config_class;
+}
+
+
+# 'require' all the classes listed in the 'isa' key of \%class_info
+
+sub require_isa {
+  my ( $class, $class_info ) = @_;
+  foreach my $isa_class ( @{ $class_info->{isa} } ) {
+    eval "require $isa_class";
+    die "Could not require the class ($isa_class). Error: $@"  if ( $@ );
+  }
+  return 1;
+}
+
 
 1;
 
@@ -369,20 +436,29 @@ SPOPS::Configure - read in configuration information for collections and create/
 
  use SPOPS::Configure;
  
- my $classes = []; 
- $classes = SPOPS::Configure->parse_config( $conf );
+ my $conf = {
+     fatbomb => {
+       class        => 'My::ObjectClass',
+       isa          => [ qw/ SPOPS::DBI::MySQL SPOPS::DBI / ],
+       increment_field => 1,
+       field        => [ qw/ fatbomb_id calories cost name servings / ],
+       no_insert    => [ qw/ fatbomb_id / ],
+       base_table   => 'fatbomb',
+       id_field     => 'fatbomb_id',
+       skip_undef   => [ qw/ servings / ],
+       sql_defaults => [ qw/ servings / ],
+     },
+ };
+
+ my $classes = SPOPS::Configure->process_config( $conf );
 
 =head1 DESCRIPTION
 
-This class only has one method: parse_config. It takes a hashref 
-of collection information and configures existing classes with 
-any information necessary (including the @ISA for each) and also
-whips up collection classes on the fly based on the data
-found in the hashref passed in.
-
-Note that this class is B<not required> to use SPOPS. You can happily
-just define the configuration information right in your class and
-never have a need to 
+This class only has one public method: C<process_config>. It takes a
+hashref of collection information and configures existing classes with
+any information necessary (including the @ISA for each) and also whips
+up collection classes on the fly based on the data found in the
+hashref passed in.
 
 =head1 METHODS
 
@@ -390,44 +466,61 @@ B<process_config( \%params )>
 
 Parameters:
 
- config (\%)
-   A hashref of configuration information for one or more SPOPS
-   objects. The key is the SPOPS object alias, the value is a hashref
-   of configuration information corresponding to that alias.
+=over 4
 
-   In the absence of an 'alias_list', each of the SPOPS objects
-   specified in the configuration will be processed.
+=item *
 
- alias_list (\@) (optional)
-   List of aliases to process from the 'config'. Use this if for some
-   reason you do not want to process all the aliases.
+config (\%)
 
- meta (\%) (optional)
-   Can also be in the 'config' hashref -- see information under
-   'parse_config()' below.
+A hashref of configuration information for one or more SPOPS
+objects. The key is the SPOPS object alias, the value is a hashref of
+configuration information corresponding to that alias.
 
-B<create_spops_class( \%config, \%spops_config )>
+In the absence of an 'alias_list', each of the SPOPS objects specified
+in the configuration will be processed.
+
+=item *
+
+alias_list (\@) (optional)
+
+List of aliases to process from the 'config'. Use this if for some
+reason you do not want to process all the aliases.
+
+=item *
+
+meta (\%) (optional)
+
+Can also be in the 'config' hashref -- see information under
+'install_class_config()' below.
+
+=item *
+
+require_isa (bool) (optional)
+
+Pass a true value to 'require' every class in the 'isa' field of each
+SPOPS class configuration. (This is actually done by the
+<require_isa()> method, below.)
+
+=back
+
+Returns: An arrayref of the SPOPS classes successfully created.
+
+B<create_spops_class( \%spops_config )>
 
 Takes configuration information for a single SPOPS class, creates it
 on-the-fly and reads in any external code when specified.
 
-Note that you can pass a true value for the key 'require_isa' in the
-\%config parameter. The routine will then try to 'require' every class
-in the 'isa' field of your SPOPS class configuration.
-
 Returns: the class name if successful.
 
-B<parse_config( \%config, \%spops_config )>
+B<install_class_config( \%spops_config )>
 
-Takes a hashref of configuration information and returns the classes
-created/configured properly. 
+Takes a hashref of configuration information and installs it to the
+SPOPS class presumably just created.
 
-One of the keys in the configuration is special. You can pass it in
-directly as a parameter (using the 'meta' key) or put it in the
-configuration (using the '_meta' key). If you do neither, the system
-will use a default (currently consisting of parsing the fields
-'field', 'no_insert', 'no_update' and 'skip_undef' from an arrayref
-into a hashref.)
+One of the keys ('_meta') in the configuration is special because it
+has directives for the config installer to perform. If do not pass it
+in with the C<\%spops_config> info, we use a default (the class
+variable $DEFAULT_META).
 
 This 'meta' information allows you to manipulate the information in
 the configuration. Generally this is only for easier input: who wants
@@ -435,11 +528,28 @@ to type out an entire hashref when all you want is to list some fields
 that get used later as lookups?
 
 The 'meta' information is a hashref. Currently the only supported key
-is 'parse_into_hash', which takes a listref and makes it into a
-hashref to facilitate individual lookups. (No 'grep in a void context'
-for us!)
+is 'parse_into_hash', which takes a listref of fields which it will
+change from a listref to a hashref when installing the class to
+facilitate individual lookups. (No 'grep in a void context' for us!)
 
-So we read in the \%spops_config information, massage it if necessary
+Contrived example where 'field1' is transformed from a listref in the
+original configuration information to a hashref:
+
+ $spops_config->{_meta}->{parse_into_hash} = [ qw/ field1 field2 / ];
+ $spops_config->{field1} = [ qw/ first second third fourth fifth / ];
+ my $spops_class = $class->install_class_config( $spops_config );
+
+ print Data::Dumper::Dumper( $spops_class->CONFIG->{field1} );
+
+ >>  $VAR1 = {
+      'fifth' => 5,
+      'first' => 1,
+      'fourth' => 4,
+      'second' => 2,
+      'third' => 3,
+    };
+
+So we read in the \%spops_config information, massage it as necessary
 and assign the information to the SPOPS class configuration. After
 this class is run you should be able to call:
 
@@ -449,7 +559,7 @@ And get back a hashref of configuration information for the class.
 
 Returns: the class name if successful.
 
-B<create_relationship>
+B<create_relationship( \%spops_config )>
 
 Currently this creates the 'has_a' relationship and installs the
 ruleset information in each class that asks for it.
@@ -458,13 +568,48 @@ See the writeup below under L<Relationship Fields>.
 
 Returns: the class name if successful.
 
-B<_read_code_class>
+B<read_code_class( $new_package_class, [ \@code_class | $code_class ] )>
 
-Used internally to emulate some of what 'require' does to find a file
-with code and then reads the subroutines into another package.
+Used internally to emulate some of what 'require' does to find a Perl
+class (.pm) then reads the subroutines into another package.
+
+Locates and reads in the file specified by the code class (first arg),
+changes the package of the Perl module then runs c<eval ""> on the
+text of the module so that the subroutines are all installed to the
+package we have just created on the fly rather than the package we
+originally used for the code. For instance, if you want to use the
+'OpenInteract::User' class, you need in your 'spops.perl' file something
+like:
+
+  'class'      => 'MyApp::User',
+  'code_class' => 'OpenInteract::User', 
+
+So we find the 'OpenInteract::User' file (somewhere in @ISA), open it
+up and as we read it in replace the old package name
+('Interact::User') with the new one ('MyApp::User'). We do not change
+the file, just the text that is read into memory. Once that is done,
+we eval it and it becomes part of the library!
+
+If the file is not found in @ISA
+
+Note that 'code_class' can also be an arrayref of classes, each of
+which has its subroutines read into the main class
 
 Returns: arrayref of filenames that whose subroutines were read into
 the SPOPS object class.
+
+B<find_config_class( \%spops_config )>
+
+Returns the class that should process the configuration for this
+class. Currently this simply goes through the 'isa' elements of the
+class and returns the appropriate C<SPOPS::Configure> subclass (e.g.,
+if we find C<SPOPS::DBI> as a parent of the class we return
+C<SPOPS::Configure::DBI> as the class to process it.)
+
+B<require_isa( \%spops_config )>
+
+Run a 'require' on all the 'isa' classes in a SPOPS configuration
+entry.
 
 =head1 CONFIGURATION FIELDS EXPLAINED
 
@@ -484,11 +629,13 @@ that is not in the list, L<SPOPS::Tie> will warn you and the
 assignment will be discarded. For instance:
 
  # configuration
+
  class => 'My::HipHop',
  field => [ qw/ hip hop hooray / ],
  ...
 
  # code
+
  my $obj = My::HipHop->new;
  $obj->{'boo-yah'} = "and he said";
 
@@ -514,9 +661,7 @@ identify a record. (In database parlance, this is a "multiple field
 primary key".) To get around the restriction, you can simply add
 another field to the record and use it as a primary key. Instead of
 using the 'fetch' method to retrieve records, you can create a simple
-'fetch_by_blah' that takes two fields instead of one. (Note: on the TO
-DO list for SPOPS is the ability to create a 'fetch_by_blah' method
-on-the-fly from configuration information.
+'fetch_by_blah' that takes two fields instead of one.
 
 =head2 Optional Fields
 
@@ -583,9 +728,19 @@ How should this object be displayed? Currently, the hashref it points
 to must have at least one key 'url', to which SPOPS appends a query
 string to identify this object.
 
-The query string it appends is very simple, something like:
+The query string it appends is very simple, persforming something
+like:
 
- url . ? . $class->CONFIG->{id_field} . = . $object->id()
+ my $id_query = join( '=', $object->CONFIG->{id_field}, $object->id() );
+ my $URL = '/Object/show/?' $id_query;
+
+So the resulting URL for a class with 'id_field' as 'news_id' and an
+ID of 5 would look like:
+
+ /Object/show/?news_id=5
+
+The URL you define is entirely separate from SPOPS and is not
+determined by it, or auto-generated by it, at all.
 
 B<name> (\&)
 
@@ -762,12 +917,12 @@ So we create a subroutine with the name:
 
  my $subroutine_name = join( '_', $id_field, $link_alias );
 
-In this case, $id_field is 'subgroup_id' and $alias is 'group'.
+In this case, $id_field is 'subgroup_id' and $alias is 'group', which
+makes 'subgroup_id_group'.
 
-You can sometimes use this to your advantage but it makes for some
-awkward naming schemes. However, you can use another means of
+You can sometimes use this to your advantage but it often makes for
+some awkward naming schemes. Fortunately, you can use another means of
 naming. The custom means allows you to do something like this:
-
 
    user => {
      field    => [ 'user_id', 'group_id', 'subgroup_id', 'email' ],
@@ -795,7 +950,8 @@ Here, instead of relying on SPOPS to name the subroutine for us that
 maps to the $id_field 'subgroup_id', we named it ouselves. The only
 warning here is to ensure that you do not create a subroutine of the
 same name in a 'code_class', otherwise the 'code_class' routine will
-get overwritten.
+get overwritten. (In this case, you need to ensure that 'subgroup()'
+is not a subroutine name in an external code class you are using.)
 
 B<fetch_by> (\@)
 
@@ -841,6 +997,8 @@ Instead of making 'code_class' read in just packages, maybe we want to
 have a file of just subroutines that gets included to the class.
 
 =head1 BUGS
+
+None known (beyond being a little confusing in places).
 
 =head1 COPYRIGHT
 

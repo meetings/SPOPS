@@ -1,12 +1,13 @@
 package SPOPS::Key::DBI::Pool;
 
-# $Id: Pool.pm,v 1.2 2001/02/21 12:25:13 lachoy Exp $
+# $Id: Pool.pm,v 1.7 2001/06/03 22:43:34 lachoy Exp $
 
 use strict;
-use SPOPS qw( _w );
+use SPOPS qw( _w DEBUG );
 
-@SPOPS::Key::DBI::Pool::ISA     = ();
-$SPOPS::Key::DBI::Pool::VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::Key::DBI::Pool::ISA      = ();
+$SPOPS::Key::DBI::Pool::VERSION  = '1.7';
+$SPOPS::Key::DBI::Pool::Revision = substr(q$Revision: 1.7 $, 10);
 
 
 # Ensure only PRE_fetch_id works.
@@ -23,13 +24,13 @@ sub pre_fetch_id  {
   unless ( $pool_sql ) {
     my $msg   = 'Cannot retrieve ID to insert record';
     SPOPS::Error->set({ 
-             user_msg => $msg, type => 'db',
+             user_msg   => $msg, 
+             type       => 'db',
              system_msg => "No SQL specified in the configuration of ($class) using the key 'pool_sql'",
-             method => 'pre_fetch_id', 
-             type => 'db' });
+             method     => 'pre_fetch_id' });
     die $msg;
   }  
-  _w( 1, "Getting ID with SQL:\n$pool_sql" );
+  DEBUG() && _w( 1, "Getting ID with SQL:\n$pool_sql" );
  
   my $params = { sql => $pool_sql, db => $p->{db} };
   my $values = eval { $class->CONFIG->{pool_value} };
@@ -40,10 +41,10 @@ sub pre_fetch_id  {
     if ( $value_type ne 'ARRAY' and $value_type ) {
       my $msg   = 'Cannot retrieve ID to insert record';
       SPOPS::Error->set({ 
-               user_msg => $msg, type => 'db',
+               user_msg   => $msg, 
+               type       => 'db',
                system_msg => "Configuration key 'pool_value' in ($class) must be a scalar or arrayref.",
-               method => 'pre_fetch_id', 
-               type => 'db' });
+               method     => 'pre_fetch_id' });
       die $msg;
     }
 
@@ -62,7 +63,7 @@ sub pre_fetch_id  {
     $SPOPS::Error::user_msg = 'Cannot retrieve ID to insert record';
     die $SPOPS::Error::user_msg;
   }   
-  _w( 1, "Returned <<$row->[0]>> for ID" );
+  DEBUG() && _w( 1, "Returned <<$row->[0]>> for ID" );
   return $row->[0];
 }
 

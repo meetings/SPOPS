@@ -1,12 +1,14 @@
 package SPOPS::Key::Random;
 
-# $Id: Random.pm,v 1.3 2001/02/21 12:29:46 lachoy Exp $
+# $Id: Random.pm,v 1.8 2001/06/03 22:43:34 lachoy Exp $
 
 use strict;
-use SPOPS  qw( _w );
+use SPOPS  qw( _w DEBUG );
 
-@SPOPS::Key::Random::ISA     = ();
-$SPOPS::Key::Random::VERSION = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::Key::Random::ISA      = ();
+$SPOPS::Key::Random::VERSION  = '1.7';
+$SPOPS::Key::Random::Revision = substr(q$Revision: 1.8 $, 10);
+
 
 use constant DEFAULT_WIDTH => 8;
 
@@ -14,7 +16,7 @@ sub pre_fetch_id  {
   my ( $class, $p ) = @_;
   my $width = $p->{width} || $class->CONFIG->{id_width} || DEFAULT_WIDTH;
   my $code =  $class->generate_random_code( $width );
-  _w( 1, "Created insert ID ($code)" );
+  DEBUG() && _w( 1, "Created insert ID ($code)" );
   return $code; 
 }
 
@@ -53,10 +55,12 @@ all have the same random seed, since they are all forked off from the
 same parent. 
 
 The solution is to put a 'srand()' in the PerlChildInitHandler,
-although mod_perl versions from 1.25 on might take care of this for
-you.
+although mod_perl versions from 1.25 is reported to take care of this
+for you.
 
 =head1 TO DO
+
+Nothing known.
 
 =head1 COPYRIGHT
 

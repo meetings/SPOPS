@@ -1,26 +1,19 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 1.7 2001/02/25 18:50:19 lachoy Exp $
+# $Id: SPOPS.pm,v 1.16 2001/06/08 12:39:40 lachoy Exp $
 
 use strict;
 require Exporter;
-use SPOPS::Tie    qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS );
+use SPOPS::Tie    qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
+use SPOPS::Tie::StrictField;
 use SPOPS::Secure qw( SEC_LEVEL_WRITE );
 use Storable      qw( store retrieve nstore );
 
 $SPOPS::AUTOLOAD  = '';
 @SPOPS::ISA       = qw( Exporter Storable );
 @SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
-
-# Identify the SPOPS release version (so that
-#      $ perl -MSPOPS -e 'print SPOPS->VERSION' 
-# gives a right answer.
-
-$SPOPS::VERSION = '0.39';
-
-# Internal use only -- CVS version
-
-$SPOPS::CVS_VERSION = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.40';
+$SPOPS::Revision  = substr(q$Revision: 1.16 $, 10);
 
 use constant DEBUG => 0;
 
@@ -41,12 +34,16 @@ sub lang                { return $_[0]->CONFIG->{lang}               }
 # Field hash and list (not just for databases...); plus the name of
 # the ID field and the timestamp field
 
-sub field               { return $_[0]->CONFIG->{field} || {}        }
-sub field_list          { return $_[0]->CONFIG->{field_list} || []   }
-sub id_field            { return $_[0]->CONFIG->{id_field}           }
-sub timestamp_field     { return $_[0]->CONFIG->{timestamp_field}    } 
+sub field               { return $_[0]->CONFIG->{field} || {}              }
+sub field_list          { return $_[0]->CONFIG->{field_list} || []         }
+sub id_field            { return $_[0]->CONFIG->{id_field}                 }
+sub timestamp_field     { return $_[0]->CONFIG->{timestamp_field}          } 
 sub creation_security   { return $_[0]->CONFIG->{creation_security} || {}  } 
-sub no_security         { return $_[0]->CONFIG->{no_security}        }
+sub no_security         { return $_[0]->CONFIG->{no_security}              }
+
+# Empty method for subclasses to override
+
+sub class_initialize    { return; }
 
 # All objects are by default cached; set the key 'no_cache'
 # to a true value to *not* cache this object
@@ -81,8 +78,8 @@ sub post_remove_action  { return $_[0]->ruleset_process_action( 'post_remove_act
 sub ruleset_process_action {
   my ( $item, $action, $p ) = @_;
   $action = lc $action;
-  _w( 1, "Trying to process $action for", ( ref $item ) ? ref $item : $item, 
-         " type of object" );
+  DEBUG() && _w( 1, "Trying to process $action for a", ( ref $item ) ? ref $item : $item, 
+                  "type of object" );
 
   # Grab the ruleset table for this class and immediately
   # return if the list of rules to apply for this action is empty
@@ -90,7 +87,7 @@ sub ruleset_process_action {
   my $rs_table = $item->RULESET;
   return 1 unless ( ref $rs_table->{ $action } eq 'ARRAY' );
   return 1 unless ( scalar @{ $rs_table->{ $action } } );
-  _w( 1, "Ruleset exists in class." );
+  DEBUG() && _w( 1, "Ruleset exists in class." );
 
   # Cycle through the rules -- the only return value can be true or false,
   # and false short-circuits the entire operation
@@ -98,7 +95,7 @@ sub ruleset_process_action {
   foreach my $rule_sub ( @{ $rs_table->{ $action } } ) {
     return undef unless ( $rule_sub->( $item, $p ) );
   }
-  _w( 1, "$action processed without error" );
+  DEBUG() && _w( 1, "$action processed without error" );
   return 1;
 }
 
@@ -126,7 +123,7 @@ sub fail_remove         { return undef; }
 
 sub check_security          { return SEC_LEVEL_WRITE; }
 sub check_action_security   { return SEC_LEVEL_WRITE; } 
-sub create_initial_security { return 1;}
+sub create_initial_security { return 1;               }
 
 # Return either a data hashref or a list with the
 # data hashref and object, depending on context
@@ -143,6 +140,12 @@ sub new {
       $tie_class = 'SPOPS::Tie::StrictField'
     }
   }
+  if ( ref $class->CONFIG->{column_group} eq 'HASH' and 
+       keys %{ $class->CONFIG->{column_group} } ) {
+    $params->{is_lazy_load}  = 1;
+    $params->{lazy_load_sub} = $class->get_lazy_load_sub;
+  }
+  DEBUG() && _w( 1, "Creating new object of class ($class) with tie class ($tie_class)" );
   my ( %data );
   my $int = tie %data, $tie_class, $class, $params;
   my $self = bless( \%data, $class );
@@ -173,8 +176,18 @@ sub clone {
 
 sub initialize {
   my ( $self, $p ) = @_;
-  foreach my $field ( keys %{ $p } ) {
-    $self->{ $field } = $p->{ $field };
+
+  # Creating a new object, all fields are set to 'loaded' so we don't
+  # try to lazy-load a field when the object hasn't even been saved
+
+  $self->set_all_loaded();
+
+  return unless ( ref $p eq 'HASH' );  
+
+  # Go through the data passed in and set
+
+  while ( my ( $field, $value ) = each %{ $p } ) {
+    $self->{ $field } = $value;
   }
 }
 
@@ -184,20 +197,68 @@ sub save   { return undef; }
 sub fetch  { return undef; }
 sub remove { return undef; }
 
+
 # We should probably deprecate these...
 
 sub get { return $_[0]->{ $_[1] }; }
 sub set { return $_[0]->{ $_[1] } = $_[2]; }
 
-# return a simple hashref of this object's
-# data -- not tied, not as an object
+
+# return a simple hashref of this object's data -- not tied, not as an
+# object
 
 sub data {
   my ( $self ) = @_;
   return { map { $_ => $self->{ $_ } } keys %{ $self } };
 }
 
+
+# Lazy loading stuff
+
+sub get_lazy_load_sub { return \&perform_lazy_load; }
+sub perform_lazy_load { return undef; }
+
+sub is_loaded    { return tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }->{ $_[1] } }
+
+sub set_loaded   { return tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }->{ $_[1] }++ }
+
+sub set_all_loaded { 
+  my ( $self ) = @_;
+  DEBUG() && _w( 1, "Setting all fields to loaded for object class", ref $self );
+  my %loaded = map { $_ => 1 } @{ $self->field_list };
+  tied( %{ $self } )->{ IDX_LAZY_LOADED() } = \%loaded;
+}
+
+sub clear_loaded { tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }->{ $_[1] } = undef; }
+
+sub clear_all_loaded { 
+  DEBUG() && _w( 1, "Clearing all fields to unloaded for object class", ref $_[0] );
+  tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() } = {}
+}
+
+
+# Is this object doing field checking?
+
 sub is_checking_fields { return tied( %{ $_[0] } )->{ IDX_CHECK_FIELDS() }; }
+
+
+# Track whether this object has changed
+
+sub changed      { return $_[0]->{ IDX_CHANGE() }; }
+
+sub has_change   { $_[0]->{ IDX_CHANGE() } = 1;    }
+
+sub clear_change { $_[0]->{ IDX_CHANGE() } = 0;    }
+
+
+# Track whether this object has been saved
+
+sub saved        { return $_[0]->{ IDX_SAVE() };   }
+sub has_save     { $_[0]->{ IDX_SAVE() } = 1;      }
+sub clear_save   { $_[0]->{ IDX_SAVE() } = 0;      }
+
+
+# Get the ID of this object, and optionally set it as well.
 
 sub id {
   my ( $self, $new_id ) = @_;
@@ -205,14 +266,14 @@ sub id {
   return undef unless ( ref $self );
   my $id_field = $self->id_field || '';
   return undef unless ( $id_field );
-  _w( 1, "ID field is ($id_field) ID is ($new_id)" );
+  DEBUG() && _w( 1, "ID field is ($id_field) ID is ($new_id)" );
   
   # Setup a new subroutine to take care of this in the future (BLOCK
   # is just so we set no strict for a limited area only)
   {
     no strict 'refs';
     my $class = ref( $self );
-    _w( 1, "Setting up subroutine in: $class for ->id() call." );
+    DEBUG() && _w( 1, "Setting up subroutine in: $class for ->id() call." );
     *{ $class. '::id' } = sub { return $_[0]->{ $id_field } if ( ! $_[1] ); return $_[0]->{ $id_field } = $_[1]; };
   }
   
@@ -221,6 +282,7 @@ sub id {
   return $self->{ $id_field } unless ( $new_id );
   return $self->{ $id_field } = $new_id;
 }
+
 
 # This is very primitive, but objects that want something more
 # fancy/complicated can implement it for themselves
@@ -236,17 +298,6 @@ sub as_string {
   return $msg;
 }
 
-# Track whether this object has changed
-
-sub changed      { return $_[0]->{ IDX_CHANGE() }; }
-sub has_change   { $_[0]->{ IDX_CHANGE() } = 1;    }
-sub clear_change { $_[0]->{ IDX_CHANGE() } = 0;    }
-
-# Track whether this object has been saved
-
-sub saved        { return $_[0]->{ IDX_SAVE() };   }
-sub has_save     { $_[0]->{ IDX_SAVE() } = 1;      }
-sub clear_save   { $_[0]->{ IDX_SAVE() } = 0;      }
 
 # returns the timestamp value for this object, if
 # one has been defined
@@ -260,7 +311,8 @@ sub timestamp {
   return undef; 
 }
 
-# pass in a value for a timestamp to check and compare it to what is
+
+# Pass in a value for a timestamp to check and compare it to what is
 # currently in the object; if there is no timestamp field specified,
 # just return true so everything will continue as normal
 
@@ -273,8 +325,9 @@ sub timestamp_compare {
   return 1;
 }
 
-# Return a title and url (in a hashref) to be used to make a link, or
-# whatnot.
+
+# Return the name of this object (what type it is), title of the
+# object and url (in a hashref) to be used to make a link, or whatnot.
 
 sub object_description {
   my ( $self ) = @_;
@@ -288,10 +341,14 @@ sub object_description {
   }
   $title ||= 'Cannot find name';
   my $link_info = $self->CONFIG->{display};
-  my $url = "$link_info->{url}?" . $self->id_field . '=' . $self->id;
-  return { name => $self->CONFIG->{object_name},
-           title => $title, url  => $url };
+  my $url       = "$link_info->{url}?" . $self->id_field . '=' . $self->id;
+  my $url_edit  = "$link_info->{url}?edit=1;" . $self->id_field . '=' . $self->id;
+  return { name     => $self->CONFIG->{object_name},
+           title    => $title, 
+           url      => $url,
+           url_edit => $url_edit };
 }
+
 
 sub AUTOLOAD {
   my ( $item ) = @_;
@@ -308,40 +365,43 @@ sub AUTOLOAD {
   }
   
   no strict 'refs';
-  _w( 1, "Trying to fulfill $request from $class (ISA: ", join( " // ", @{ $class . '::ISA' } ), ")" );
+  DEBUG() && _w( 1, "Trying to fulfill $request from $class (ISA: ", 
+                  join( " // ", @{ $class . '::ISA' } ), ")" );
   if ( ref $item and $item->is_checking_fields ) {
     my $fields = $item->field || {};
     if ( exists $fields->{ $request } ) {
-      _w( 1, "$class to fill  param <<$request>>; returning data." );
+      DEBUG() && _w( 2, "$class to fill  param <<$request>>; returning data." );
       *{ $class . '::' . $request } = sub { return $_[0]->{ $request } };
       return $item->{ $request };
     }
     elsif ( my $value = $item->{ $request } ) {
-      _w( 1, " $request must be a temp or something, returning value." );
+      DEBUG() && _w( 2, " $request must be a temp or something, returning value." );
       return $value;
     }
     elsif ( $request =~ /^tmp_/ ) {
-      _w( 1, "$request is a temp var, but no value saved. Returning undef." );
+      DEBUG() && _w( 2, "$request is a temp var, but no value saved. Returning undef." );
       return undef;
     }
     elsif ( $request =~ /^_internal/ ) {
-      _w( 1, " $request is an internal request, but no value saved. Returning undef." );
+      DEBUG() && _w( 2, " $request is an internal request, but no value saved. Returning undef." );
       return undef;
     }
     _w( 0, "AUTOLOAD Error: Cannot access the method $request via <<$class>>",
            "with the parameters ", join( ' ', @_ ) );
     return undef;
   }
-  _w( 1, "$class is not checking fields, so create sub and return data for <<$request>>" );
+  DEBUG() && _w( 2, "$class is not checking fields, so create sub and return data for <<$request>>" );
   *{ $class . '::' . $request } = sub { return $_[0]->{ $request } };
   return $item->{ $request }; 
 }
 
+
 sub DESTROY {
   my ( $self ) = @_;
-  _w( 1, "Destroying SPOPS object <", ref( $self ), ">\n",
-         "ID: <", $self->id, ">\n", "Time: ", scalar( localtime ) );
+  DEBUG() && _w( 2, "Destroying SPOPS object (". ref( $self ) . ") ID: " .
+                    "(" . $self->id . ") at time: ", scalar( localtime ) );
 }
+
 
 sub _w {
   my $lev   = shift || 0;
@@ -350,6 +410,7 @@ sub _w {
   my @ci = caller(1);
   warn "$ci[3] ($line) >> ", join( ' ', @_ ), "\n";
 }
+
 
 sub _wm {
   my $lev   = shift || 0;
@@ -819,6 +880,13 @@ passing the information:
 should likely not set the data, since 'firt_name' is the misspelled
 version of the defined field 'first_name'.
 
+Note that we also set the 'loaded' property of all fields to true, so
+if you override this method you need to simply call:
+
+ $self->set_all_loaded();
+
+somewhere in the overridden method.
+
 B<fetch( $oid, [ \%params ] )>
 
 Implemented by subclass.
@@ -836,23 +904,42 @@ The \%params parameter can contain a number of items -- all are optional.
 
 Parameters:
 
- <datasource>
-   For most SPOPS implementations, you can pass the data source (a DBI
-   database handle, a GDBM tied hashref, etc.) into the routine.
+=over 4
 
- data
-   You can use fetch() not just to retrieve data, but also to do the
-   other checks it normally performs (security, caching, rulesets,
-   etc.). If you already know the data to use, just pass it in using
-   this hashref. The other checks will be done but not the actual data
-   retrieval. (See the C<fetch_group> routine in L<SPOPS::DBI> for an
-   example.)
+=item *
 
- skip_security
-   A true value skips security checks.
+B<(datasource)> (obj) (optional)
 
- skip_cache
-   A true value skips any use of the cache.
+For most SPOPS implementations, you can pass the data source (a DBI
+database handle, a GDBM tied hashref, etc.) into the routine. For DBI
+this variable is C<db>, but for other implementations it can be
+something else.
+
+=item *
+
+B<data> (\%) (optional)
+
+You can use fetch() not just to retrieve data, but also to do the
+other checks it normally performs (security, caching, rulesets,
+etc.). If you already know the data to use, just pass it in using this
+hashref. The other checks will be done but not the actual data
+retrieval. (See the C<fetch_group> routine in L<SPOPS::DBI> for an
+example.)
+
+=item *
+
+B<skip_security> (bool) (optional)
+
+A true value skips security checks, false or default value keeps them.
+
+=item *
+
+B<skip_cache> (bool) (optional)
+
+A true value skips any use of the cache, always hitting the data
+source.
+
+=back
 
 In addition, specific implementations may allow you to pass in other
 parameters. (For example, you can pass in 'field_alter' to the
@@ -897,21 +984,40 @@ Example:
 
 Parameters:
 
- <datasource>
-   For most SPOPS implementations, you can pass the data source (a DBI
-   database handle, a GDBM tied hashref, etc.) into the routine.
+=over 4
 
- is_add
-   A true value forces this to be treated as a new record.
+=item *
 
- skip_security
-   A true value skips the security check.
+B<(datasource)> (obj) (optional)
 
- skip_cache
-   A true value skips any caching.
+For most SPOPS implementations, you can pass the data source (a DBI
+database handle, a GDBM tied hashref, etc.) into the routine.
 
- skip_log
-   A true value skips the call to 'log_action'
+=item *
+
+B<is_add> (bool) (optional)
+
+A true value forces this to be treated as a new record.
+
+=item *
+
+B<skip_security> (bool) (optional)
+
+A true value skips the security check.
+
+=item *
+
+B<skip_cache> (bool) (optional)
+
+A true value skips any caching.
+
+=item *
+
+B<skip_log> (bool) (optional)
+
+A true value skips the call to 'log_action'
+
+=back
 
 B<remove()>
 
@@ -924,9 +1030,35 @@ Returns: status code based on success (undef == failure).
 
 Parameters:
 
- <datasource>
-   For most SPOPS implementations, you can pass the data source (a DBI
-   database handle, a GDBM tied hashref, etc.) into the routine.
+=over 4
+
+=item *
+
+B<(datasource)> (obj) (optional)
+
+For most SPOPS implementations, you can pass the data source (a DBI
+database handle, a GDBM tied hashref, etc.) into the routine.
+
+=item *
+
+B<skip_security> (bool) (optional)
+
+A true value skips the security check.
+
+=item *
+
+B<skip_cache> (bool) (optional)
+
+A true value skips any caching.
+
+=item *
+
+B<skip_log> (bool) (optional)
+
+A true value skips the call to 'log_action'
+
+
+=back
 
 Examples:
 
@@ -990,6 +1122,121 @@ creates a subroutine in the namespace of your class which handles
 future calls so there is no need for AUTOLOAD on the second or future
 calls.
 
+=head1 LAZY LOADING
+
+As of version 0.40, this class plus the tie implementation
+(L<SPOPS::Tie>) support lazy loading of objects. This means you do not
+have to load the entire object at once.
+
+To use lazy loading, you need to specify one or more 'column groups',
+each of which is a logical grouping of properties to fetch. Further,
+you need to specify which group of properties to fetch when you run a
+'fetch' or 'fetch_group' command. SPOPS will fetch only those fields
+and, as long as your implementing class has a subroutine for
+performing lazy loads, will load the other fields only on demand.
+
+For example, say we have an object representing an HTML page. One of
+the most frequent uses of the object is to participate in a listing --
+search results, navigation, etc. When we fetch the object for listing,
+we do not want to retrieve the entire page -- it is hard on the
+database and takes up quite a bit of memory.
+
+So when we define our object, we define a column group called
+'listing' which contains the fields we display when listing the objects:
+
+$spops = {
+    html_page => {
+      class        => 'My::HTMLPage',
+      isa          => [ qw/ SPOPS::DBI::Pg SPOPS::DBI / ],
+      field        => [ qw/ page_id location title author content / ],
+      column_group => { listing => [ qw/ location title author / ] },
+      ... 
+   },
+};
+
+And when we retrieve the objects for listing, we pass the column group
+name we want to use:
+
+ my $page_list = My::HTMLPage->fetch_group({ order        => 'location',
+                                             column_group => 'listing' });
+
+Now each object in C<\@page_list> has the fields 'page_id',
+'location', 'title' and 'author' filled in, but not 'content', even
+though 'content' is defined as a field in the object. The first time
+we try to retrieve the 'content' field, SPOPS will load the value for
+that field into the object behind the scenes.
+
+ foreach my $page ( @{ $page_list } ) {
+
+   # These properties are in the fetched object and are not
+   # lazy-loaded
+
+   print "Title: $page->{title}\n",
+         "Author: $page->{author}\n";
+
+   # When we access lazy-loaded properties like 'content', SPOPS goes
+   # and retrieves the value for each object property as it's
+   # requested.
+
+   if ( $title =~ /^OpenInteract/ ) {
+     print "Content\n\n$page->{content}\n";
+   }
+ }
+
+Obviously, you want to make sure you use this wisely, otherwise you
+will put more strain on your database than if you were not using lazy
+loading. The example above, for instance, is a good use since we might
+be using the 'content' property for a few objects. But it would be a
+poor use sif we did not have the C<if> statement or if B<every>
+'title' began with 'OpenInteract' ince the 'content' property would be
+retrieved anyway.
+
+Here are the methods and interfaces for implementing lazy loading:
+
+=over 4
+
+B<get_lazy_load_sub> 
+
+Called by SPOPS when initializing a new object if one or more
+'column_group' entries are found in the configuration. It should
+return a coderef that implements lazy loading for a single field. (See
+below.)
+
+B<perform_lazy_load( $class, \%data, $field )>
+
+Interface for a subclass to implement lazy loading. The method
+C<get_lazy_load_sub()> should return a coderef conforming to this
+interface.
+
+The implementation should return the value for C<$field> given the
+object information C<\%data>, which is a map of fieldname to value and
+includes the ID field and value of the object.
+
+B<is_loaded( $field )>
+
+Returns true if C<$field> has been loaded, false if not.
+
+B<set_loaded( $field )>
+
+Sets the 'loaded' property of C<$field> to true.
+
+B<clear_loaded( $field )>
+
+Sets the 'loaded' property of C<$field> to false.
+
+B<set_all_loaded()>
+
+Sets the 'loaded' property of all fields in the object to true.
+
+B<clear_all_loaded()>
+
+Sets the 'loaded' property of all fields in the object to false.
+
+=back
+
+For an example of how a SPOPS subclass implements lazy-loading, see
+L<SPOPS::DBI>.
+
 =head1 DATA ACCESS METHODS
 
 Most of this information can be accessed through the I<CONFIG>
@@ -1005,14 +1252,14 @@ information. The following are defined:
 
 =item * 
 
-lang ( $ )
+B<lang> ($)
 
 Returns a language code (e.g., 'de' for German; 'en' for
 English). This only works if defined by your class.
 
 =item * 
 
-no_cache ( bool )
+B<no_cache> (bool)
 
 Returns a boolean based on whether this object can be cached or
 not. This does not mean that it B<will> be cached, just whether the
@@ -1020,20 +1267,20 @@ class allows its objects to be cached.
 
 =item * 
 
-field( \% )
+B<field> (\%)
 
 Returns a hashref (which you can sort by the values if you wish) of
 fieldnames used by this class.
 
 =item * 
 
-field_list( \@ )
+B<field_list> (\@)
 
 Returns an arrayref of fieldnames used by this class.
 
 =item * 
 
-timestamp_field ( $ )
+B<timestamp_field> ($)
 
 Returns a fieldname used for the timestamp. Having a blank or
 undefined value for this is ok. But if you do define it, your UPDATEs
@@ -1069,12 +1316,12 @@ this. Otherwise, the caching module should implement:
 The method B<get()>, which returns the property values for a
 particular object.
 
- $cache->get( { class => 'SPOPS-class', id => 'id' } )
+ $cache->get({ class => 'SPOPS-class', id => 'id' })
 
 The method B<set()>, which saves the property values for an object
 into the cache.
 
- $cache->set( { data => $spops_object } );
+ $cache->set({ data => $spops_object });
 
 This is a fairly simple interface which leaves implementation pretty
 much wide open.
@@ -1093,25 +1340,25 @@ taken (usually at the very beginning of the action) and the other
 after the action has been successfully completed.
 
 What kind of actions might you want to accomplish? Cascading deletes
-(when you delete one object, delete a number of other dependent
-objects as well); dependent fetches (when you fetch one object, fetch
-all its component objects as well); implement a consistent data layer
-(such as full-text searching) by sending all inserts and updates to a
-separate module or daemon. Whatever.
+(when you delete one object, delete a number of dependent objects as
+well); dependent fetches (when you fetch one object, fetch all its
+component objects as well); implement a consistent data layer (such as
+full-text searching) by sending all inserts and updates to a separate
+module or daemon. Whatever.
 
 Each of these actions is a rule, and together they are rulesets. There
 are some fairly simple guidelines to rules:
 
 =over 4
 
-=item 1
+=item 1.
 
 Each rule is independent of every other rule. Why? Rules for a
 particular action may be executed in an arbitrary order. You cannot
 guarantee that the rule from one class will execute before the rule
 from a separate class.
 
-=item 2
+=item 2.
 
 A rule should not change the data of the object on which it
 operates. Each rule should be operating on the same data. And since
@@ -1119,7 +1366,9 @@ guideline 1 states the rules can be executed in any order, changing
 data for use in a separate rule would create a dependency between
 them.
 
-=item 3
+NOTE: This item is up for debate (as of 0.40). 
+
+=item 3.
 
 If a rule fails, then the action is aborted. This is central to how
 the ruleset operates, since it allows inherited behaviors to have a
@@ -1171,6 +1420,44 @@ Called before a remove has been attempted.
 B<post_remove_action( \% )>
 
 Called after a remove has been successfully completed.
+
+B<ruleset_add( $class, \%class_ruleset )>
+
+Interface for adding rulesets to a class. The first argument is the
+class to which we want to add the ruleset, the second is the ruleset
+for the class. The ruleset is simply a hash reference with keys as the
+methods named above ('pre_fetch_action', etc.) pointing to an arrayref
+of code references. 
+
+This means that every phase named above above ('pre_fetch_action',
+etc.) can run more than one rule. Here is an example of what such a
+method might look like -- this one is taken from a class that
+implements full-text indexing. When the object is saved successfully,
+we want to submit the object contents to our indexing routine. When
+the object has been removed successfully, we want to remove the object
+from our index:
+
+  sub ruleset_add {
+    my ( $class, $rs_table ) = @_;
+    my $obj_class = ref $class || $class;
+    push @{ $rs_table->{post_save_action} }, \&reindex_object;
+    push @{ $rs_table->{post_remove_action} }, \&remove_object_from_index;
+    return __PACKAGE__;
+  }
+
+Note that the return value is always the package that inserted the
+rule(s) into the ruleset. This enables the module that creates the
+class (L<SPOPS::Configure::Ruleset>) to ensure that the same rule does
+not get entered multiple times.
+
+B<ruleset_process_action( ($object|$class), $action, \%params )>
+
+This method executes all the rules in a given ruleset for a give
+action. For instance, when called with the action name
+'pre_fetch_action' it executes all the rules in that part of the
+ruleset.
+
+Return value is true if all the rules executed ok, false if not.
 
 =head1 FAILED ACTIONS
 
@@ -1305,14 +1592,50 @@ B<object_description()>
 Returns a hashref with three keys of information about a particular
 object:
 
- url
-   URL that will display this object
+=over 4
 
- name
-   Name of this general class of object (e.g., 'News')
+=item *
 
- title
-   Title of this particular object (e.g., 'Man bites dog, film at 11')
+B<url> ($)
+
+URL that will display this object
+
+B<url_edit> ($)
+
+URL that will display this object in editable form.
+
+=item *
+
+B<name> ($)
+
+Name of this general class of object (e.g., 'News')
+
+=item *
+
+B<title> ($)
+
+Title of this particular object (e.g., 'Man bites dog, film at 11')
+
+=back
+
+The defaults put together by SPOPS by reading your configuration file
+might not be sufficiently dynamic for your object. In that case, just
+override the method and substitute your own. For instance, the
+following adds some sort of sales adjective to the beginning of every
+object title:
+
+  package My::Object;
+
+  sub object_description {
+    my ( $self ) = @_;
+    my $info = $self->SUPER::object_description();
+    $info->{title} = join( ' ', sales_adjective_of_the_day(), 
+                                $info->{title} );
+    return $info; 
+  }
+
+And be sure to include this class in your 'code_class' configuration
+key. (See L<SPOPS::Configure> for more info.)
 
 =head1 ERROR HANDLING
 
@@ -1341,7 +1664,7 @@ information that can be used by the ruleset. For instance, if I do not
 want an object indexed by the full-text ruleset (even though the class
 uses it), I could do:
 
- eval { $obj->save( { full_text_skip => 1 } ) };
+ eval { $obj->save({ full_text_skip => 1 }) };
 
 B<Objects composed of many records>
 
@@ -1381,6 +1704,8 @@ Something to think about, anyway.
 
 =head1 BUGS
 
+None known.
+
 =head1 COPYRIGHT
 
 Copyright (c) 2001 intes.net, inc.. All rights reserved.
@@ -1404,7 +1729,7 @@ http://sourceforge.net/projects/openinteract/
 
 Chris Winters <chris@cwinters.com>
 
-Christian Lemburg <clemburg@online-club.de> contributed some
+Christian Lemburg <clemburg@online-club.de> contributed excellent
 documentation and far too many good ideas to implement.
 
 Rusty Foster <rusty@kuro5hin.org> was also influential in the early

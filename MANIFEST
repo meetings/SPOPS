@@ -7,6 +7,7 @@ README
 RELEASE
 SPOPS.pm
 SPOPS/Error.pm
+SPOPS/Initialize.pm
 SPOPS/Tie.pm
 SPOPS/Tie/StrictField.pm
 SPOPS/Secure.pm
@@ -18,10 +19,12 @@ SPOPS/DBI.pm
 SPOPS/DBI/Sybase.pm
 SPOPS/DBI/RandomCode.pm
 SPOPS/DBI/MySQL.pm
+SPOPS/DBI/Pg.pm
 SPOPS/Key/Random.pm
 SPOPS/Key/DBI/HandleField.pm
 SPOPS/Key/DBI/Identity.pm
 SPOPS/Key/DBI/Pool.pm
+SPOPS/Key/DBI/Sequence.pm
 SPOPS/Configure.pm
 SPOPS/Configure/DBI.pm
 SPOPS/Configure/Ruleset.pm

@@ -1,20 +1,21 @@
-package SPOPS::User;
+package SPOPS::Impl::User;
 
-# $Id: User.pm,v 1.1.1.1 2001/02/02 06:08:32 lachoy Exp $
+# $Id: User.pm,v 1.5 2001/06/03 22:43:34 lachoy Exp $
 
 use strict;
 use Carp          qw( carp );
 use SPOPS::Secure qw( :level :scope );
 
-@SPOPS::User::ISA     = qw();
-$SPOPS::User::VERSION = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
-$SPOPS::User::C       = {};
+@SPOPS::Impl::User::ISA      = qw();
+$SPOPS::Impl::User::VERSION  = '1.7';
+$SPOPS::Impl::User::Revision = substr(q$Revision: 1.5 $, 10);
+$SPOPS::Impl::User::C        = {};
 
-$SPOPS::User::crypt_password = undef;
+$SPOPS::Impl::User::crypt_password = undef;
 
 use constant DEBUG  => 0;
 
-sub CONFIG { return $SPOPS::User::C; }
+sub CONFIG { return $SPOPS::Impl::User::C; }
 
 sub _class_initialize {
  my $class  = shift;
@@ -95,12 +96,12 @@ sub check_password {
 
 =head1 NAME
 
-SPOPS::User - Create and manipulate users. 
+SPOPS::Impl::User - Create and manipulate users. 
 
 =head1 SYNOPSIS
 
-  use SPOPS::User;
-  $user = SPOPS::User->new();
+  use SPOPS::Impl::User;
+  $user = SPOPS::Impl::User->new();
 
   # Increment the user's login total
   $user->increment_login();
@@ -143,6 +144,5 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
 
 =cut

@@ -2,7 +2,7 @@
 
 use strict;
 use DBI;
-use SPOPS::Configure::DBI;
+use SPOPS::Initialize;
 use Data::Dumper  qw( Dumper );
 
 # Set to 1 to see SQL calls (and other stuff)
@@ -11,10 +11,16 @@ use constant DEBUG => 0;
 {
 
   # Uncomment the following lines for MySQL
-  my $DBI_DB_TYPE  = 'mysql';
-  my $DBI_DB_NAME  = 'test';
-  my $DBI_USERNAME = '';
-  my $DBI_PASSWORD = '';
+#  my $DBI_DB_TYPE  = 'mysql';
+#  my $DBI_DB_NAME  = 'test';
+#  my $DBI_USERNAME = '';
+#  my $DBI_PASSWORD = '';
+
+  # Uncomment the following lines for PostgreSQL
+  my $DBI_DB_TYPE  = 'Pg';
+  my $DBI_DB_NAME  = 'dbname=test';
+  my $DBI_USERNAME = 'postgres';
+  my $DBI_PASSWORD = 'postgres';
 
   # Uncomment the following lines for Sybase ASA
 #  my $DBI_DB_TYPE  = 'ASAny';
@@ -40,6 +46,9 @@ use constant DEBUG => 0;
   }
   elsif ( $DBI_DB_TYPE eq 'mysql' ) {
     $auto_inc = 'int not null auto_increment';
+  }
+  elsif ( $DBI_DB_TYPE eq 'Pg' ) {
+    $auto_inc = 'SERIAL not null';
   }
 
   my $fb_table = <<SQL;
@@ -87,16 +96,19 @@ SQL
 
   if ( $DBI_DB_TYPE eq 'Sybase' or $DBI_DB_TYPE eq 'ASAny' ) {
     $spops->{fatbomb}->{isa}          = [ qw/ SPOPS::DBI::Sybase SPOPS::DBI / ];
-    $spops->{fatbomb}->{syb_identity} = 'fatbomb_id';
+#    $spops->{fatbomb}->{syb_identity} = 'fatbomb_id';
+    $spops->{fatbomb}->{increment_field} = 1;
   }
   elsif ( $DBI_DB_TYPE eq 'mysql' ) {
     $spops->{fatbomb}->{isa}          = [ qw/ SPOPS::DBI::MySQL SPOPS::DBI / ];
     $spops->{fatbomb}->{increment_field} = 1;
   }
+  elsif ( $DBI_DB_TYPE eq 'Pg' ) {
+    $spops->{fatbomb}->{isa}          = [ qw/ SPOPS::DBI::Pg SPOPS::DBI / ];
+    $spops->{fatbomb}->{increment_field} = 1;
+  }
 
-  SPOPS::Configure::DBI->process_config( { config      => $spops,
-                                           require_isa => 1 } );
-  My::ObjectClass->class_initialize;
+  SPOPS::Initialize->process( $spops );
 
   my $object = My::ObjectClass->new;
   $object->{calories} = 1500;
@@ -151,7 +163,10 @@ SQL
 
   # Comment the next line if you want to see the contents of the table
   # after the test has run
-  $db->do( 'DROP TABLE fatbomb' );
+#  $db->do( 'DROP TABLE fatbomb' );
+#  if ( $DBI_DB_TYPE eq 'Pg' ) {
+#    $db->do( 'DROP SEQUENCE fatbomb_fatbomb_id_seq' );
+#  }
   $db->disconnect;
   print "Task complete!\n";
 }

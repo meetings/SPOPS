@@ -1,14 +1,13 @@
 package SPOPS::Configure::Ruleset;
 
-# $Id: Ruleset.pm,v 1.1.1.1 2001/02/02 06:08:28 lachoy Exp $
+# $Id: Ruleset.pm,v 1.7 2001/06/06 06:17:43 lachoy Exp $
 
 use strict;
-use SPOPS qw( _w );
+use SPOPS qw( _w DEBUG );
 
-@SPOPS::Configure::Ruleset::ISA     = ();
-$SPOPS::Configure::Ruleset::VERSION = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
-
-use constant DEBUG => 0;
+@SPOPS::Configure::Ruleset::ISA      = ();
+$SPOPS::Configure::Ruleset::VERSION  = '1.7';
+$SPOPS::Configure::Ruleset::Revision = substr(q$Revision: 1.7 $, 10);
 
 # EVAL'ABLE PACKAGE/SUBROUTINES
 
@@ -20,10 +19,9 @@ my $generic_ruleset_template = <<'RULESET';
 RULESET
 
 sub create_relationship {
-  my $class = shift;
-  my $info     = shift;
+  my ( $class, $info ) = @_;
   my $this_class = $info->{class};
-  _w( 1, "Parsing alias/class: $this_class" );
+  DEBUG() && _w( 1, "Parsing alias/class: $this_class" );
 
  # Install the variable/subroutine RULESET into the class
 
@@ -31,32 +29,42 @@ sub create_relationship {
   $ruleset_info =~ s/%%CLASS%%/$this_class/g;
   eval $ruleset_info;
   die " Could not eval ruleset info into $this_class: $@"  if ( $@ );
-  
- # Process the rulesets -- note that each ruleset should also 
- # call SUPER::... so all of the sets can be set; we also
- # pass around the hashref resulting from the RULESET call
- # so each subroutine can put its rules directly into the 
- # variable
-  
-  # Something to add -- we really must allow a SPOPS class to
-  # define its own behaviors; however, if we simply call 'can',
-  # we may wind up with the information from a parent.
-  
-  # Another idea how to handle this is to simply establish a 
-  # policy whereby a class must fill its own ruleset using
-  # its _class_initialize procedure. There's an inheritance issue
-  # there (what if the _class_initialize is inherited as well?),
-  # but we can cross that bridge when we come to it.     
-  
+
+  # Process the rulesets -- we pass around the hashref resulting from
+  # the RULESET call so each subroutine can put its rules directly
+  # into the variable
+
+  # Note: Track the parent classes used for rulesets so we don't use
+  # the same one twice in case of the dreaded inheritance
+  # diamond. Thanks to Ray Zimmerman for the spot!
+
   {
     no strict 'refs';
+
+    # First see if we can add a ruleset implemented in the class
+    # itself
+
+    my $src = \%{ $this_class . '::' };
+    my ( $base_sub );
+    if ( defined( $src->{ruleset_add} ) and 
+         defined( my $base_sub = *{ $src->{ruleset_add} }{CODE} ) ) {
+      $base_sub->( $this_class, $this_class->RULESET );
+    }
+
+    # Now find all the rulesets in the classes for this parent
+
+    my %classes_used = ();
+PARENT:
     foreach my $parent_class ( @{ $this_class . '::ISA' } ) {
       if ( my $rs_sub = $parent_class->can( 'ruleset_add' ) ) {
-        $rs_sub->( $this_class, $this_class->RULESET );
-        _w( 1, "Adding routine from ($parent_class)" );
+        next PARENT if ( $classes_used{ $parent_class } );
+        my $impl_class = $rs_sub->( $this_class, $this_class->RULESET );
+        $classes_used{ $impl_class }++;
+        DEBUG() && _w( 1, "Adding routine from ($parent_class)" );
       }
     }
   }
+  DEBUG() && _w( 1, "Finished adding rulesets" );
   return 1;
 }
 
@@ -68,8 +76,7 @@ __END__
 
 =head1 NAME
 
-SPOPS::Configure::Ruleset - Install variables, subroutines and process
-inherited rulesets per class
+SPOPS::Configure::Ruleset - Install variables, subroutines and process inherited rulesets per class
 
 =head1 SYNOPSIS
 
@@ -85,13 +92,13 @@ always called from the L<SPOPS::Configure> class after doing intitial
 processing of classes. The method takes configuration information for
 a SPOPS class.
 
-For this class, we install a package variable \%RULESET and a method
-RULESET which returns that hashref. The variable \%RULESET holds all
-of the applicable rules for that particular class, and after creating
-the variable and subroutine we find all of the rules inherited by the
-class and install them in the class. This is a performance win, since
-we do not need to dynamically search them out everytime the rules for
-a particular action need to be executed.
+For this class, we install a package variable C<\%RULESET> and a
+method C<RULESET()> which returns that hashref. The variable
+C<\%RULESET> holds all of the applicable rules for that particular
+class, and after creating the variable and subroutine we find all of
+the rules inherited by the class and install them in the class. This
+is a performance win, since we do not need to dynamically search them
+out everytime the rules for a particular action need to be executed.
 
 See L<SPOPS> for more information about what a ruleset is and how it
 is executed.
@@ -100,13 +107,17 @@ is executed.
 
 B<create_relationship( \%spops_config )>
 
-Install the package variable \%RULESET and the method RULESET to
-access it. Also find all the rules that apply to a particular class
+Install the package variable C<\%RULESET> and the method C<RULESET()>
+to access it. Also find all the rules that apply to a particular class
 (inherited from parents) and install to the class.
 
 =head1 TO DO
 
+Nothing known.
+
 =head1 BUGS
+
+None known.
 
 =head1 COPYRIGHT
 
@@ -117,7 +128,12 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters <chris@cwinters.com>
+
+Ray Zimmerman <rz10@cornell.edu> found a bug where inheritance
+diamonds would call the ruleset for the same parent class twice. He
+also found some erroneous comments and pointed out that classes should
+be able to implement their own rulesets.
 
 =cut
 

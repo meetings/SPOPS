@@ -1,12 +1,14 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 1.2 2001/02/20 04:36:58 lachoy Exp $
+# $Id: MySQL.pm,v 1.7 2001/06/03 22:43:34 lachoy Exp $
 
 use strict;
+use SPOPS  qw( _w DEBUG );
 use SPOPS::Key::DBI::HandleField;
 
-@SPOPS::DBI::MySQL::ISA     = ();
-$SPOPS::DBI::MySQL::VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::DBI::MySQL::ISA      = ();
+$SPOPS::DBI::MySQL::VERSION  = '1.7';
+$SPOPS::DBI::MySQL::Revision = substr(q$Revision: 1.7 $, 10);
 
 sub sql_current_date  { return 'NOW()' }
 
@@ -20,6 +22,7 @@ sub post_fetch_id {
   my ( $item, @args ) = @_;
   return undef unless ( $item->CONFIG->{increment_field} );
   $item->CONFIG->{handle_field} ||= 'mysql_insertid';
+  DEBUG() && _w( 1, "Setting to handle field: $item->CONFIG->{handle_field}" );
   return SPOPS::Key::DBI::HandleField::post_fetch_id( $item, @args );
 }
 
@@ -35,9 +38,10 @@ SPOPS::DBI::MySQL -- MySQL-specific code for DBI collections
 
 =head1 SYNOPSIS
 
- package MySPOPS;
-
- @MySPOPS::ISA = qw( SPOPS::DBI::MySQL SPOPS::DBI );
+ myobject => {
+   isa             => [ qw( SPOPS::DBI::MySQL SPOPS::DBI ) ],
+   increment_field => 1,
+ };
 
 =head1 DESCRIPTION
 
@@ -52,9 +56,17 @@ tables that have at least one auto-increment field:
    ...
  )
 
+You must also specify a true value for the class configuration
+variable 'increment_field' to be able to automatically retrieve
+auto-increment field values.
+
 =head1 BUGS
 
+None known.
+
 =head1 TO DO
+
+Nothing known.
 
 =head1 SEE ALSO
 

@@ -1,6 +1,23 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.40  Sun Jun 10 14:50:20 EDT 2001
+
+  * Upgraders need to rename two fields in 'sys_security', both of
+    which were changed to get around reserved terms in various
+    databases.
+
+     oid   --> object_id
+     level --> security_level
+
+    In MySQL, you can run:
+
+    ALTER TABLE sys_security CHANGE oid object_id VARCHAR(150)
+
+    ALTER TABLE sys_security CHANGE level security_level CHAR(1)
+
+  * For detailed changes, see the 'Changes' file.
+
 0.39
 
   * If you're using 'AUTO_INCREMENT' fields for SPOPS::DBI::MySQL, you
@@ -16,4 +33,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 1.1 2001/02/25 21:07:08 lachoy Exp $
+$Id: RELEASE,v 1.4 2001/06/10 18:35:51 lachoy Exp $

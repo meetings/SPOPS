@@ -1,5 +1,135 @@
 Revision history for Perl extension SPOPS.
 
+0.40  Sun Jun 10 14:50:20 EDT 2001
+
+Overall: 
+
+   * Modified how debugging works (again). This should be a
+     performance gain -- thanks to posts and pointers on a recent
+     thread on the mod_perl mailing list (April 2001, "Cutting down on
+     the DEBUG bloat...")
+
+   * Initialization is easier: SPOPS::Initialize should take care of
+     the details for you. (Thanks to David Boone <dave@bis.bc.ca> for
+     asking about this.)
+
+   * PostgreSQL now supported, as are sequences as a key generation
+     tool which should open the door for Oracle support.
+
+   * Lazy loading of objects now supported. You can specify a logical
+     group of properties and ask that only those be fetched. Your
+     database will thank you, as will your memory in a persistent
+     environment. See 'LAZY LOADING' in SPOPS.pm for details. (Please
+     note that this is a quite new feature and if you have any
+     problems and/or feedback, share!)
+
+   * Note: To use strict field checking, you need to set
+     'strict_field' in your object configuration to a true value.
+
+Specifics:
+
+   * All modules: (hopefully) fixed version numbering CPAN issues.
+
+   * SPOPS.pm:
+
+     - Implemented (and documented!) the lazy-loading interface.
+
+     - Better documented rulesets (thanks to Ray Zimmerman for
+     prodding).
+
+   * SPOPS/Configure.pm
+
+     - The primary method in this class ('process_config()' now uses
+     whatever configuration subclass is appropriate. For instance, if
+     an SPOPS object has 'SPOPS::DBI' as a parent it will use
+     'SPOPS::Configure::DBI'. Generally this just ensures that extra
+     capabilities of the configuration subclass get used (like
+     'create_relationships()') but it's open-ended enough to allow
+     interesting things...
+
+     - Added some inline and POD documentation to clarify matters.
+
+   * SPOPS/Configure/DBI.pm: Thanks to Ray Zimmerman
+     <rz10@cornell.edu> for spotting an error in the generated
+     '_remove()' subroutine -- it wasn't passing the parameters
+     (namely a database handle) through to the 'id_clause()' method
+     call.
+
+   * SPOPS/Configure/Ruleset.pm:
+
+     - Fixed error so that an inheritance diamond won't load the same
+     rule into the ruleset twice, spotted by Ray Zimmerman
+     <rz10@cornell.edu>.
+
+   * SPOPS/DBI.pm
+
+     - Modified fetch_group() to accommodate a 'limit' parameter,
+     which allows limit the number of returned objects as well as
+     slice that number offset from the beginning. Patch by Rusty
+     Foster <rusty@kuro5hin.org>.
+
+     - Also (inspired by Rusty) modified fetch_group() to retrieve
+     entire records rather than just the ID field and submitting that
+     to a fetch() call -- security is still checked just like before,
+     but since we refactored that action into its own routine we can
+     call it from both 'fetch()' and 'fetch_group()'.  This should
+     immediately reduce the number of database calls.
+
+     - Added (and documented) a new method fetch_count() which
+     executes a query and counts up the number of records it would
+     have fetched. This **includes** security restrictions. (Otherwise
+     it would be misleading...)
+
+     - Refactored a number of actions from fetch() and fetch_group()
+     into separate routines, including _fetch_select_fields() which
+     returns the raw fields plus the formatted fields.
+
+     - Added lazy-loading routines meeting the SPOPS interface.
+
+     - fetch_group() will now only prepend the table name to columns
+     that aren't formatting select statements (e.g., not to
+     "DATE_FORMAT( fieldname, '%a...' )"
+
+     - added docs regarding database handles -- how to create a
+     'global_db_handle()' method, etc.
+
+   * SPOPS/DBI/Pg.pm: Added first draft of PostgreSQL DBI
+     adapter. It's been tested and seems to work pretty well with
+     OpenInteract, which itself is a decent SPOPS test. Uses the
+     'SPOPS::Key::DBI::Sequence' class to implement auto-incrementing
+     fields.
+
+   * SPOPS/DBI/Sybase.pm: Use the now-standard 'increment_field'
+     boolean to see whether we're using an IDENTITY field for key
+     generation or not. (Thanks to Harry Danilevsky
+     <hdanilevsky@DeerfieldCapital.com> for pointing it out.)
+
+   * SPOPS/Impl/SecurityObj.pm: Lots of refactoring.
+
+   * SPOPS/Key/DBI/Sequence.pm: Added first draft of a sequence key
+     generator (found in many databases, including PostgreSQL and
+     Oracle). 
+
+   * SPOPS/Secure.pm, SPOPS/Secure/Hierarchy.pm
+
+     - Renamed the field 'oid' to 'object_id' to get around databases
+     that use 'oid' as a reserved word (like PostgreSQL).
+
+     - Renamed the field 'level' to 'security_level' to get around
+     databases that have 'level' as a reserved word (like
+     Sybase). While this is a fairly fundamental change from the
+     database schema side of things, people simply using SPOPS as it
+     was intended shouldn't feel any changes except for altering the
+     table in which the security information is kept. (But that's an
+     implementation issue :-)
+
+   * SPOPS/Secure/Hierarchy.pm: Fixed the 'create_root_object' call to
+     SPOPS::Secure->set_security() to call the right method with the
+     right parameter types. Added some docs.
+
+   * SPOPS/SQLInterface.pm: Documented the value 'sth' for the
+     'return' parameter of db_select(). 
+
 0.39 Sun Feb 25 13:50:56 EST 2001
 
    * SPOPS.pm, SPOPS/Tie.pm, SPOPS/DBI.pm: Created a 'saved' flag
@@ -40,7 +170,7 @@ Revision history for Perl extension SPOPS.
      and call the 'zanybrainy' method of a C<My::User> object to get
      back the associated C<My::Group> object. (This is a silly example
      but it means we don't have to rely solely on the clunky
-     automatic naming anymore.)
+     automatic naming anymore, although it's still there if you want.)
 
    * SPOPS/DBI/MySQL.pm: post_fetch_id() now first checks to see if
      the 'increment_field' of the class configuration is set to a true
@@ -129,7 +259,7 @@ Revision history for Perl extension SPOPS.
      'NS::MyObject' into the 'class' column of the 'sys_security'
      table, it put something like 'NS::MyObject=HASH(0x8b7bb12)'.
 
-0.36  Dec 20
+0.36  Dec 20, 2000
 
      SMALL API CHANGE: the return value from the 'fetch_by_object'
      method in the security object class is now undef if there are no
@@ -153,7 +283,7 @@ Revision history for Perl extension SPOPS.
      on) anything now, as long as you have a consistent categorical
      identifier and a unique identifier for each thing.
 
-0.35  Nov 18
+0.35  Nov 18, 2000
 
      Added SPOPS/Secure/Hierarchy.pm for finding security in a
      parent-child relationship, like filesystems. This involved
@@ -181,7 +311,7 @@ Revision history for Perl extension SPOPS.
      '$Id' and modified my email from chris@cwinters.com to
      chris@cwinters.com.
 
-0.34  Nov 10
+0.34  Nov 10, 2000
 
      Switched some silly documentation stuff in all the files. Changed
      SPOPS/DBI.pm to pass $p to the pre/post action rulesets so that
@@ -192,7 +322,7 @@ Revision history for Perl extension SPOPS.
      relationship. Modify SPOPS.pm to only respond to AUTOLOAD
      requests when the thing doing the requesting is an object.
 
-0.33  Oct 16
+0.33  Oct 16, 2000
 
      Added lots of documentation to individual files; transition to
      'use constant' for debugging values (much gets optimized away at
@@ -210,7 +340,7 @@ Revision history for Perl extension SPOPS.
      localized $SIG{__WARN__} handler to throw out any messages passed
      to STDERR so we can rely on our own error reporting
 
-0.32  Sep 27
+0.32  Sep 27, 2000
 
      Added lots of documentation (including a 'README' file) and made
      lots of changes to the configuration classes (SPOPS/Configure.pm
@@ -227,7 +357,7 @@ Revision history for Perl extension SPOPS.
 
      Added a couple of examples into the 'eg/' directory.
 
-0.31  Sep 26
+0.31  Sep 26, 2000
 
      Removed the html encoding/decoding stuff from SPOPS.pm. Cleaned
      up the initial_security stuff in SPOPS/Secure.pm -- better
@@ -237,7 +367,7 @@ Revision history for Perl extension SPOPS.
      Added the necessary information to license SPOPS under the
      Artistic/GPL licenses. Woo-hoo!
 
-0.30  Sep 15
+0.30  Sep 15, 2000
 
      More tests, now for DBI. These are pretty simple and don't go
      into security, but they should actually be quite useful to see if
@@ -254,7 +384,7 @@ Revision history for Perl extension SPOPS.
      ('int', 'num', 'char', etc.) and SPOPS will translate them to the
      DBI types for you.
 
-0.29  Sep 14
+0.29  Sep 14, 2000
 
      Added the second implementation for storing SPOPS objects:
      SPOPS/GDBM.pm. Tested with Interact::Package objects and so far
@@ -272,7 +402,7 @@ Revision history for Perl extension SPOPS.
      SPOPS/GDBM.pm and for SPOPS/HashFile.pm. DBI tests are going to
      be a little more difficult...
 
-0.28  Sep 11
+0.28  Sep 11, 2000
 
      Added the 'object_description' method to SPOPS.pm, since we
      really do not have a generic way to query an object for a general
@@ -288,7 +418,7 @@ Revision history for Perl extension SPOPS.
      subroutines if the configuration states that there is code behind
      the class.
 
-0.27  Aug 28
+0.27  Aug 28, 2000
 
      Moved all the ruleset initialization configuration actions to
      SPOPS/Configure/Ruleset.pm. This involved moving the package
@@ -304,7 +434,7 @@ Revision history for Perl extension SPOPS.
      deserve its own 'version', but we need to get this out for
      something :)
 
-0.26  Aug 16
+0.26  Aug 16, 2000
 
       Minor changes to reflect that we never need to call a
       global_error_class, and that the cache return has been named to
@@ -338,7 +468,7 @@ Revision history for Perl extension SPOPS.
       to a separate class, which processes it and adds/modifies a
       full-text search engine. Cool stuff :)
 
-0.25  Aug 2
+0.25  Aug 2, 2000
 
       Fixed a long-dormant buglet: this entire time, the
       SPOPS/DBI/save method was trying to retrieve the just-set values
@@ -349,7 +479,7 @@ Revision history for Perl extension SPOPS.
       and nothing to the others...  Good thing caching isn't activated
       yet :)
 
-0.24  Jul 26
+0.24  Jul 26, 2000
 
       Fixed some typos in SPOPS/Configure/DBI.pm in the eval'd
       routines (including one where we were fetching the linked
@@ -360,7 +490,7 @@ Revision history for Perl extension SPOPS.
       the save() method, so you can update the primary key field and
       still refer to the old ID.
 
-0.23  Jul 15
+0.23  Jul 15, 2000
 
       Radically changed how errors are thrown. Every error generated
       by SPOPS now sets the package variables user_msg, system_msg,
@@ -374,7 +504,7 @@ Revision history for Perl extension SPOPS.
       modules. Added the module SPOPS/Impl/User.pm as an example of
       what a SPOPS user object looks like and should do.
 
-0.22  Jul 14
+0.22  Jul 14, 2000
 
       Modified a couple items in SPOPS/DBI.pm: the fetch_group()
       method can now take multiple tables and do a join but still
@@ -390,7 +520,7 @@ Revision history for Perl extension SPOPS.
       out easily. Modify the SPOPS/Configure/DBI.pm _add and _remove
       aliases to take either a single ID or an arrayref of IDs.
 
-0.21  Jun 27
+0.21  Jun 27, 2000
 
       Updated to put all internal dependencies (like @ISA) into
       explicit 'use' statements rather than depend on mod_perl or
@@ -402,11 +532,11 @@ Revision history for Perl extension SPOPS.
       particular record simply isn't found -- for some reason, I
       thought this had been in there since the beginning.
 
-0.20  Jun 18
+0.20  Jun 18, 2000
 
       Paper bag fix in SPOPS/Secure.pm made by renaming a hash. <blush>
 
-0.19  Jun 18
+0.19  Jun 18, 2000
 
        Added and reworked a ton of documentation to SPOPS/DBI.pm; also
        added a super-easy and super-cool feature to its fetch()
@@ -422,7 +552,7 @@ Revision history for Perl extension SPOPS.
        we going to fetch the object to login before we've logged in
        yet? :)
 
-0.18  Jun 14
+0.18  Jun 14, 2000
 
        Modified how errors are handled within all SPOPS modules. This
        forced changes throughout a number of modules, but particularly
@@ -435,7 +565,7 @@ Revision history for Perl extension SPOPS.
        (versus a hashref) argument for the list of fields it will
        accept.
 
-0.17  Jun 13
+0.17  Jun 13, 2000
 
        Modified all parameters to be passed as hashrefs rather than
        hashes. Passing-by-hashref was implemented in more recent
@@ -448,7 +578,7 @@ Revision history for Perl extension SPOPS.
        a 'tmp_' variable. Modified the SPOPS/clone() method to force
        the ID field of the new object to be blank.
 
-0.16  Jun 9
+0.16  Jun 9, 2000
 
        Fixed SPOPS/Configure.pm to have the alias of the 'has_a'
        subroutine created to match the type of object it 'has' only if
@@ -465,7 +595,7 @@ Revision history for Perl extension SPOPS.
        annoyingly...). Also tested out object security stuff -- works
        pretty well.
 
-0.15  Jun 8
+0.15  Jun 8, 2000
 
         Modified the SQL-generation in SPOPS/Impl/SecurityObj.pm to
         properly fetch WORLD-only requests; if there is no user object
@@ -481,7 +611,7 @@ Revision history for Perl extension SPOPS.
         security now seems to be working well, although more testing
         is certainly required :)
         
-0.14  Jun 7
+0.14  Jun 7, 2000
 
         Allow user to pass information to fetch() method (via both fetch()
         and fetch_group() that overrides configuration for the field_alter
@@ -492,14 +622,14 @@ Revision history for Perl extension SPOPS.
         however); SPOPS/Impl/SecurityObj.pm also had some changes to
         enable it to work with classes
 
-0.13  Jun 5
+0.13  Jun 5, 2000
 
         Added SPOPS/Impl/SecurityObj.pm to the distribution as a DBI-based
         SPOPS object representing security; added methods and documentation
         to SPOPS/Secure.pm; modified SPOPS/Configure.pm to allow multiple
         aliases per type in the 'has_a' descriptor.
 
-0.12  May 29
+0.12  May 29, 2000
 
         Added list_process() method to SPOPS.pm and added the related
         methods to SPOPS::Configure::DBI %alias_to%_remove and 
@@ -511,7 +641,7 @@ Revision history for Perl extension SPOPS.
         thrown in SQLInterface to have the proper type and at least
         some semblance of informative messages.
 
-0.11  May 24 
+0.11  May 24, 2000
 
         Paper bag fix in SPOPS::Tie (changes weren't being tracked and
         therefore updates not saved); paper bag fix in SPOPS::Configure::DBI
@@ -520,11 +650,11 @@ Revision history for Perl extension SPOPS.
         routine created in SPOPS::Configure and eval'd for has_a now
         only tries a fetch if the ID value exists
 
-0.10  May 17 
+0.10  May 17, 2000 
 
         Polishing; things basically work
 
-0.01  May 12
+0.01  May 12, 2000
 
 	    Original version - much of the packages were brought in from elsewhere,
         but a lot of work is needed to extricate them from their

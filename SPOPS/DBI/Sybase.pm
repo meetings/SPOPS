@@ -1,12 +1,13 @@
 package SPOPS::DBI::Sybase;
 
-# $Id: Sybase.pm,v 1.2 2001/02/20 04:37:15 lachoy Exp $
+# $Id: Sybase.pm,v 1.6 2001/06/03 22:43:34 lachoy Exp $
 
 use strict;
 use SPOPS::Key::DBI::Identity;
 
-@SPOPS::DBI::Sybase::ISA     = ();
-$SPOPS::DBI::Sybase::VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::DBI::Sybase::ISA      = ();
+$SPOPS::DBI::Sybase::VERSION  = '1.7';
+$SPOPS::DBI::Sybase::Revision = substr(q$Revision: 1.6 $, 10);
 
 sub sql_quote {
   my ( $class, $value, $type, $db ) = @_;
@@ -18,11 +19,12 @@ sub sql_current_date  { return 'GETDATE()' }
 
 
 # Backward compatibility and convenience, so you don't have to specify
-# another item in the isa -- instead just set 'syb_identity' to true.
+# another item in the isa -- instead just set 'syb_identity' or
+# 'increment_field' to true.
 
 sub post_fetch_id { 
   my ( $item, @args ) = @_;
-  return undef unless ( $item->CONFIG->{syb_identity} );
+  return undef unless ( $item->CONFIG->{increment_field} or $item->CONFIG->{syb_identity} );
   return SPOPS::Key::DBI::Identity::post_fetch_id( $item, @args );
 }
 

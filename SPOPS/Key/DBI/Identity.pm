@@ -1,12 +1,13 @@
 package SPOPS::Key::DBI::Identity;
 
-# $Id: Identity.pm,v 1.2 2001/02/21 12:25:13 lachoy Exp $
+# $Id: Identity.pm,v 1.7 2001/06/03 22:43:34 lachoy Exp $
 
 use strict;
-use SPOPS  qw( _w );
+use SPOPS  qw( _w DEBUG );
 
-@SPOPS::Key::DBI::Identity::ISA     = ();
-$SPOPS::Key::DBI::Identity::VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::Key::DBI::Identity::ISA      = ();
+$SPOPS::Key::DBI::Identity::VERSION  = '1.7';
+$SPOPS::Key::DBI::Identity::Revision = substr(q$Revision: 1.7 $, 10);
 
 # Ensure only POST_fetch_id used
 
@@ -32,7 +33,7 @@ sub post_fetch_id {
     die $SPOPS::Error::user_msg;
   }
   my $row = $sth->fetchrow_arrayref;
-  _w( 1, "Found inserted ID ($row->[0])" );
+  DEBUG() && _w( 1, "Found inserted ID ($row->[0])" );
   return $row->[0];
 }
 
@@ -48,15 +49,13 @@ SPOPS::Key::DBI::Identity -- Retrieve IDENTITY values from a supported DBI datab
 
 =head1 SYNOPSIS
 
- # Using a class-only defintion
- package MySPOPS;
- @MySPOPS::ISA = qw( SPOPS::Key::DBI::Identity  SPOPS::DBI );
-
- # Using a config-only definition
- 'myspops' => {
-     'isa' => [ qw/ SPOPS::Key::DBI::Identity  SPOPS::DBI / ],
-     ...
- },
+ # In your SPOPS configuration
+ $spops  = {
+   'myspops' => {
+       'isa' => [ qw/ SPOPS::Key::DBI::Identity  SPOPS::DBI / ],
+       ...
+   },
+ };
 
 =head1 DESCRIPTION
 
@@ -65,19 +64,17 @@ returned by its last insert. Of course, this only works if you have an
 IDENTITY field in your table, such as:
 
  CREATE TABLE my_table (
-   id    numeric( 8, 0 ) IDENTITY not null,
+   id    NUMERIC( 8, 0 ) IDENTITY NOT NULL,
    ...
  )
 
 This method is typically used in Sybase and Microsoft SQL Server
 databases. The client library (Open Client, FreeTDS, ODBC) should not
-make a difference to this module.
+make a difference to this module since we perform a SELECT statement
+to retrieve the value rather than relying on a property of the
+database/statement handle.
 
 =head1 METHODS
-
-B<pre_fetch_id()>
-
-Ensure we only get the ID after the data are inserted.
 
 B<post_fetch_id()>
 
@@ -85,9 +82,11 @@ Retrieve the IDENTITY value after inserting a row.
 
 =head1 BUGS
 
-None.
+None known.
 
 =head1 TO DO
+
+Nothing known.
 
 =head1 SEE ALSO
 

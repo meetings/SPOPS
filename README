@@ -70,15 +70,13 @@ new object with our just-created class.
       },
  };
  
- SPOPS::Configure::DBI->process_config( { config      => $spops,
-                                          require_isa => 1 } );
- My::ObjectClass->class_initialize;
- 
+ SPOPS::Initialize->process({ config => $spops });
+
  my $object = My::ObjectClass->new;
  $object->{calories} = 1500;
  $object->{cost}     = '$3.50';
  $object->{name}     = "Super Deluxe Jumbo Big Mac";
- my $fb_id = eval { $object->save( { db => $db } ) };
+ my $fb_id = eval { $object->save({ db => $db }) };
  if ( $@ ) {
     my $ei = SPOPS::Error->get;
     die "Error found! ($@) Error information: ", Dumper( $ei ), "\n";
@@ -105,11 +103,23 @@ spot something that looks totally out of place or appears to have no
 real purpose, let us know!
 
 
-HOW DO I SAY IT?
+
+WHAT DATABASES ARE SUPPORTED RIGHT NOW?
 ====================
 
-It's usually pronounced so it rhymes with 'mess mops', although you're
-free to make up your own.
+Currently supported databases include (in alphabetical order):
+
+ * MS SQL Server (using DBD::ODBC and SPOPS::DBI::Sybase)
+
+ * MySQL (using DBD::mysql and SPOPS::DBI::MySQL
+
+ * PostgreSQL (using DBD::Pg and SPOPS::DBI::Pg)
+
+ * Sybase Adaptive Server Enterprise (using DBD::Sybase and
+   SPOPS::DBI::Sybase)
+
+ * Sybase Adaptive Server Anywhere (using DBD::ASAny and
+   SPOPS::DBI::Sybase)
 
 
 DO YOU HAVE A LIBRARY FOR <insert name here>?
@@ -117,27 +127,26 @@ DO YOU HAVE A LIBRARY FOR <insert name here>?
 
 Maybe. Near-future development will include:
 
- LDAP (using Net::LDAP by default, but you'll be able to plug in other
- drivers like Mozilla::LDAP)
+ * LDAP (using Net::LDAP by default, but you'll be able to plug in other
+   drivers like Mozilla::LDAP)
 
- Sybase Adaptive Server Enterprise (using DBD::Sybase -- tested briefly)
+ * Oracle (using DBD::Oracle)
 
- Sybase Adaptive Server Anywhere (using DBD::ASAny -- tested briefly)
+ * DB2 (using DBD::DB2)
 
- Oracle (using DBD::Oracle)
+ * Interbase (using DBD::Interbase)
 
- DB2 (using DBD::DB2)
-
- Postgres (using DBD::Pg)
-
- Interbase (using DBD::Interbase)
-
- MS SQL Server (using DBD::ODBC, FreeTDS?)
-
- CORBA (likely using CORBA::ORBit in the beginning)
+ * CORBA (likely using CORBA::ORBit in the beginning)
 
 Have something else you want implemented? Let us know! We might be
 able to do it ourselves, or we might be able to help you out.
+
+
+HOW DO I SAY IT?
+====================
+
+It's usually pronounced so it rhymes with 'mess mops', although you're
+free to make up your own.
 
 
 WHERE CAN I LEARN MORE?
@@ -151,10 +160,15 @@ Overview and examples
 
  perldoc SPOPS
 
+Initializing objects
+
+ perldoc SPOPS::Initialize
+
 Configuration
 
  perldoc SPOPS::Configure
  perldoc SPOPS::Configure::DBI
+ perldoc SPOPS::Configure::Ruleset
 
 Error handling
 
@@ -170,9 +184,11 @@ DBI issues
  perldoc SPOPS::SQLInterface
  perldoc SPOPS::DBI::MySQL
  perldoc SPOPS::DBI::Sybase
+ perldoc SPOPS::DBI::Pg
  perldoc SPOPS::Key::DBI::HandleField
  perldoc SPOPS::Key::DBI::Identity
  perldoc SPOPS::Key::DBI::Pool
+ perldoc SPOPS::Key::DBI::Sequence
 
 Utilities that might be useful:
 
@@ -212,7 +228,8 @@ up-to-date versions, support information, party hat designs, etc.
 AUTHORS
 =========================
 
-Chris Winters <chris@cwinters.com> is the primary author of SPOPS. 
+Chris Winters <chris@cwinters.com> is the primary author of
+SPOPS. (Sourceforge name: 'lachoy')
 
 Other folks who have had a hand:
 
@@ -234,6 +251,10 @@ Marcus Baker <mbaker@intes.net>
 
 Rick Myers <rik@sumthin.nu>
 
+=item *
+
+Ray Zimmerman <rz10@cornell.edu>
+
 =back
 
 
@@ -249,4 +270,4 @@ version 2 of the License (see 'COPYING'), or (at your option) any
 later version.
 
 =========================
-$Id: README,v 1.3 2001/02/25 19:11:10 lachoy Exp $
+$Id: README,v 1.5 2001/06/06 06:19:00 lachoy Exp $

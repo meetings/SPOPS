@@ -1,13 +1,15 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 1.1.1.1 2001/02/02 06:08:28 lachoy Exp $
+# $Id: Utility.pm,v 1.5 2001/06/03 22:43:34 lachoy Exp $
 
 use strict;
 use Date::Format  qw( time2str );
 use Date::Calc    ();
 
-@SPOPS::Utility::ISA     = qw();
-$SPOPS::Utility::VERSION = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::Utility::ISA      = qw();
+$SPOPS::Utility::VERSION  = '1.7';
+$SPOPS::Utility::Revision = substr(q$Revision: 1.5 $, 10);
+
 
 # Return a random code of length $length. If $opt is 'mixed', then the
 # code is filled with both lower- and upper-case charaters.
@@ -25,6 +27,7 @@ sub generate_random_code {
   return join '', map { chr( int( rand(26) ) + 65 ) } ( 1 .. $length );
 }
 
+
 # Return a 'crypt'ed version of $text
 #
 # Signature: $crypted = $class->crypt_it( $text );
@@ -35,6 +38,7 @@ sub crypt_it {
   my $salt = $class->generate_random_code( 2 );
   return crypt( $text, $salt );
 }
+
 
 # Return a { time } (or the current time) formatted with { format }
 #
@@ -48,11 +52,13 @@ sub now {
   return time2str( $p->{format}, $p->{time} );
 }
 
+
 # Return the current time formatted 'yyyy-mm-dd'
 #
 # Signature: $date_string = $class->today();
 
 sub today { return $_[0]->now( { format => '%Y-%m-%e' } ); }
+
 
 # Return a true value if right now is between two other dates
 
@@ -102,6 +108,7 @@ sub now_between_dates {
   return 1;
 }
 
+
 # Pass in \@existing and \@new and get back a hashref with:
 #   add    => \@: items in \@new but not in \@existing,
 #   keep   => \@: items in \@new and in \@existing,
@@ -111,14 +118,17 @@ sub list_process {
   my ( $class, $exist, $new ) = @_;
 
   # Create a hash of the existing items
+
   my %existing = map { $_ => 1 } @{ $exist };
   my ( @k, @a );
 
   # Go through the new items...
+
   foreach my $new_id ( @{ $new } ) {
     
     #... if it's existing, track it as a keeper
     # and remove it from the existing pile
+
     if ( $existing{ $new_id } ) {
       delete $existing{ $new_id };
       push @k, $new_id;
@@ -133,6 +143,7 @@ sub list_process {
   # now, the only items left in %existing are the ones
   # that were not specified in the new list; therefore,
   # these should be removed
+
   return { add => \@a, keep => \@k, remove => [ keys %existing ] };
 }
 

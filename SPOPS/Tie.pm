@@ -1,29 +1,35 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 1.3 2001/02/25 18:50:19 lachoy Exp $
+# $Id: Tie.pm,v 1.10 2001/06/05 13:36:49 lachoy Exp $
 
 use strict;
-use vars qw( $PREFIX_TEMP $PREFIX_INTERNAL );
-use Carp qw( carp );
+use vars  qw( $PREFIX_TEMP $PREFIX_INTERNAL );
+use Carp  qw( carp );
 
 require Exporter;
 
 @SPOPS::Tie::ISA       = qw( Exporter );
-@SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_INTERNAL IDX_TEMP  
-                             IDX_CHECK_FIELDS $PREFIX_TEMP $PREFIX_INTERNAL );
+                             IDX_CHECK_FIELDS IDX_LAZY_LOADED
+                             $PREFIX_TEMP $PREFIX_INTERNAL );
+$SPOPS::Tie::VERSION   = '1.7';
+$SPOPS::Tie::Revision  = substr(q$Revision: 1.10 $, 10);
 
 use constant IDX_DATA          => '_collection_data';
 use constant IDX_CHANGE        => '_changed';
 use constant IDX_SAVE          => '_saved';
 use constant IDX_INTERNAL      => '_internal';
 use constant IDX_TEMP          => '_temp_data';
+use constant IDX_IS_LAZY_LOAD  => '_is_lazy_load';
+use constant IDX_LAZY_LOADED   => '_lazy_load_fields';
+use constant IDX_LAZY_LOAD_SUB => '_lazy_load_sub';
 use constant IDX_CHECK_FIELDS  => '_CHECK_FIELD_LIST';
 
 $PREFIX_TEMP       = 'tmp_';
 $PREFIX_INTERNAL   = '_internal';
 
-use constant DEBUG => 0;
+*_w    = *SPOPS::_w;
+*DEBUG = *SPOPS::DEBUG;
 
 # Tie interface stuff below here; see 'perldoc perltie' for what
 # each method does. (Or better yet, read Damian Conway's discussion
@@ -48,40 +54,63 @@ sub TIEHASH {
                   IDX_CHANGE()       => 0, 
                   IDX_SAVE()         => 0,
                   IDX_DATA()         => {},
+                  IDX_IS_LAZY_LOAD() => $p->{is_lazy_load},
+                  IDX_LAZY_LOADED()  => {},
+                  IDX_LAZY_LOAD_SUB()=> $p->{lazy_load_sub},
                   IDX_CHECK_FIELDS() => $HAS_FIELD }, $class );
 }
 
-sub _field_check {}
+sub _field_check { return undef; }
 
 # Just go through each of the possible things that could be
 # set and do the appropriate action.
 
 sub FETCH {
   my ( $self, $key ) = @_;
-  if ( DEBUG ) { warn " tie: Trying to retrieve value for ($key)\n"; }
+  DEBUG() && _w( 3, " tie: Trying to retrieve value for ($key)\n" );
   return $self->{ IDX_CHANGE() }                if ( $key eq IDX_CHANGE );
   return $self->{ IDX_SAVE() }                  if ( $key eq IDX_SAVE );
   return $self->{ IDX_TEMP() }->{ lc $key }     if ( $key =~ /^$PREFIX_TEMP/ );
   return $self->{ IDX_INTERNAL() }->{ lc $key } if ( $key =~ /^$PREFIX_INTERNAL/ );
-  return $self->_fetch( $key );
+  return undef unless ( $self->_can_fetch( $key ) );
+  if ( $self->{ IDX_IS_LAZY_LOAD() } and 
+       ! $self->{ IDX_LAZY_LOADED() }->{ $key } ) {
+    $self->_lazy_load( $key );
+  }
+  return $self->{ IDX_DATA() }->{ lc $key };
 }
 
-sub _fetch { return $_[0]->{ IDX_DATA() }->{ lc $_[1] } }
+sub _can_fetch { return 1; }
 
+sub _lazy_load {
+  my ( $self, $key ) = @_;
+  unless ( ref $self->{ IDX_LAZY_LOAD_SUB() } eq 'CODE' ) {
+    die "Lazy loading activated but no load function specified!\n";
+  }
+  DEBUG() && _w( 1, "Trying to lazy load ($key) since the loaded is:",
+                    $self->{ IDX_LAZY_LOADED() }->{ $key } );
+  $self->{ IDX_DATA() }->{ lc $key } = 
+                    $self->{ IDX_LAZY_LOAD_SUB() }->( $self->{class}, 
+                                                      $self->{ IDX_DATA() }, 
+                                                      $key );
+  $self->{ IDX_LAZY_LOADED() }->{ $key }++;  
+}
 
 # Similar to FETCH
 
 sub STORE {
   my ( $self, $key, $value ) = @_;
-  if ( DEBUG ) { warn " tie: Trying to store in ($key) value ($value)\n"; }
+  DEBUG() && _w( 3,  " tie: Trying to store in ($key) value ($value)\n" );
   return $self->{ IDX_CHANGE() } = $value                if ( $key eq IDX_CHANGE );
   return $self->{ IDX_SAVE() } = $value                  if ( $key eq IDX_SAVE );
   return $self->{ IDX_TEMP() }->{ lc $key } = $value     if ( $key =~ /^$PREFIX_TEMP/ );
   return $self->{ IDX_INTERNAL() }->{ lc $key } = $value if ( $key =~ /^$PREFIX_INTERNAL/ );
-  return $self->_store( $key, $value );
+  return undef unless ( $self->_can_store( $key, $value ) );
+  $self->{ IDX_CHANGE() }++;
+  return $self->{ IDX_DATA() }->{ lc $key } = $value;
 }
 
-sub _store { $_[0]->{ IDX_CHANGE() }++; return $_[0]->{ IDX_DATA() }->{ lc $_[1] } = $_[2] }
+sub _can_store { return 1; }
 
 
 # For EXISTS and DELETE, We can only do these actions on the actual
@@ -89,7 +118,7 @@ sub _store { $_[0]->{ IDX_CHANGE() }++; return $_[0]->{ IDX_DATA() }->{ lc $_[1]
 
 sub EXISTS {
   my ( $self, $key ) = @_;
-  if ( DEBUG ) { warn " tie: Checking for existence of ($key)\n"; }
+  DEBUG() && _w( 3, " tie: Checking for existence of ($key)\n" );
   return exists $self->{ IDX_DATA() }->{ lc $key };
   carp "Cannot check existence for field ($key): it is not a valid field";
 }
@@ -97,7 +126,7 @@ sub EXISTS {
 
 sub DELETE {
   my ( $self, $key ) = @_;
-  if ( DEBUG ) { warn " tie: Clearing value for ($key)\n"; }
+  DEBUG() && _w( 3, " tie: Clearing value for ($key)\n" );
   $self->{ IDX_DATA() }->{ lc $key } = undef;
   $self->{ IDX_CHANGE() }++;
 }
@@ -114,11 +143,11 @@ sub CLEAR {
 
 # Note that you only see the data when you cycle through the keys 
 # or even do a Data::Dumper::Dumper( $object ); you do not see
-# the meta-data being tracked.
+# the meta-data being tracked. This is a feature.
 
 sub FIRSTKEY {
   my ( $self ) = @_;
-  if ( DEBUG ) { warn " tie: Finding first key in data object\n"; }
+  DEBUG() && _w( 3, " tie: Finding first key in data object\n" );
   keys %{ $self->{ IDX_DATA() } };
   my $first_key = each %{ $self->{ IDX_DATA() } };
   return undef unless defined $first_key;
@@ -128,7 +157,7 @@ sub FIRSTKEY {
 
 sub NEXTKEY {
   my ( $self ) = @_;
-  if ( DEBUG ) { warn " tie: Finding next key in data object\n"; }
+  DEBUG() && _w( 3, " tie: Finding next key in data object\n" );
   my $next_key = each %{ $self->{ IDX_DATA() } };
   return undef unless defined $next_key;
   return $next_key;
@@ -162,7 +191,7 @@ SPOPS::Tie - Simple class implementing tied hash with some goodies
  $data{tmp_rebound_avg} = 11.3;
 
  while ( my ( $prop, $val ) = each %data ) {
-  printf( "%-15s: %s\n", $prop, $val );
+   printf( "%-15s: %s\n", $prop, $val );
  }
 
  # Note that output does not include 'tmp_rebound_avg'
@@ -170,6 +199,11 @@ SPOPS::Tie - Simple class implementing tied hash with some goodies
  >login          : cb
  >last_name      : Barkley
  >birth_date     : 1957-01-19
+
+ print "Rebounding Average: $data{tmp_rebound_avg}\n";
+
+ # But you can access it still the same
+ >Rebounding Average: 11.3
 
 =head1 DESCRIPTION
 
@@ -181,15 +215,15 @@ variables.
 
 You can check whether the data have changed since the last fetch by
 either calling the method of the SPOPS object (recommended) or asking
-for the '_changed' key:
+for the '_changed' key from the C<tied()> object:
 
  # See if this object has changed
- if ( $obj->{_changed} ) {
+ if (tied %data){_changed} ) {;
   ...do stuff...
- }
+ } 
 
  # Tell the object that it has changed (force)
- $obj->{_changed} = 1;
+ (tied %data){_changed} = 1;
 
 Note that this state is automatically tracked based on whether you set
 any property of the object, so you should never need to do this. See
@@ -224,6 +258,19 @@ property 'tmp_inoculation'. However, you can only reference it
 directly. You will not see the property if you iterate through hash
 using I<keys> or I<each>.
 
+=head2 Lazy Loading
+
+You can specify you want your object to be lazy loaded when creating
+the tie interface:
+
+  my $fields = [ qw/ first_name last_name login life_history / ];
+  my $params = { is_lazy_load  => 1,
+                 lazy_load_sub => \&load_my_variables,
+                 field         => $fields };
+  tie %data, 'SPOPS::Tie', $class, $params;
+
+
+
 =head2 Storing Information for Internal Use
 
 The final kind of information that can be stored in a SPOPS object is
@@ -232,9 +279,9 @@ typically only used in the internal SPOPS mechanisms -- temporary
 variables are often used to store computed results or other
 information for display rather than internal use.
 
-For example, the L<SPOPS::DBI> module allows you to create validating
-subroutines to ensure that your data conform to some sort of
-specification:
+For example, the L<SPOPS::DBI> module could allow you to create
+validating subroutines to ensure that your data conform to some sort
+of specification:
 
  push @{ $obj->{_internal_validate} }, \&ensure_consistent_date;
 

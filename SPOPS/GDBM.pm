@@ -1,15 +1,16 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 1.2 2001/02/11 21:07:07 lachoy Exp $
+# $Id: GDBM.pm,v 1.7 2001/06/03 22:43:34 lachoy Exp $
 
 use strict;
-use SPOPS         qw( _w );
+use SPOPS         qw( _w DEBUG );
 use Carp          qw( carp );
 use Data::Dumper  qw( Dumper );
 use GDBM_File;
 
-@SPOPS::GDBM::ISA       = qw( SPOPS );
-@SPOPS::GDBM::VERSION   = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::GDBM::ISA      = qw( SPOPS );
+$SPOPS::GDBM::VERSION  = '1.7';
+$SPOPS::GDBM::Revision = substr(q$Revision: 1.7 $, 10);
 
 # Make this the default for everyone -- they can override it
 # themselves...
@@ -71,26 +72,26 @@ sub global_gdbm_tie {
       $gdbm_filename   = $item->{tmp_gdbm_filename};
     }
     if ( $item->CONFIG->{gdbm_info}->{file_fragment} and $p->{directory} ) {
-      _w( 1, "Found file fragent and directory" );
+      DEBUG() && _w( 1, "Found file fragent and directory" );
       $gdbm_filename ||= join( '/', $p->{directory}, $item->CONFIG->{gdbm_info}->{file_fragment} );
     }
     $gdbm_filename ||= $item->CONFIG->{gdbm_info}->{filename};
     $gdbm_filename ||= $item->global_config->{gdbm_info}->{filename};
   }
-  _w( 1, "Trying file $gdbm_filename to connect" );
+  DEBUG() && _w( 1, "Trying file $gdbm_filename to connect" );
   unless ( $gdbm_filename ) {
     die "Insufficient/incorrect information to tie to GDBM file! ($gdbm_filename)\n";
   }
 
-  _w( 2, "Beginning perm: ", defined( $p->{perm} ) ? $p->{perm} : '' );
+  DEBUG() && _w( 2, "Beginning perm: ", defined( $p->{perm} ) ? $p->{perm} : '' );
   $p->{perm}   = 'create' unless ( -e $gdbm_filename );
   $p->{perm} ||= 'read';
-  _w( 2, "Final perm: $p->{perm}" );
+  DEBUG() && _w( 2, "Final perm: $p->{perm}" );
 
   my $perm = GDBM_File::GDBM_READER;
   $perm    = GDBM_File::GDBM_WRITER  if ( $p->{perm} eq 'write' );
   $perm    = GDBM_File::GDBM_WRCREAT if ( $p->{perm} eq 'create' );
-  _w( 1, "Trying to use perm ($perm) to connect" );
+  DEBUG() && _w( 1, "Trying to use perm ($perm) to connect" );
   my %db = ();
   tie( %db, 'GDBM_File', $gdbm_filename, $perm, 0666 );
   if ( $p->{perm} eq 'create' && ! -w $gdbm_filename ) {
@@ -158,9 +159,9 @@ sub fetch_group {
   my ( $item, $p ) = @_;
   my $db = $item->global_gdbm_tie( $p );
   my $class = ref $item || $item;
-  _w( 1, "Trying to find keys beginning with ($class)" );
+  DEBUG() && _w( 1, "Trying to find keys beginning with ($class)" );
   my @object_keys = grep /^$class/, keys %{ $db };
-  _w( 2, "Keys found in DB: ", join( ", ", @object_keys ) );
+  DEBUG() && _w( 2, "Keys found in DB: ", join( ", ", @object_keys ) );
   my @objects = ();
   foreach my $key ( @object_keys ) {
     my $data = eval { $class->_return_structure_for_key( $key, { db => $db } ) };
@@ -176,12 +177,12 @@ sub save {
   my ( $self, $p ) = @_;
   $p->{perm} ||= 'write';
   
-  _w( 1, "Trying to save a <<", ref $self, ">>" );
+  DEBUG() && _w( 1, "Trying to save a <<", ref $self, ">>" );
   my $id = $self->id;
   
   my $is_add = ( $p->{is_add} or ! $id or $id =~ /^tmp/ );
   unless ( $is_add or $self->changed ) {
-    _w( 1, "This object exists and has not changed. Exiting." );
+    DEBUG() && _w( 1, "This object exists and has not changed. Exiting." );
     return $id;
   }
   return undef unless ( $self->pre_save_action( { is_add => $is_add } ) );

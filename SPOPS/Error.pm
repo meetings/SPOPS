@@ -1,12 +1,13 @@
 package SPOPS::Error;
 
-# $Id: Error.pm,v 1.1.1.1 2001/02/02 06:08:16 lachoy Exp $
+# $Id: Error.pm,v 1.6 2001/06/03 22:43:34 lachoy Exp $
 
 use strict;
-use SPOPS qw( _w );
+use SPOPS qw( _w DEBUG );
 
-@SPOPS::Error::ISA     = ();
-$SPOPS::Error::VERSION = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::Error::ISA      = ();
+$SPOPS::Error::VERSION  = '1.7';
+$SPOPS::Error::Revision = substr(q$Revision: 1.6 $, 10);
 
 $SPOPS::Error::user_msg   = undef;
 $SPOPS::Error::system_msg = undef;
@@ -29,7 +30,7 @@ sub clear {
 }
 
 sub get {
-  my $class = shift;
+  my ( $class ) = @_;
   return { user_msg   => $SPOPS::Error::user_msg,
            system_msg => $SPOPS::Error::system_msg,
            type       => $SPOPS::Error::type,
@@ -41,9 +42,8 @@ sub get {
 }
 
 sub set {
-  my $class = shift;
-  my $p     = shift;
-  
+  my ( $class, $p ) = @_;
+
   # First clean everything up
 
   $class->clear;
@@ -53,7 +53,7 @@ sub set {
   {
     no strict 'refs';
     foreach my $key ( keys %{ $p } ) {
-      _w( 1, "Setting error $key to $p->{ $key }" );
+      DEBUG() && _w( 1, "Setting error $key to $p->{ $key }" );
       ${ $class . '::' . $key } = $p->{ $key };
     }
   }
@@ -82,6 +82,7 @@ SPOPS::Error - Centralized error messages from all SPOPS objects.
 =head1 SYNOPSIS
 
  # Using SPOPS in your application
+
  my $obj_list = eval { $obj->fetch_group( { where => 'this = that' } ) };
  if ( $@ ) {
    warn "Error found! Error: $@\n",
@@ -109,10 +110,6 @@ like this:
 See the L<NOTES> section below for hints on making the error variables
 shorter.
 
-=over 4
-
-=item
-
 B<user_msg> ($)
 
 A generic message that is suitable for showing a user. When telling a
@@ -127,15 +124,11 @@ instead, you want to tell them:
 This variable is identical to the value thrown by the I<die()>
 command, so you do not normally need to refer to it.
 
-=item
-
 B<system_msg> ($)
 
 Even though you do not want to show your users details of the error,
 you still need to know them! The variable I<system_msg> gives you
 details regarding the error.
-
-=item
 
 B<type> ($)
 
@@ -145,31 +138,21 @@ implementation (e.g., DBI, dbm, LDAP, etc.). Others can be:
  -security: There is a security violation and the action could not be
             completed
 
-=item
-
 B<package> ($)
 
 Set to the package from where the error was thrown.
-
-=item
 
 B<method> ($)
 
 Set to the method from where the error was thrown.
 
-=item
-
 B<filename> ($)
 
 Set to the filename from where the error was thrown.
 
-=item
-
 B<line> ($)
 
 Set to the line number from where the error was thrown.
-
-=item
 
 B<extra> (\%)
 
@@ -177,8 +160,6 @@ Different SPOPS classes have different information related to the
 current request. For instance, DBI errors will typically fill the
 'sql' and 'values' keys. Other SPOPS implementations may use different
 keys; see their documentation for details.
-
-=back
 
 =head1 METHODS
 
@@ -228,7 +209,11 @@ Whatever floats your boat.
 
 =head1 TO DO
 
+Nothing known.
+
 =head1 BUGS
+
+None known.
 
 =head1 COPYRIGHT
 
@@ -239,6 +224,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters <chris@cwinters.com>
 
 =cut

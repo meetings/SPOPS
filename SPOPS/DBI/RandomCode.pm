@@ -1,12 +1,13 @@
 package SPOPS::DBI::RandomCode;
 
-# $Id: RandomCode.pm,v 1.2 2001/02/20 04:39:16 lachoy Exp $
+# $Id: RandomCode.pm,v 1.7 2001/06/03 22:43:34 lachoy Exp $
 
 use strict;
-use SPOPS  qw( _w );
+use SPOPS  qw( _w DEBUG );
 
-@SPOPS::DBI::RandomCode::ISA     = ();
-$SPOPS::DBI::RandomCode::VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::DBI::RandomCode::ISA      = ();
+$SPOPS::DBI::RandomCode::VERSION  = '1.7';
+$SPOPS::DBI::RandomCode::Revision = substr(q$Revision: 1.7 $, 10);
 
 my $DEFAULT_WIDTH = 8;
 
@@ -17,7 +18,7 @@ sub pre_fetch_id  {
        "classes to use 'SPOPS::Key::Random' instead.\n";
   $width ||= $class->CONFIG->{id_width} || $DEFAULT_WIDTH;
   my $code =  $class->generate_random_code( $width );
-  _w( 1, "Created insert ID ($code)" );
+  DEBUG() && _w( 1, "Created insert ID ($code)" );
   return $code; 
 }
 
@@ -35,31 +36,8 @@ SPOPS::DBI::RandomCode - Creates a random code for the ID field
 
 =head1 SYNOPSIS
 
- package MySPOPS;
-
- @MySPOPS::ISA = qw( SPOPS::DBI::RandomCode SPOPS::DBI );
-
-=head1 DESCRIPTION
-
-Very, very simple. We just use the I<generate_random_code()> 
-method in all SPOPS  classes to generate an n character
-code. The width of the code is determined by the field 
-{id_width} in the CONFIG of the SPOPS implementation.
-
-=head1 BUGS
-
-B<Getting a 'random' value>
-
-If you are using this under mod_perl, you might have the problem of
-colliding ID fields. This seems to happen because the httpd children
-all have the same random seed, since they are all forked off from the
-same parent. 
-
-The solution is to put a 'srand()' in the PerlChildInitHandler,
-although mod_perl versions from 1.25 on might take care of this for
-you.
-
-=head1 TO DO
+THIS PACKAGE IS DEPRECATED. PLEASE USE 'SPOPS::Key::Random'
+INSTEAD. THIS PACKAGE WILL BE DISCONTINUED WITH THE 0.41 RELEASE.
 
 =head1 COPYRIGHT
 
