@@ -1,6 +1,6 @@
 package SPOPS::Secure::Loopback;
 
-# $Id: Loopback.pm,v 1.4 2004/01/10 02:21:39 lachoy Exp $
+# $Id: Loopback.pm,v 1.5 2004/06/02 00:48:24 lachoy Exp $
 
 use strict;
 use Log::Log4perl qw( get_logger );
@@ -10,7 +10,7 @@ use SPOPS::Secure::Util;
 
 my $log = get_logger();
 
-$SPOPS::Secure::Loopback::VERSION = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::Loopback::VERSION = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
 
 sub fetch_by_object {
     my ( $class, $object, $p ) = @_;
@@ -102,7 +102,7 @@ Nothing known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2002-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

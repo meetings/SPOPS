@@ -1,12 +1,12 @@
 package SPOPS::Exception::Security;
 
-# $Id: Security.pm,v 3.1 2003/01/02 06:00:23 lachoy Exp $
+# $Id: Security.pm,v 3.2 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
 use SPOPS::Secure qw( :verbose :level );
 
-$SPOPS::Exception::Security::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Exception::Security::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Exception::Security::EXPORT_OK = qw( spops_security_error );
 
 my @FIELDS = qw( security_required security_found );
@@ -103,7 +103,7 @@ L<SPOPS::Secure|SPOPS::Secure>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

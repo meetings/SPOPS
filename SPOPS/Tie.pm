@@ -1,6 +1,6 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 3.7 2004/05/01 19:45:27 lachoy Exp $
+# $Id: Tie.pm,v 3.8 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -12,7 +12,7 @@ use SPOPS::Exception qw( spops_error );
 @SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_INTERNAL IDX_TEMP
                              IDX_CHECK_FIELDS IDX_LAZY_LOADED
                              $PREFIX_TEMP $PREFIX_INTERNAL );
-$SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 3.7 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 3.8 $ =~ /(\d+)\.(\d+)/);
 
 use constant IDX_DATA          => '_dat';
 use constant IDX_CHANGE        => '_chg';
@@ -581,7 +581,7 @@ L<perltie|perltie>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

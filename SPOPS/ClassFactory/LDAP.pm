@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory::LDAP;
 
-# $Id: LDAP.pm,v 3.2 2004/01/10 02:21:40 lachoy Exp $
+# $Id: LDAP.pm,v 3.3 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use Log::Log4perl qw( get_logger );
@@ -9,7 +9,7 @@ use SPOPS::ClassFactory qw( OK ERROR DONE );
 
 my $log = get_logger();
 
-$SPOPS::ClassFactory::LDAP::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::LDAP::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 
 ########################################
@@ -433,7 +433,7 @@ L<SPOPS|SPOPS>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 MSN Marketing Services Nordwest, GmbH. All rights
+Copyright (c) 2001-2004 MSN Marketing Services Nordwest, GmbH. All rights
 reserved.
 
 This library is free software; you can redistribute it and/or modify

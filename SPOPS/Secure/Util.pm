@@ -1,6 +1,6 @@
 package SPOPS::Secure::Util;
 
-# $Id: Util.pm,v 1.5 2004/02/18 02:54:55 lachoy Exp $
+# $Id: Util.pm,v 1.6 2004/06/02 00:48:24 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -147,7 +147,7 @@ Nothing known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2002-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

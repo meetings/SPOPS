@@ -4,7 +4,6 @@ COPYING
 COPYING-DOCS
 MANIFEST
 README
-RELEASE
 log4perl.conf
 SPOPS.pm
 SPOPS/ClassFactory.pm
@@ -35,6 +34,9 @@ SPOPS/HashFile.pm
 SPOPS/Import.pm
 SPOPS/Import/Object.pm
 SPOPS/Import/DBI/Data.pm
+SPOPS/Import/DBI/Delete.pm
+SPOPS/Import/DBI/GenericOperation.pm
+SPOPS/Import/DBI/Update.pm
 SPOPS/Import/DBI/Table.pm
 SPOPS/Import/DBI/TableTransform.pm
 SPOPS/Import/DBI/TableTransform/InterBase.pm
@@ -150,6 +152,10 @@ t/61_export_xml.t
 t/62_export_perl.t
 t/63_export_sql.t
 t/64_export_dbdata.t
+t/70_import_object.t
+t/71_import_dbi_data.t
+t/72_import_dbi_delete.t
+t/73_import_dbi_update.t
 t/80_security.t
 t/81_security_hierarchical.t
 t/config.pl

@@ -1,13 +1,13 @@
 package SPOPS::Iterator;
 
-# $Id: Iterator.pm,v 3.3 2004/02/26 01:05:43 lachoy Exp $
+# $Id: Iterator.pm,v 3.4 2004/06/02 00:48:21 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
 use Log::Log4perl qw( get_logger );
 use SPOPS;
 
-$SPOPS::Iterator::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Iterator::VERSION   = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Iterator::EXPORT_OK = qw( ITER_IS_DONE ITER_FINISHED );
 
 use constant ITER_POSITION      => '_position';
@@ -528,7 +528,7 @@ iterators. (See: http://www.plover.com/perl/)
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

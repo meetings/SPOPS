@@ -1,13 +1,13 @@
 package SPOPS::Import::DBI::Data;
 
-# $Id: Data.pm,v 3.2 2003/01/02 06:00:23 lachoy Exp $
+# $Id: Data.pm,v 3.6 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
-use SPOPS::Exception;
+use SPOPS::Exception qw( spops_error );
 use SPOPS::SQLInterface;
 
-$SPOPS::Import::DBI::Data::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::Data::VERSION  = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
 
 my @FIELDS = qw( table fields db );
 SPOPS::Import::DBI::Data->mk_accessors( @FIELDS );
@@ -19,13 +19,10 @@ sub get_fields { return ( $_[0]->SUPER::get_fields(), @FIELDS ) }
 
 sub run {
     my ( $self ) = @_;
-    eval {
-        unless ( $self->db )     { die "Cannot run w/o a database handle available!" }
-        unless ( $self->table )  { die "Cannot run w/o table defined!" }
-        unless ( $self->fields ) { die "Cannot run w/o fields defined!" }
-        unless ( $self->data )   { die "Cannot run w/o data defined" }
-    };
-    if ( $@ ) { SPOPS::Exception->throw( $@ ) }
+    unless ( $self->db )     { spops_error "Cannot run without a database handle available" }
+    unless ( $self->table )  { spops_error "Cannot run without table defined" }
+    unless ( $self->fields ) { spops_error "Cannot run without fields defined" }
+    unless ( $self->data )   { spops_error "Cannot run without data defined" }
 
     my %insert_args = ( db    => $self->db,
                         table => $self->table,
@@ -51,9 +48,8 @@ sub fields_as_hashref {
     my ( $self ) = @_;
     my $field_list = $self->fields;
     unless ( ref $field_list eq 'ARRAY' and scalar @{ $field_list } ) {
-        SPOPS::Exception->throw(
-                    "Before using this method, please set the fields in the " .
-                    "importer object using:\n\$importer->fields( \\\@fields" );
+        spops_error "Before using this method, please set the fields in the " .
+                    "importer object using:\n\$importer->fields( \\\@fields )";
     }
     my $count = 0;
     return { map { $_ => $count++ } @{ $field_list } };
@@ -80,6 +76,8 @@ sub assign_raw_data {
     $self->table( $meta->{table} || $meta->{sql_table} );
     $self->fields( $meta->{fields} || $meta->{field_order} );
     $self->data( $raw_data );
+    delete $meta->{ $_ } for ( qw( table sql_table fields field_order ) );
+    $self->extra_metadata( $meta );
     return $self;
 }
 
@@ -135,6 +133,26 @@ Import raw (non-object) data to a DBI table.
 
 =head1 METHODS
 
+B<data_from_file( $filename )>
+
+Runs C<raw_data_from_file( $filename )> from L<SPOPS::Import> to read
+a serialized Perl data structure from C<$filename>, then sends the
+arrayref to C<assign_raw_data()> and returns the result.
+
+B<data_from_fh( $filehandle )>
+
+Runs C<raw_data_from_fh( $filename )> from L<SPOPS::Import> to read a
+serialized Perl data structure from C<$filehandle>, then sends the
+arrayref to C<assign_raw_data()> and returns the result.
+
+B<assign_raw_data( \@( \%metadata, @data ) )>
+
+Assigns the data 'table' and 'fields' from C<\%metadata> to the import
+object, then the remainder of the data to the 'data' property.
+
+The additional metadata is stored under the 'extra_metadata' property
+of the import object.
+
 =head1 BUGS
 
 None known.
@@ -147,7 +165,7 @@ Nothing known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -106,11 +106,27 @@ these three steps. The first two can be combined, either explicitly as
 we did in the example or by passing the properties to the C<new()>
 method.
 
-Currently SPOPS data import options are an object import, called using
-the 'object' key, and a raw data import for DBI tables, called using
-the 'dbdata' key. See L<SPOPS::Import::Object|SPOPS::Import::Object>
-and L<SPOPS::Import::DBI::Data|SPOPS::Import::DBI::Data> for more
-information specific to each import format.
+Currently SPOPS data import options are:
+
+=over 4
+
+=item *
+
+B<object> - Define the SPOPS class and data to fill them; see L<SPOPS::Import::Object>
+
+=item *
+
+B<dbdata> - Import DBI data directly to a table; see L<SPOPS::Import::DBI::Data>
+
+=item *
+
+B<dbupdate> - Update data in a DBI table directly; see L<SPOPS::Import::DBI::Update>
+
+=item *
+
+B<dbdelete> - Delete data from a DBI table; see L<SPOPS::Import::DBI::Delete>
+
+=back
 
 =head2 Importing DBI Tables
 
@@ -262,7 +278,7 @@ example.)
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 Chris Winters. All rights reserved.
+Copyright (c) 2001-2004 Chris Winters. All rights reserved.
 
 See L<SPOPS::Manual|SPOPS::Manual> for license.
 

@@ -1,11 +1,11 @@
 package SPOPS::Export::DBI::Data;
 
-# $Id: Data.pm,v 3.2 2003/01/02 06:00:23 lachoy Exp $
+# $Id: Data.pm,v 3.3 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export::Object );
 
-$SPOPS::Export::DBI::Data::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Export::DBI::Data::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 sub create_header {
     my ( $self, $fields ) = @_;
@@ -57,7 +57,7 @@ L<SPOPS::Import::DBI::Data|SPOPS::Import::DBI::Data>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

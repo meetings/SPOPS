@@ -1,6 +1,6 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 3.10 2004/02/26 01:04:59 lachoy Exp $
+# $Id: SQLInterface.pm,v 3.12 2004/06/02 00:48:21 lachoy Exp $
 
 use strict;
 use Data::Dumper          qw( Dumper );
@@ -12,7 +12,7 @@ use SPOPS::Exception::DBI qw( spops_dbi_error );
 
 my $log = get_logger();
 
-$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.10 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.12 $ =~ /(\d+)\.(\d+)/);
 
 my %TYPE_INFO = ();
 
@@ -310,7 +310,7 @@ sub db_insert {
 
 
 # field    => \@ of fieldnames
-# value    => \@ of values
+# value    => \@ of values (includes both update values and WHERE params)
 # table    => $ of table to insert into
 # where    => $ clause for which we're updating
 # no_quote => \% of fields not to quote
@@ -328,6 +328,15 @@ sub db_update {
     }
     my $sql = $p->{sql};
 
+    my @values = ();
+    $p->{value} ||= [];
+
+    # If SQL provided still pass the values as bound parameters
+
+    if ( $sql ) {
+        @values = @{ $p->{value} };
+    }
+
     # Build the SQL
 
     unless ( $sql ) {
@@ -340,17 +349,21 @@ sub db_update {
                                        { dbi_type_info => $p->{dbi_type_info},
                                          db            => $db } );
         my ( @update );
-        my @values = ();
+
+        # make a copy of the values given so we can modify the list as
+        # we go -- it may include both update parameters and WHERE
+        # parameters
+
+        @values = @{ $p->{value} };
 
         # Go through each field and setup an update assign subset
         # for each; most of them get a bound parameter and push the
         # value onto the stack, but values that cannot be bound push
         # the direct information onto the stack.
 
-        my $count  = 0;
         $p->{no_quote} ||= {};
         foreach my $field ( @{ $p->{field} } ) {
-            my $rawval = $p->{value}[$count];
+            my $rawval = shift @values;
             $log->is_info &&
                 $log->info( "Trying to add value [", defined $rawval ? $rawval : '', "] ",
                                       "with field [$field] and type ",
@@ -364,7 +377,6 @@ sub db_update {
                                                $type_info->get_type( $field ),
                                                $db );
             push @update, "$field = $value";
-            $count++;
         }
         my $update = join ', ', @update;
         my $where  = ( $p->{where} ) ? "WHERE $p->{where}" : '';
@@ -381,7 +393,10 @@ sub db_update {
         spops_dbi_error $@, { sql => $sql, action => 'prepare' };
     }
 
-    my $rv = eval { $sth->execute };
+    # assign the remainder of the values in case the 'WHERE' clause
+    # included any
+
+    my $rv = eval { $sth->execute( @values ) };
     if ( $@ ) {
         spops_dbi_error $@, { sql => $sql, action => 'execute' };
     }
@@ -795,7 +810,7 @@ List of fieldnames we are updating
 B<value> (\@) (optional unless you use '?' placeholders)
 
 List of values corresponding to the fields we are
-updating.
+updating and to parameters in the WHERE clause.
 
 B<table> ($) (optional unless 'sql' defined)
 
@@ -971,7 +986,7 @@ L<DBI|DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

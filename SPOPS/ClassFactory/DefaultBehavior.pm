@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 3.9 2004/03/12 14:40:26 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 3.10 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use Log::Log4perl qw( get_logger );
@@ -9,7 +9,7 @@ use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
 my $log = get_logger();
 
-$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.9 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.10 $ =~ /(\d+)\.(\d+)/);
 
 # Overlap here with DBI...
 my @PARSE_INTO_HASH  = qw( field no_insert no_update skip_undef multivalue );
@@ -514,7 +514,7 @@ L<SPOPS::ClassFactory|SPOPS::ClassFactory>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,6 +1,6 @@
 package SPOPS::Tie::StrictField;
 
-# $Id: StrictField.pm,v 3.4 2004/05/11 02:07:34 lachoy Exp $
+# $Id: StrictField.pm,v 3.5 2004/06/02 00:48:24 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Tie );
@@ -8,7 +8,7 @@ use Log::Log4perl qw( get_logger );
 use SPOPS::Tie    qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP
                       IDX_CHECK_FIELDS $PREFIX_TEMP $PREFIX_INTERNAL );
 
-$SPOPS::Tie::StrictField::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tie::StrictField::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 my $log = get_logger();
 
@@ -165,7 +165,7 @@ L<perltie|perltie>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

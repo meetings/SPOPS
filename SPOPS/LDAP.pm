@@ -1,6 +1,6 @@
 package SPOPS::LDAP;
 
-# $Id: LDAP.pm,v 3.3 2004/01/10 02:21:40 lachoy Exp $
+# $Id: LDAP.pm,v 3.4 2004/06/02 00:48:21 lachoy Exp $
 
 use strict;
 use base qw( SPOPS );
@@ -15,7 +15,7 @@ use SPOPS::Secure    qw( :level );
 
 my $log = get_logger();
 
-$SPOPS::LDAP::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::LDAP::VERSION   = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 
 ########################################
@@ -937,7 +937,7 @@ L<SPOPS|SPOPS>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 MSN Marketing Service Nordwest, GmbH. All rights
+Copyright (c) 2001-2004 MSN Marketing Service Nordwest, GmbH. All rights
 reserved.
 
 This library is free software; you can redistribute it and/or modify

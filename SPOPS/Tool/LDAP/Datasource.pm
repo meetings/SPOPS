@@ -1,6 +1,6 @@
 package SPOPS::Tool::LDAP::Datasource;
 
-# $Id: Datasource.pm,v 3.2 2004/01/10 02:21:39 lachoy Exp $
+# $Id: Datasource.pm,v 3.3 2004/06/02 00:48:24 lachoy Exp $
 
 use strict;
 use Log::Log4perl qw( get_logger );
@@ -9,7 +9,7 @@ use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
 
 my $log = get_logger();
 
-$SPOPS::Tool::LDAP::Datasource::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tool::LDAP::Datasource::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
@@ -132,7 +132,7 @@ L<SPOPS::LDAP|SPOPS::LDAP>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

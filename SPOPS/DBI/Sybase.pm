@@ -1,11 +1,11 @@
 package SPOPS::DBI::Sybase;
 
-# $Id: Sybase.pm,v 3.5 2004/01/06 21:25:55 lachoy Exp $
+# $Id: Sybase.pm,v 3.6 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use SPOPS::Key::DBI::Identity;
 
-$SPOPS::DBI::Sybase::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Sybase::VERSION  = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return 'GETDATE()' }
 
@@ -111,7 +111,7 @@ FreeTDS: http://www.freetds.org/
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

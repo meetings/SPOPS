@@ -1,6 +1,6 @@
 package SPOPS::LDAP::MultiDatasource;
 
-# $Id: MultiDatasource.pm,v 3.2 2004/01/10 02:21:39 lachoy Exp $
+# $Id: MultiDatasource.pm,v 3.3 2004/06/02 00:48:23 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::LDAP );
@@ -9,7 +9,7 @@ use Log::Log4perl qw( get_logger );
 use SPOPS;
 use SPOPS::Exception::LDAP;
 
-$SPOPS::LDAP::MultiDatasource::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::LDAP::MultiDatasource::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEFAULT_CONNECT_KEY => 'main';
 
@@ -402,7 +402,7 @@ Example in SPOPS distribution: eg/ldap_multidatasource.pl
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 MSN Marketing Service Nordwest, GmbH. All rights
+Copyright (c) 2001-2004 MSN Marketing Service Nordwest, GmbH. All rights
 reserved.
 
 This library is free software; you can redistribute it and/or modify

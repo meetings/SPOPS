@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 41_ldap_inline_config.t,v 1.2 2002/10/10 12:07:42 lachoy Exp $
+# $Id: 41_ldap_inline_config.t,v 1.3 2004/05/26 01:17:22 lachoy Exp $
 
 use strict;
 use constant NUM_TESTS       => 4;
@@ -10,7 +10,7 @@ my $SPOPS_CLASS = 'LDAPInlineTest';
 my ( $db, $do_end );
 
 {
-    # Read in the config file and make sure we're supposed to run
+    # Read in the config file and make sure we're supposed to run'
 
     do "t/config.pl";
     my $config = _read_config_file() || {};
@@ -34,12 +34,12 @@ my ( $db, $do_end );
     my $spops_config = {
          user => {
              ldap_base_dn => $USER_BASE_DN,
-             class        => $USER_LDAP_CLASS,
+             class        => $SPOPS_CLASS,
              rules_from   => [ 'SPOPS::Tool::LDAP::Datasource' ],
              isa          => [ 'SPOPS::LDAP' ],
              field        => [ qw/ uid cn sn givenname mail objectclass / ],
              id_field     => 'uid',
-             id_value_field => 'mail',
+             id_value_field => 'uid',
              field_map    => { user_id => 'uid', first_name => 'givenname' },
              multivalue   => [ 'objectclass' ],
              ldap_object_class => [ qw/ top person inetOrgPerson organizationalPerson / ],

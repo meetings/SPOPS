@@ -1,6 +1,6 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 3.3 2004/01/10 02:21:40 lachoy Exp $
+# $Id: GDBM.pm,v 3.4 2004/06/02 00:48:21 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS );
@@ -12,7 +12,7 @@ use SPOPS::Exception qw( spops_error );
 
 my $log = get_logger();
 
-$SPOPS::GDBM::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::GDBM::VERSION = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 # Make this the default for everyone -- they can override it
 # themselves...
@@ -436,7 +436,7 @@ GDBM on Perl/Win32:
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

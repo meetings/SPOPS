@@ -1,17 +1,18 @@
 package SPOPS::Import::Object;
 
-# $Id: Object.pm,v 3.4 2003/04/22 02:31:05 lachoy Exp $
+# $Id: Object.pm,v 3.7 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
+use SPOPS::Exception qw( spops_error );
 
-$SPOPS::Import::Object::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::Object::VERSION  = sprintf("%d.%02d", q$Revision: 3.7 $ =~ /(\d+)\.(\d+)/);
 
-my @FIELDS = qw( include_id fields extra_metadata ); # skip_fields 
+my @FIELDS = qw( include_id fields ); # skip_fields 
 SPOPS::Import::Object->mk_accessors( @FIELDS );
 
 
-########################################
+########################################;
 # Core API
 
 sub get_fields { return ( $_[0]->SUPER::get_fields(), @FIELDS ) }
@@ -20,22 +21,24 @@ sub run {
     my ( $self ) = @_;
     my $fields       = $self->fields;
     my $object_class = $self->object_class;
-    eval {
-        unless ( $fields )       { die "Cannot run w/o fields defined!\n" }
-        unless ( $object_class ) { die "Cannot run w/o object class defined\n" }
-        unless ( $self->data )   { die "Cannot run w/o data defined\n" }
-    };
-    if ( $@ ) { SPOPS::Exception->throw( $@ ) }
+    unless ( $fields )       { spops_error "Cannot run without fields defined" }
+    unless ( $object_class ) { spops_error "Cannot run without object class defined" }
+    my $all_data = $self->data;
+    unless ( ref( $all_data ) eq 'ARRAY' and scalar @{ $all_data } > 0 ) {
+        spops_error "Cannot run without data defined";
+    }
 
     my $num_fields = scalar @{ $fields };
     my @status = ();
-    foreach my $data ( @{ $self->data } ) {
+    foreach my $data ( @{ $all_data } ) {
         my $obj = $object_class->new;
         for ( my $i = 0; $i < $num_fields; $i++ ) {
             $obj->{ $fields->[ $i ] } = $data->[ $i ];
         }
-        eval { $obj->save({ is_add        => 1,
-                            DEBUG         => $self->DEBUG }) };
+        eval {
+            $obj->save({ is_add => 1,
+                         DEBUG  => $self->DEBUG })
+        };
         if ( $@ ) {
             push @status, [ undef, $data, $@ ];
         }
@@ -54,9 +57,8 @@ sub fields_as_hashref {
     my ( $self ) = @_;
     my $field_list = $self->fields;
     unless ( ref $field_list eq 'ARRAY' and scalar @{ $field_list } ) {
-        SPOPS::Exception->throw(
-               "Please set the fields in the importer object using:\n",
-               "\$importer->fields( \\\@fields" );
+        spops_error 'Please set the fields in the importer object using: ',
+                    '\$importer->fields( \\\@fields" )';
     }
     my $count = 0;
     return { map { $_ => $count++ } @{ $field_list } };
@@ -85,11 +87,8 @@ sub assign_raw_data {
     my @raw_data = @{ $raw_data_orig };
     my %meta = %{ shift @raw_data };
     $self->object_class( $meta{object_class} || $meta{spops_class} );
-    delete $meta{object_class};
-    delete $meta{spops_class};
     $self->fields( $meta{fields} || $meta{field_order} );
-    delete $meta{fields};
-    delete $meta{field_order};
+    delete $meta{ $_ } for( qw( object_class spops_class fields field_order ) );
     $self->extra_metadata( \%meta );
     $self->data( \@raw_data );
     return $self;
@@ -219,14 +218,6 @@ B<data>
 
 =back
 
-=head1 BUGS
-
-None known.
-
-=head1 TO DO
-
-Nothing known.
-
 =head1 SEE ALSO
 
 L<SPOPS::Manual::ImportExport|SPOPS::Manual::ImportExport>
@@ -237,7 +228,7 @@ L<SPOPS::Export::Object|SPOPS::Export::Object>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

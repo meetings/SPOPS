@@ -1,6 +1,6 @@
 package SPOPS::Loopback;
 
-# $Id: Loopback.pm,v 3.10 2004/03/12 14:52:28 lachoy Exp $
+# $Id: Loopback.pm,v 3.11 2004/06/02 00:48:21 lachoy Exp $
 
 use strict;
 use base qw( SPOPS );
@@ -8,7 +8,7 @@ use Data::Dumper  qw( Dumper );
 use Log::Log4perl qw( get_logger );
 use SPOPS::Secure qw( :level );
 
-$SPOPS::Loopback::VERSION  = sprintf("%d.%02d", q$Revision: 3.10 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Loopback::VERSION  = sprintf("%d.%02d", q$Revision: 3.11 $ =~ /(\d+)\.(\d+)/);
 
 my $log = get_logger();
 
@@ -240,7 +240,7 @@ L<SPOPS|SPOPS>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,11 +1,11 @@
 package SPOPS::Exception::LDAP;
 
-# $Id: LDAP.pm,v 3.1 2003/01/02 06:00:23 lachoy Exp $
+# $Id: LDAP.pm,v 3.2 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
 
-$SPOPS::Exception::LDAP::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Exception::LDAP::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Exception::LDAP::EXPORT_OK = qw( spops_ldap_error );
 
 my @FIELDS = qw( code action filter error_text error_name );
@@ -92,7 +92,7 @@ L<Net::LDAP::Util|Net::LDAP::Util>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

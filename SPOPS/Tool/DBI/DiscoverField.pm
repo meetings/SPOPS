@@ -1,6 +1,6 @@
 package SPOPS::Tool::DBI::DiscoverField;
 
-# $Id: DiscoverField.pm,v 3.5 2004/03/12 14:38:23 lachoy Exp $
+# $Id: DiscoverField.pm,v 3.6 2004/06/02 00:48:24 lachoy Exp $
 
 use strict;
 use Log::Log4perl qw( get_logger );
@@ -9,7 +9,7 @@ use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
 
 my $log = get_logger();
 
-$SPOPS::Tool::DBI::DiscoverField::VERSION = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tool::DBI::DiscoverField::VERSION = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
@@ -99,7 +99,7 @@ here.)
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,6 +1,6 @@
 package SPOPS::Tool::DBI::Datasource;
 
-# $Id: Datasource.pm,v 3.4 2004/01/10 02:21:39 lachoy Exp $
+# $Id: Datasource.pm,v 3.5 2004/06/02 00:48:24 lachoy Exp $
 
 use strict;
 use Log::Log4perl qw( get_logger );
@@ -9,7 +9,7 @@ use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
 
 my $log = get_logger();
 
-$SPOPS::Tool::DBI::Datasource::VERSION = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tool::DBI::Datasource::VERSION = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
@@ -148,7 +148,7 @@ L<SPOPS::DBI|SPOPS::DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

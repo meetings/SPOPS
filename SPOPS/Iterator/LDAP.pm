@@ -1,6 +1,6 @@
 package SPOPS::Iterator::LDAP;
 
-# $Id: LDAP.pm,v 3.2 2004/01/10 02:21:40 lachoy Exp $
+# $Id: LDAP.pm,v 3.3 2004/06/02 00:48:23 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Iterator );
@@ -12,7 +12,7 @@ use SPOPS::Secure   qw( :level );
 
 my $log = get_logger();
 
-$SPOPS::Iterator::LDAP::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Iterator::LDAP::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 # Keys with _LDAP at the beginning are specific to this implementation;
 # keys without _LDAP at the begining are used in all iterators.
@@ -210,7 +210,7 @@ L<Net::LDAP|Net::LDAP>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 Marketing Service Northwest, GmbH. All rights
+Copyright (c) 2001-2004 Marketing Service Northwest, GmbH. All rights
 reserved.
 
 This library is free software; you can redistribute it and/or modify

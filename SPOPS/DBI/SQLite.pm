@@ -1,6 +1,6 @@
 package SPOPS::DBI::SQLite;
 
-# $Id: SQLite.pm,v 3.4 2004/01/10 02:21:40 lachoy Exp $
+# $Id: SQLite.pm,v 3.5 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use Log::Log4perl qw( get_logger );
@@ -12,7 +12,7 @@ use SPOPS::Utility;
 
 my $log = get_logger();
 
-$SPOPS::DBI::SQLite::VERSION = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::SQLite::VERSION = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return SPOPS::Utility->now }
 
@@ -126,7 +126,7 @@ L<DBI|DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2002-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

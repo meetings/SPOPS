@@ -1,6 +1,6 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 3.4 2004/01/10 02:21:40 lachoy Exp $
+# $Id: MySQL.pm,v 3.5 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use Log::Log4perl qw( get_logger );
@@ -10,7 +10,7 @@ use SPOPS::Key::DBI::HandleField;
 
 my $log = get_logger();
 
-$SPOPS::DBI::MySQL::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::MySQL::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return 'NOW()' }
 
@@ -116,7 +116,7 @@ L<DBI|DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

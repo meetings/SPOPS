@@ -1,13 +1,13 @@
 package SPOPS::DBI::Pg;
 
-# $Id: Pg.pm,v 3.5 2004/03/19 02:49:33 lachoy Exp $
+# $Id: Pg.pm,v 3.6 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use Log::Log4perl    qw( get_logger );
 use SPOPS;
 use SPOPS::Exception qw( spops_error );
 
-$SPOPS::DBI::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
 
 use constant PG_SEQUENCE_NEXT    => q{SELECT NEXTVAL( '%s' )};
 use constant PG_SEQUENCE_CURRENT => q{SELECT CURRVAL( '%s' )};
@@ -180,7 +180,7 @@ L<DBI|DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

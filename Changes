@@ -3,6 +3,50 @@ Revision history for Perl extension SPOPS.
 NOTE: All items with a leading 'SP-###' are issues in the JIRA issue
 tracking system. Learn more at http://jira.openinteract.org/
 
+0.87  Tue Jun  1 20:34:44 EDT 2004
+
+ * SPOPS/Import.pm:
+
+   - SP-5: Added property 'extra_metadata' to hold user-defined
+   metadata for an import.
+
+ * SPOPS/Import/DBI/Data.pm:
+
+   - SP-5: When running 'assign_raw_data()' store the first element in the
+   raw data in the new 'extra_metadata' property after first removing
+   the data we need from it.
+
+ * SPOPS/Import/DBI/Delete.pm:
+
+   - SP-6: Add class for declaring records to delete through the
+   import interface.
+
+ * SPOPS/Import/DBI/GenericOperation.pm:
+
+   - SP-6: add parent class for doing update/delete through the import
+   interface.
+
+ * SPOPS/Import/DBI/Update.pm:
+
+   - SP-6: Add class for declaring records to update through the
+   import interface.
+
+ * SPOPS/SQLInterface.pm:
+
+   - SP-7: Modify db_update() to allow additional data passed in
+   'value' parameter to be passed to the statement 'execute()' call so
+   you can use placeholders in the WHERE clause of your update.
+
+   This is a completely backward-compatible modification as the
+   changes are additive and we don't change any parameter without
+   first making a copy.
+
+ * t/40_ldap.t, t/41_ldap_config.t
+
+   - Applied patches from Martin Kutter to work on a directory with
+   schema checking enabled.
+
+
 0.86  Sat May 22 15:33:30 EDT 2004
 
 Individual:

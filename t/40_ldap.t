@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 40_ldap.t,v 3.1 2002/10/10 12:07:42 lachoy Exp $
+# $Id: 40_ldap.t,v 3.2 2004/05/26 01:17:22 lachoy Exp $
 
 use strict;
 use constant NUM_TESTS => 37;
@@ -60,7 +60,7 @@ END {
              isa          => [ 'SPOPS::LDAP' ],
              field        => [ qw/ uid cn sn givenname mail objectclass / ],
              id_field     => 'uid',
-             id_value_field => 'mail',
+             id_value_field => 'uid',
              field_map    => { user_id => 'uid', first_name => 'givenname' },
              multivalue   => [ 'objectclass' ],
              ldap_object_class => [ qw/ top person inetOrgPerson organizationalPerson / ],
@@ -314,17 +314,27 @@ END {
 
 sub setup {
     my ( $ldap ) = @_;
-    add_ou( $ldap, $BASE_DN,       'SPOPS Testing' );
-    add_ou( $ldap, $USER_BASE_DN,  'SPOPS Testing Users' );
-    add_ou( $ldap, $GROUP_BASE_DN, 'SPOPS Testing Groups' );
+    add_ou( $ldap, $BASE_DN,       $TEST_OU, 'SPOPS Testing' );
+    add_ou( $ldap, $USER_BASE_DN,  $USER_OU, 'SPOPS Testing Users' );
+    add_ou( $ldap, $GROUP_BASE_DN, $GROUP_OU, 'SPOPS Testing Groups' );
 }
 
 
 sub add_ou {
-    my ( $ldap, $ou_dn, $cn ) = @_;
-    my $ldap_msg = $ldap->add( $ou_dn,
-                               attr => [ objectclass => [ 'organizationalRole' ],
-                                         cn          => [ $cn ] ]);
+    my ( $ldap, $ou_dn, $ou ,$cn ) = @_;
+    my $entry = Net::LDAP::Entry->new( );
+    $ou=~s/^ou\=//;
+    $entry->add (
+       ou => $ou,
+       cn => $cn,
+       objectClass => [ 'organizationalRole' ]
+    );
+#    print Dumper($entry);
+    $entry->dn( $ou_dn );
+#    my $ldap_msg = $ldap->add( $ou_dn,
+#             attr => [ objectclass => [ 'organizationalUnit' ],
+#             ou          => [ $cn ] ]);
+    my $ldap_msg=$entry->update($ldap);
     if ( my $code = $ldap_msg->code ) {
         die "Cannot create OU entry for ($ou_dn) in LDAP\n",
             "Error: ", $ldap_msg->error, " ($code)\n";

@@ -1,16 +1,16 @@
 package SPOPS::Import;
 
-# $Id: Import.pm,v 3.5 2003/04/19 13:31:16 lachoy Exp $
+# $Id: Import.pm,v 3.8 2004/06/02 00:48:21 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Class::Factory );
 use SPOPS::Exception qw( spops_error );
 
-$SPOPS::Import::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::VERSION  = sprintf("%d.%02d", q$Revision: 3.8 $ =~ /(\d+)\.(\d+)/);
 
 use constant AKEY => '_attrib';
 
-my @FIELDS = qw( object_class data DEBUG );
+my @FIELDS = qw( object_class data extra_metadata DEBUG );
 SPOPS::Import->mk_accessors( @FIELDS );
 
 sub new {
@@ -113,10 +113,11 @@ sub read_fh {
 ##############################
 # INITIALIZE
 
-__PACKAGE__->register_factory_type( object => 'SPOPS::Import::Object' );
-__PACKAGE__->register_factory_type( dbdata => 'SPOPS::Import::DBI::Data' );
-__PACKAGE__->register_factory_type( table  => 'SPOPS::Import::DBI::Table' );
-
+__PACKAGE__->register_factory_type( object   => 'SPOPS::Import::Object' );
+__PACKAGE__->register_factory_type( dbdata   => 'SPOPS::Import::DBI::Data' );
+__PACKAGE__->register_factory_type( dbupdate => 'SPOPS::Import::DBI::Update' );
+__PACKAGE__->register_factory_type( dbdelete => 'SPOPS::Import::DBI::Delete' );
+__PACKAGE__->register_factory_type( table    => 'SPOPS::Import::DBI::Table' );
 1;
 
 __END__
@@ -171,6 +172,22 @@ B<raw_data_from_fh( $filehandle )>
 Reads C<$filehandle> as a Perl data structure and does perliminary
 checks to ensure it can be used in an import.
 
+=head2 Properties
+
+B<object_class>
+
+Class of the object to import
+
+B<data>
+
+Data for this import. The implementation subclass specifies its
+format, but it is normally either an arrayref of arrayrefs or an
+arrayref of hashrefs.
+
+B<extra_metadata>
+
+Placeholder for user-defined metadata.
+
 =head2 Subclasses
 
 Subclasses should override the following methods.
@@ -186,7 +203,7 @@ Each status entry is an arrayref formatted:
 
 If the import for this record was successful, the first (0) entry will
 be true, the second (1) will be the object inserted (if possible,
-otherwise it's the data structure as if the record failed), and the
+otherwise it is the data structure as if the record failed), and the
 third (2) entry will be undefined.
 
 If the import for this record failed, the first (0) entry will be
@@ -220,7 +237,7 @@ None known.
 
 B<Import XML>
 
-We currently export XML documents but we don't import them. It would
+We currently export XML documents but we do not import them. It would
 be useful to do this.
 
 =head1 SEE ALSO
@@ -233,7 +250,7 @@ L<Class::Factory|Class::Factory>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

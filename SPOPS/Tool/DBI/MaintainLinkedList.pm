@@ -1,6 +1,6 @@
 package SPOPS::Tool::DBI::MaintainLinkedList;
 
-# $Id: MaintainLinkedList.pm,v 1.4 2004/01/10 02:21:39 lachoy Exp $
+# $Id: MaintainLinkedList.pm,v 1.5 2004/06/02 00:48:24 lachoy Exp $
 
 use strict;
 use Log::Log4perl qw( get_logger );
@@ -12,7 +12,7 @@ use constant HEAD_DEFAULT => 'null';
 
 my $log = get_logger();
 
-$SPOPS::Tool::DBI::MaintainLinkedList::VERSION = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tool::DBI::MaintainLinkedList::VERSION = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
 
 ########################################
 # CODE GENERATION BEHAVIOR
@@ -416,7 +416,7 @@ L<SPOPS::ClassFactory|SPOPS::ClassFactory>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,6 +1,6 @@
 package SPOPS::Secure::DBI;
 
-# $Id: DBI.pm,v 1.8 2004/02/18 02:54:55 lachoy Exp $
+# $Id: DBI.pm,v 1.9 2004/06/02 00:48:24 lachoy Exp $
 
 use strict;
 use Log::Log4perl qw( get_logger );
@@ -11,7 +11,7 @@ use SPOPS::Secure::Util;
 
 my $log = get_logger();
 
-$SPOPS::Secure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.9 $ =~ /(\d+)\.(\d+)/);
 
 # Pass in:
 #  $class->fetch_by_object( $obj, [ { user  => $user_obj,
@@ -322,7 +322,7 @@ None known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

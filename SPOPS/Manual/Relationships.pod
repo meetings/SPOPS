@@ -571,7 +571,7 @@ happen:
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 Chris Winters. All rights reserved.
+Copyright (c) 2001-2004 Chris Winters. All rights reserved.
 
 See L<SPOPS::Manual|SPOPS::Manual> for license.
 

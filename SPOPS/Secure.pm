@@ -1,6 +1,6 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 3.13 2004/05/11 02:09:39 lachoy Exp $
+# $Id: Secure.pm,v 3.14 2004/06/02 00:48:21 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -8,7 +8,7 @@ use vars  qw( $EMPTY );
 use Data::Dumper  qw( Dumper );
 use Log::Log4perl qw( get_logger );
 
-$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.13 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.14 $ =~ /(\d+)\.(\d+)/);
 
 # Stuff for security constants and exporting
 
@@ -1195,7 +1195,7 @@ None known, besides girth.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

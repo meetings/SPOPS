@@ -1,12 +1,12 @@
 package SPOPS::Export;
 
-# $Id: Export.pm,v 3.3 2003/01/02 06:00:25 lachoy Exp $
+# $Id: Export.pm,v 3.4 2004/06/02 00:48:21 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Class::Factory );
 use SPOPS::Exception qw( spops_error );
 
-$SPOPS::Export::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Export::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 use constant AKEY => '_attrib';
 
@@ -268,7 +268,7 @@ L<Class::Factory|Class::Factory>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

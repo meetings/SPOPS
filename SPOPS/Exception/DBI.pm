@@ -1,11 +1,11 @@
 package SPOPS::Exception::DBI;
 
-# $Id: DBI.pm,v 3.2 2003/02/16 22:01:58 lachoy Exp $
+# $Id: DBI.pm,v 3.3 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
 
-$SPOPS::Exception::DBI::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Exception::DBI::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Exception::DBI::EXPORT_OK = qw( spops_dbi_error );
 
 my @FIELDS = qw( sql bound_value action );
@@ -113,7 +113,7 @@ L<DBI|DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

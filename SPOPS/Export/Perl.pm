@@ -1,12 +1,12 @@
 package SPOPS::Export::Perl;
 
-# $Id: Perl.pm,v 3.2 2003/01/02 06:00:23 lachoy Exp $
+# $Id: Perl.pm,v 3.3 2004/06/02 00:48:22 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export );
 use Data::Dumper qw( Dumper );
 
-$SPOPS::Export::Perl::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Export::Perl::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 my @track = ();
 
@@ -62,7 +62,7 @@ L<Data::Dumper|Data::Dumper>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

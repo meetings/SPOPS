@@ -1,11 +1,11 @@
 package SPOPS::Import::DBI::TableTransform::Oracle;
 
-# $Id: Oracle.pm,v 3.3 2003/08/12 03:40:55 lachoy Exp $
+# $Id: Oracle.pm,v 3.4 2004/06/02 00:48:23 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import::DBI::TableTransform );
 
-$SPOPS::Import::DBI::TableTransform::Oracle::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::Oracle::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 sub increment {
     my ( $self, $sql ) = @_;
@@ -84,7 +84,7 @@ L<SPOPS::Import::DBI::TableTransform|SPOPS::Import::DBI::TableTransform>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2002-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,6 +1,6 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 3.5 2004/05/11 04:21:28 lachoy Exp $
+# $Id: Hierarchy.pm,v 3.6 2004/06/02 00:48:24 lachoy Exp $
 
 use strict;
 use base  qw( Exporter SPOPS::Secure );
@@ -16,7 +16,7 @@ use SPOPS::Secure::Util;
 my $log = get_logger();
 
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
-$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 
@@ -534,7 +534,7 @@ L<SPOPS::Secure|SPOPS::Secure>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,6 +1,6 @@
 package SPOPS::Key::DBI::Pool;
 
-# $Id: Pool.pm,v 3.3 2004/01/10 02:21:39 lachoy Exp $
+# $Id: Pool.pm,v 3.4 2004/06/02 00:48:23 lachoy Exp $
 
 use strict;
 use Log::Log4perl qw( get_logger );
@@ -8,7 +8,7 @@ use SPOPS;
 
 my $log = get_logger();
 
-$SPOPS::Key::DBI::Pool::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Key::DBI::Pool::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 
 # Ensure only PRE_fetch_id works.
@@ -115,7 +115,7 @@ It might be a good idea to subclass this with a pure Perl solution.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

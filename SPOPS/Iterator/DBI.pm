@@ -1,6 +1,6 @@
 package SPOPS::Iterator::DBI;
 
-# $Id: DBI.pm,v 3.3 2004/02/26 01:02:17 lachoy Exp $
+# $Id: DBI.pm,v 3.4 2004/06/02 00:48:23 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Iterator );
@@ -12,7 +12,7 @@ use SPOPS::Secure   qw( :level );
 
 my $log = get_logger();
 
-$SPOPS::Iterator::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Iterator::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 # Keys with _DBI at the beginning are specific to this implementation;
 # keys without _DBI at the begining are used in all iterators.
@@ -212,7 +212,7 @@ L<SPOPS::DBI|SPOPS::DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

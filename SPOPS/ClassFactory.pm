@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory;
 
-# $Id: ClassFactory.pm,v 3.5 2004/01/10 02:21:40 lachoy Exp $
+# $Id: ClassFactory.pm,v 3.6 2004/06/02 00:48:21 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -11,7 +11,7 @@ use Data::Dumper  qw( Dumper );
 use SPOPS;
 use SPOPS::Exception;
 
-$SPOPS::ClassFactory::VERSION   = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::VERSION   = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::ClassFactory::EXPORT_OK = qw( OK DONE NOTIFY ERROR RESTART
                                       FACTORY_METHOD RULESET_METHOD );
 
@@ -713,7 +713,7 @@ L<SPOPS|SPOPS>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,6 +1,6 @@
 package SPOPS::Import::DBI::Table;
 
-# $Id: Table.pm,v 3.5 2003/04/21 14:39:34 lachoy Exp $
+# $Id: Table.pm,v 3.7 2004/06/02 00:48:23 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
@@ -8,7 +8,7 @@ use Data::Dumper qw( Dumper );
 use SPOPS::Exception;
 use SPOPS::Import::DBI::TableTransform;
 
-$SPOPS::Import::DBI::Table::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::Table::VERSION  = sprintf("%d.%02d", q$Revision: 3.7 $ =~ /(\d+)\.(\d+)/);
 
 my @FIELDS = qw( database_type transforms print_only return_only );
 SPOPS::Import::DBI::Table->mk_accessors( @FIELDS );
@@ -22,7 +22,7 @@ sub run {
     my ( $self ) = @_;
 
     unless ( $self->data ) {
-        my $m = "Cannot import a table without data!\n" .
+        my $m = "Cannot import a table without data\n" .
                 "Please set it using \$table_import->data( \$table_sql )\n" .
                 "or \$table_import->read_table_from_file( '/path/to/mytable.sql' )\n" .
                 "or \$table_import->read_table_from_fh( \$filehandle )";
@@ -126,10 +126,10 @@ SPOPS::Import::DBI::Table - Import a DBI table structure
 =head1 SYNOPSIS
 
  #!/usr/bin/perl
-
+ 
  use strict;
  use SPOPS::Import;
-
+ 
  {
      my $table_import = SPOPS::Import->new( 'table' );
      $table_import->database_type( 'sybase' );
@@ -138,12 +138,12 @@ SPOPS::Import::DBI::Table - Import a DBI table structure
      $table_import->transforms([ \&table_login ]);
      $table_import->run;
  }
-
+ 
  sub table_login {
     my ( $transformer, $sql, $importer ) = @_;
     $$sql =~ s/%%LOGIN%%/varchar(25)/g;
  }
-
+ 
  __DATA__
  CREATE TABLE sys_user (
   user_id       %%INCREMENT%%,
@@ -164,7 +164,7 @@ SPOPS::Import::DBI::Table - Import a DBI table structure
  )
 
  Output:
-
+ 
  CREATE TABLE sys_user (
   user_id       NUMERIC( 10, 0 ) IDENTITY NOT NULL,
   login_name    varchar(25) not null,
@@ -288,7 +288,7 @@ L<SPOPS::Import::DBI::TableTransform|SPOPS::Import::DBI::TableTransform>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2004 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
