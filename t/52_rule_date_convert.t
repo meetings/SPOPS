@@ -1,17 +1,19 @@
 # -*-perl-*-
 
-# $Id: 52_rule_date_convert.t,v 1.1 2002/09/09 12:40:13 lachoy Exp $
+# $Id: 52_rule_date_convert.t,v 1.2 2003/06/10 14:13:44 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
-use Test::More tests => 15;
-use Class::Date;
-use Time::Piece;
+use Test::More tests => 22;
 
 my $DATE_FORMAT = '%Y-%m-%d %H:%M:%S';
 
-{
-    my %config = (
+require_ok( 'SPOPS::Initialize' );
+
+
+my $original_time = '2002-02-02 02:22:12';
+
+my %config = (
       test => {
          class               => 'TimePieceTest',
          isa                 => [ 'SPOPS::Loopback' ],
@@ -22,18 +24,22 @@ my $DATE_FORMAT = '%Y-%m-%d %H:%M:%S';
          convert_date_format => $DATE_FORMAT,
          convert_date_field  => [ 'date_field' ],
       },
-    );
+);
+
+# Time::Piece
+
+SKIP: {
+    eval "require Time::Piece";
+    if ( $@ ) {
+        skip "Time::Piece not installed", 7;
+    }
 
     # Create our test class using the loopback
-
-    require_ok( 'SPOPS::Initialize' );
 
     my $init_list_tp = eval { SPOPS::Initialize->process({ config => \%config }) };
     ok( ! $@, "Initialize process run $@" );
     is( $init_list_tp->[0], 'TimePieceTest',
         'Time::Piece object class initialized' );
-
-    my $original_time = '2002-02-02 02:22:12';
 
     # Time::Piece
 
@@ -53,7 +59,15 @@ my $DATE_FORMAT = '%Y-%m-%d %H:%M:%S';
     is( $original_obj_tp, $new_item_tp->{date_field},
         'Object field fetched matches value of original' );
 
-    # Class::Date
+}
+
+# Class::Date
+
+SKIP: {
+    eval "require Class::Date";
+    if ( $@ ) {
+        skip "Class::Date not installed", 7;
+    }
 
     $config{test}->{class} = 'ClassDateTest';
     $config{test}->{convert_date_class} = 'Class::Date';
@@ -76,5 +90,46 @@ my $DATE_FORMAT = '%Y-%m-%d %H:%M:%S';
     isa_ok( $new_item_cd->{date_field}, 'Class::Date',
             'Object field fetched as Class::Date' );
     is( $original_obj_cd, $new_item_cd->{date_field},
+        'Object field fetched matches value of original' );
+}
+
+
+# DateTime
+SKIP: {
+    eval "require DateTime";
+    if ( $@ ) {
+        skip "DateTime not installed", 7;
+    }
+    eval "require DateTime::Format::Strptime";
+    if ( $@ ) {
+        skip "DateTime::Format::Strptime not installed", 7;
+    }
+    else {
+        DateTime::Format::Strptime->import( 'strptime' );
+    }
+
+    $config{test}->{class} = 'DateTimeTest';
+    $config{test}->{convert_date_class} = 'DateTime';
+    my $init_list_dt = eval {
+        SPOPS::Initialize->process({ config => \%config })
+    };
+    ok( ! $@, "Initialize process run $@" );
+    is( $init_list_dt->[0], 'DateTimeTest',
+        'DateTime object class initialized' );
+
+    my $original_obj_dt = strptime( $DATE_FORMAT, $original_time );
+    my $item_dt = DateTimeTest->new({ myid => 22,
+                                      date_field => $original_obj_dt });
+    eval { $item_dt->save };
+    ok( ! $@, 'Object with DateTime field saved' );
+    isa_ok( $item_dt->{date_field}, 'DateTime',
+            'Object field resaved as DateTime' );
+    is( DateTimeTest->peek( 22, 'date_field' ), $original_time,
+        'DateTime field value saved' );
+
+    my $new_item_dt = DateTimeTest->fetch( 22 );
+    isa_ok( $new_item_dt->{date_field}, 'DateTime',
+            'Object field fetched as DateTime' );
+    is( $original_obj_dt, $new_item_dt->{date_field},
         'Object field fetched matches value of original' );
 }

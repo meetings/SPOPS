@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory;
 
-# $Id: ClassFactory.pm,v 3.3 2003/05/10 19:26:52 lachoy Exp $
+# $Id: ClassFactory.pm,v 3.4 2003/06/09 03:21:37 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -10,7 +10,7 @@ use Data::Dumper  qw( Dumper );
 use SPOPS         qw( _w DEBUG );
 use SPOPS::Exception;
 
-$SPOPS::ClassFactory::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::VERSION   = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::ClassFactory::EXPORT_OK = qw( OK DONE NOTIFY ERROR RESTART
                                       FACTORY_METHOD RULESET_METHOD );
 
@@ -183,14 +183,15 @@ sub create_stub {
 
 
 # Just step through @{ $config->{isa} } and 'require' each entry
-# unless it's already been; also require everything in @{
-# $config->{rules_from} }
+# unless it's already been; also require everything in
+# @{ $config->{rules_from} }
 
 sub require_config_classes {
     my ( $class, $config ) = @_;
     my $this_class = $config->{class};
     my $rules_from = $config->{rules_from} || [];
     foreach my $req_class ( @{ $config->{isa} }, @{ $rules_from } ) {
+        next unless ( $req_class );
         next if ( $REQ_CLASSES{ $req_class } );
         eval "require $req_class";
         if ( $@ ) {
@@ -256,7 +257,7 @@ sub find_behavior {
                           join( ', ', keys %{ $behaviors } ) );
         foreach my $slot_name ( keys %{ $behaviors } ) {
             my $typeof = ref $behaviors->{ $slot_name };
-            next unless ( $typeof eq 'CODE' or $typeof eq' ARRAY' );
+            next unless ( $typeof eq 'CODE' or $typeof eq 'ARRAY' );
             DEBUG() && _w( 2, "Adding slot behaviors for ($slot_name)" );
             if ( $typeof eq 'CODE' ) {
                 push @{ $this_config->{ $PK }{behavior_table}{ $slot_name } },
@@ -466,12 +467,12 @@ SPOPS::ClassFactory - Create SPOPS classes from configuration and code
 =head1 SYNOPSIS
 
  # Using SPOPS::Initialize (strongly recommended)
-
+ 
  my $config = { ... };
  SPOPS::Initialize->process({ config => $config });
-
+ 
  # Using SPOPS::ClassFactory
-
+ 
  my $config = {};
  my $classes_created = SPOPS::ClassFactory->create( $config );
  foreach my $class ( @{ $classes_created } ) {

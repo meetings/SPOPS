@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 3.3 2003/04/21 22:25:49 lachoy Exp $
+# $Id: DBI.pm,v 3.5 2003/06/09 03:20:56 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-$SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 
@@ -214,6 +214,7 @@ my $generic_linksto = <<'LINKSTO';
 
     sub %%CLASS%%::%%LINKSTO_ALIAS%% {
         my ( $self, $p ) = @_;
+        $p ||= {};
         $p->{select} = [ '%%LINKSTO_ID_FIELD%%' ];
         $p->{from}   = [ '%%LINKSTO_TABLE%%' ];
         my $id_clause = $self->id_clause( $self->id, 'noqualify', $p );
@@ -226,8 +227,8 @@ my $generic_linksto = <<'LINKSTO';
         foreach my $info ( @{ $rows } ) {
             my $item = eval { %%LINKSTO_CLASS%%->fetch( $info->[0], $p ) };
             if ( $@ ) {
-                SPOPS::_w( 0, " Cannot fetch linked object %%LINKSTO_ALIAS%% => ",
-                              "[$@]. Continuing with others..." );
+                SPOPS::_w( 0, " Cannot fetch linked object %%LINKSTO_CLASS%% [$info->[0]] ",
+                              "from %%CLASS%%: $@\nContinuing with others..." );
                 next;
             }
             push @obj, $item if ( $item );
@@ -238,6 +239,8 @@ my $generic_linksto = <<'LINKSTO';
     sub %%CLASS%%::%%LINKSTO_ALIAS%%_add {
         my ( $self, $link_id_list, $p ) = @_;
         return 0 unless ( defined $link_id_list );
+
+        $p ||= {};
 
         # Allow user to pass only one ID to add (scalar) or an
         # arrayref (ref)
@@ -261,6 +264,7 @@ my $generic_linksto = <<'LINKSTO';
 
     sub %%CLASS%%::%%LINKSTO_ALIAS%%_remove {
         my ( $self, $link_id_list, $p ) = @_;
+        $p ||= {};
 
         # Allow user to pass only one ID to remove (scalar) or an
         # arrayref (ref)

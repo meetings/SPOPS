@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.12 2003/05/10 19:28:46 lachoy Exp $
+# $Id: SPOPS.pm,v 3.13 2003/06/10 14:15:42 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -11,8 +11,8 @@ use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.76';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.12 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.77';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.13 $ =~ /(\d+)\.(\d+)/);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -327,8 +327,11 @@ sub ruleset_process_action {
     # return if the list of rules to apply for this action is empty
 
     my $rs_table = $item->RULESET;
-    return 1 unless ( ref $rs_table->{ $action } eq 'ARRAY' );
-    return 1 unless ( scalar @{ $rs_table->{ $action } } );
+    unless ( ref $rs_table->{ $action } eq 'ARRAY'
+                 and scalar @{ $rs_table->{ $action } } > 0 ) {
+        _w( 2, "No rules to process for [$action]" );
+        return 1;
+    }
     DEBUG() && _w( 1, "Ruleset exists in class." );
 
     # Cycle through the rules -- the only return value can be true or false,
@@ -336,8 +339,11 @@ sub ruleset_process_action {
 
     my $count_rules = 0;
     foreach my $rule_sub ( @{ $rs_table->{ $action } } ) {
-        return undef unless ( $rule_sub->( $item, $p ) );
         $count_rules++;
+        unless ( $rule_sub->( $item, $p ) ) {
+            _w( 0, "Rule [$count_rules] of [$action] failed" );
+            return undef;
+        }
     }
     DEBUG() && _w( 1, "$action processed ($count_rules rules successful) without error" );
     return 1;

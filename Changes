@@ -1,5 +1,27 @@
 Revision history for Perl extension SPOPS.
 
+0.77  Tue Jun 10 10:17:08 EDT 2003
+
+Overall:
+
+ * Bugfix for code generator and be able to convert to/from DateTime
+   objects
+
+Individual:
+
+   * SPOPS/ClassFactory.pm:
+
+     - In require_config_classes(), ensure we don't try to 'require'
+     an empty class.
+
+     - In find_behavior(), fix typo that skipped arrayrefs returned
+     from 'behavior_factory' (ouch!)
+
+   * SPOPS/Tool/DateConvert.pm:
+
+     - Added implementation for DateTime
+
+
 0.76  Sat May 10 15:29:09 EDT 2003
 
 Overall:
