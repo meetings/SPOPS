@@ -1,12 +1,13 @@
 package SPOPS::Initialize;
 
-# $Id: Initialize.pm,v 3.1 2003/01/02 06:00:25 lachoy Exp $
+# $Id: Initialize.pm,v 3.2 2003/05/10 19:25:53 lachoy Exp $
 
 use strict;
-use SPOPS        qw( _w DEBUG );
+use SPOPS            qw( _w DEBUG );
 use SPOPS::ClassFactory;
+use SPOPS::Exception qw( spops_error );
 
-$SPOPS::Initialize::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Initialize::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 # Main interface -- take the information read in from 'read_config()'
 # and create SPOPS classes, then initialize them
@@ -48,8 +49,8 @@ sub process {
     foreach my $spops_class ( @{ $class_created_ok } ) {
         eval { $spops_class->class_initialize() };
         if ( $@ ) {
-            SPOPS::Exception->throw( "Failed to run class_initialize() " .
-                                     "on [$spops_class]: $@" );
+            spops_error "Failed to run class_initialize() on ",
+                        "[$spops_class]: $@";
         }
         push @full_success, $spops_class;
     }
@@ -81,7 +82,7 @@ sub read_config {
         my $dir = $p->{directory};
         DEBUG() && _w( 1, "Reading configuration files from ($dir) with pattern ($p->{pattern})" );
         opendir( CONF, $dir )
-               || SPOPS::Exception->throw( "Cannot read configuration files from directory [$dir]: $!" );
+               || spops_error "Cannot read configuration files from directory [$dir]: $!";
         my @directory_files = readdir( CONF );
         close( CONF );
         foreach my $file ( @directory_files ) {
@@ -128,7 +129,7 @@ sub read_perl_file {
     close( INFO );
     my $data = eval $info;
     if ( $@ ) {
-        SPOPS::Exception->throw( "Cannot read data structure from [$filename]: $@" );
+        spops_error "Cannot read data structure from [$filename]: $@";
     }
     return $data;
 }

@@ -1,11 +1,11 @@
 package SPOPS::Import::Object;
 
-# $Id: Object.pm,v 3.1 2003/01/02 06:00:23 lachoy Exp $
+# $Id: Object.pm,v 3.4 2003/04/22 02:31:05 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
 
-$SPOPS::Import::Object::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::Object::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 my @FIELDS = qw( include_id fields extra_metadata ); # skip_fields 
 SPOPS::Import::Object->mk_accessors( @FIELDS );
@@ -37,10 +37,10 @@ sub run {
         eval { $obj->save({ is_add        => 1,
                             DEBUG         => $self->DEBUG }) };
         if ( $@ ) {
-            push @status, [ undef, $data, "$@ - $SPOPS::Error::system_msg" ];
+            push @status, [ undef, $data, $@ ];
         }
         else {
-            push @status, [ 1, $data, undef ];
+            push @status, [ 1, $obj, undef ];
         }
     }
     return \@status;
@@ -81,16 +81,17 @@ sub data_from_fh {
 # backward compatibility
 
 sub assign_raw_data {
-    my ( $self, $raw_data ) = @_;
-    my $meta = shift @{ $raw_data };
-    $self->object_class( $meta->{object_class} || $meta->{spops_class} );
-    delete $meta->{object_class};
-    delete $meta->{spops_class};
-    $self->fields( $meta->{fields} || $meta->{field_order} );
-    delete $meta->{fields};
-    delete $meta->{field_order};
-    $self->extra_metadata( $meta );
-    $self->data( $raw_data );
+    my ( $self, $raw_data_orig ) = @_;
+    my @raw_data = @{ $raw_data_orig };
+    my %meta = %{ shift @raw_data };
+    $self->object_class( $meta{object_class} || $meta{spops_class} );
+    delete $meta{object_class};
+    delete $meta{spops_class};
+    $self->fields( $meta{fields} || $meta{field_order} );
+    delete $meta{fields};
+    delete $meta{field_order};
+    $self->extra_metadata( \%meta );
+    $self->data( \@raw_data );
     return $self;
 }
 
@@ -98,29 +99,37 @@ sub assign_raw_data {
 
 __END__
 
-=pod
-
 =head1 NAME
 
 SPOPS::Import::Object - Import SPOPS objects
 
 =head1 SYNOPSIS
 
+ # Define a data file 'mydata.dat'
+ 
+ [
+    { spops_class => 'OpenInteract2::Security',
+      field_order => [ qw/ class object_id scope scope_id security_level / ],
+      transform_default_to_id    => [ 'scope_id' ] },
+    [ 'OpenInteract2::Action::Error', 0, 'w', 'world', 4 ],
+    [ 'OpenInteract2::Action::Error', 0, 'g', 'site_admin_group', 8 ],
+ ];
+ 
  # Create the importer and read in the properties and data
-
+ 
  my $importer = SPOPS::Import->new( 'object' )
                              ->data_from_file( 'mydata.dat' );
-
+ 
  # Modify the 'name' field in every record
-
+ 
  my $fields_h = $importer->fields_as_hashref;
  my $name_idx = $fields_h->{name};
- foreach my $data ( @{ $self->data } ) {
+ foreach my $data ( @{ $importer->data } ) {
      $data->[ $name_idx ] =~ s/YourClass/MyClass/;
  }
-
+ 
  # Run the import and display the results
-
+ 
  my $status = $importer->run;
  foreach my $entry ( @{ $status } ) {
    if ( $entry->[0] ) { print "$entry->[1][0]: OK\n" }
@@ -236,5 +245,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters E<lt>chris@cwinters.comE<gt>
-
-=cut

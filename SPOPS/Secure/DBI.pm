@@ -1,6 +1,6 @@
 package SPOPS::Secure::DBI;
 
-# $Id: DBI.pm,v 1.5 2003/01/02 06:00:22 lachoy Exp $
+# $Id: DBI.pm,v 1.6 2003/05/10 19:24:11 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -8,7 +8,7 @@ use SPOPS         qw( DEBUG _w _wm );
 use SPOPS::Secure qw( :level :scope );
 use SPOPS::Secure::Util;
 
-$SPOPS::Secure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 
 # Pass in:
 #  $class->fetch_by_object( $obj, [ { user  => $user_obj,
@@ -24,7 +24,7 @@ sub fetch_by_object {
     my ( $class, $item, $p ) = @_;
     my ( $find_class, $find_id ) =
                SPOPS::Secure::Util->find_class_and_oid( $item, $p );
-    unless ( $find_class and $find_id ) {
+    unless ( $find_class and defined $find_id ) { # $find_id could be 0...
         my $msg = 'Cannot check security';
         warn " -- Cannot retrieve security since no item passed in to check!\n";
         SPOPS::Exception->throw( 'No item defined to check security for' );

@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 3.3 2003/01/03 05:12:07 lachoy Exp $
+# $Id: 30_dbi.t,v 3.5 2003/05/10 19:22:41 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -9,7 +9,7 @@
 use strict;
 use Data::Dumper qw( Dumper );
 
-use constant NUM_TESTS       => 60;
+use constant NUM_TESTS       => 62;
 use constant TEST_TABLE_NAME => 'spops_test';
 
 my $SPOPS_CLASS = 'DBITest';
@@ -21,14 +21,13 @@ END {
     cleanup( $db, TEST_TABLE_NAME ) if ( $do_end );
  }
 
-# Table definition:
+# Table definition, just for reference
 # CREATE TABLE foo (
 #    spops_id    int not null primary key,
 #    spops_name  char(20),
 #    spops_goop  char(20) not null,
 #    spops_num   int default 2
 # )
-
 
 {
     # Grab our DBI routines and be sure we're supposed to run.
@@ -56,13 +55,15 @@ END {
            isa          => [ $spops_dbi_driver, 'SPOPS::DBI' ],
            field        => [ qw/ spops_id spops_name spops_goop spops_num / ],
            id_field     => 'spops_id',
-           skip_undef   => { spops_num => 1 },
-           sql_defaults => [ qw/ spops_num / ],
+           skip_undef   => [ 'spops_num' ],
+           sql_defaults => [ 'spops_num' ],
            base_table   => TEST_TABLE_NAME,
            table_name   => TEST_TABLE_NAME,
         },
     };
-    my $class_init_list = eval { SPOPS::Initialize->process({ config => $spops_config }) };
+    my $class_init_list = eval {
+        SPOPS::Initialize->process({ config => $spops_config })
+    };
     ok( ! $@, 'Initialize process run' );
     is( $class_init_list->[0], $SPOPS_CLASS, 'Initialize class' );
 
@@ -310,7 +311,14 @@ END {
     {
         my $obj_count = eval { $SPOPS_CLASS->fetch_count({ db => $db }) };
         ok( ! $@, 'Fetch count execution' );
-        ok( $obj_count == 3, 'Fetch count value' );
+        is( $obj_count, 3, 'Fetch count value' );
+
+        my $skip_obj_count = eval {
+            $SPOPS_CLASS->fetch_count({ db            => $db,
+                                        skip_security => 1 })
+        };
+        ok( ! $@, 'Fetch count execution (security skipped)' );
+        is( $skip_obj_count, 3, 'Fetch count value (security_skipped)' );
     }
 
     # Create an iterator and run through the objects

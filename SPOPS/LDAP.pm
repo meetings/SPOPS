@@ -1,6 +1,6 @@
 package SPOPS::LDAP;
 
-# $Id: LDAP.pm,v 3.1 2003/01/02 06:00:24 lachoy Exp $
+# $Id: LDAP.pm,v 3.2 2003/05/10 19:27:32 lachoy Exp $
 
 use strict;
 use base qw( SPOPS );
@@ -12,7 +12,7 @@ use SPOPS            qw( DEBUG _w );
 use SPOPS::Exception::LDAP;
 use SPOPS::Secure    qw( :level );
 
-$SPOPS::LDAP::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::LDAP::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 
 ########################################
@@ -82,9 +82,6 @@ sub behavior_factory {
 
 sub class_initialize {
     my ( $class )  = @_;
-    my $C = $class->CONFIG;
-    $C->{field_list}  = [ sort{ $C->{field}{$a} <=> $C->{field}{$b} }
-                          keys %{ $C->{field} } ];
     $class->_class_initialize;
     return 1;
 }

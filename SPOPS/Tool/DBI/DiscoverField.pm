@@ -1,12 +1,12 @@
 package SPOPS::Tool::DBI::DiscoverField;
 
-# $Id: DiscoverField.pm,v 3.1 2003/01/02 06:00:21 lachoy Exp $
+# $Id: DiscoverField.pm,v 3.3 2003/05/10 19:23:07 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
 use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
 
-$SPOPS::Tool::DBI::DiscoverField::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tool::DBI::DiscoverField::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
@@ -20,8 +20,10 @@ sub discover_fields {
     return ( OK, undef ) unless ( $CONFIG->{field_discover} eq 'yes' );
     my $dbh = $class->global_datasource_handle( $CONFIG->{datasource} );
     unless ( $dbh ) {
-      return ( NOTIFY, "Cannot discover fields because no DBI database " .
-                       "handle available to class ($class)" );
+        $CONFIG->{field}      = undef;
+        $CONFIG->{field_list} = undef;
+        return ( NOTIFY, "Cannot discover fields because no DBI database " .
+                         "handle available to class ($class)" );
     }
     my $sql = $class->sql_fetch_types( $CONFIG->{base_table} );
     my ( $sth );
@@ -29,7 +31,10 @@ sub discover_fields {
         $sth = $dbh->prepare( $sql );
         $sth->execute;
     };
-    return ( NOTIFY, "Cannot discover fields: $@" ) if ( $@ );
+    if ( $@ ) {
+        $CONFIG->{field} = undef;
+        return ( NOTIFY, "Cannot discover fields: $@" );
+    }
     $CONFIG->{field} = [ map { lc $_ } @{ $sth->{NAME} } ];
     DEBUG() && _w( 1, "Table: ($CONFIG->{base_table}); ",
 			          "Fields: (", join( ', ', @{ $CONFIG->{field} } ), ")" );

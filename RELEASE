@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.76  Sat May 10 15:29:09 EDT 2003
+
+ * A number of small bugfixes and enhancements
+
+
 0.75  Fri Feb 21 08:41:00 EST 2003
 
  * Fix bug with mixed-case ID field and lazy loading
@@ -217,4 +222,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 3.10 2003/02/21 13:47:18 lachoy Exp $
+$Id: RELEASE,v 3.11 2003/05/10 19:29:15 lachoy Exp $

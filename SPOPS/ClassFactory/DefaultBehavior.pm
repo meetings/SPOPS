@@ -1,14 +1,16 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 3.3 2003/01/02 06:00:24 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 3.5 2003/05/10 19:24:43 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
-$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
-my @PARSE_INTO_HASH = qw( field no_insert no_update skip_undef multivalue );
+# Overlap here with DBI...
+my @PARSE_INTO_HASH  = qw( field no_insert no_update skip_undef multivalue );
+my @PARSE_INTO_ARRAY = qw( sql_defaults fetch_by ldap_object_class );
 
 # NOTE: These behaviors are called from SPOPS.pm, although they can be
 # theoretically called from anywhere.
@@ -26,13 +28,26 @@ sub conf_modify_config {
     if ( ref $CONFIG->{field} eq 'ARRAY' ) {
         $CONFIG->{field_list} = [ @{ $CONFIG->{field} } ];
     }
+    elsif ( $CONFIG->{field} ) {
+        $CONFIG->{field_list} = [ $CONFIG->{field} ];
+    }
+    else {
+        $CONFIG->{field_list} = [];
+    }
 
     # When we change a listref to a hashref, keep the order
     # by maintaining a count; that way they can be re-ordered
     # if desired.
 
+HASHITEM:
     foreach my $item ( @PARSE_INTO_HASH ) {
-        next unless ( ref $CONFIG->{ $item } eq 'ARRAY' );
+        unless ( defined $CONFIG->{ $item } ) {
+            $CONFIG->{ $item } = {};
+            next HASHITEM;
+        }
+        if ( ref $CONFIG->{ $item } ne 'ARRAY' ) {
+            $CONFIG->{ $item } = [ $CONFIG->{ $item } ];
+        }
         DEBUG() && _w( 1, "Parsing key ($item) into a hash" );
         my $count = 1;
         my %new = ();
@@ -41,6 +56,15 @@ sub conf_modify_config {
             $count++;
         }
         $CONFIG->{ $item } = \%new;
+    }
+
+    foreach my $item ( @PARSE_INTO_ARRAY ) {
+        unless ( defined $CONFIG->{ $item } ) {
+            $CONFIG->{ $item } = [];
+        }
+        if ( ref $CONFIG->{ $item } ne 'ARRAY' ) {
+            $CONFIG->{ $item } = [ $CONFIG->{ $item } ];
+        }
     }
     return ( OK, undef );
 }
@@ -386,7 +410,19 @@ B<conf_modify_config( \%config )>
 Set the values from 'field' into 'field_list', and parse the following
 entries from arrayrefs into hashrefs:
 
- field, no_insert, no_update, skip_undef, multivalue
+=over 4
+
+=item B<field>
+
+=item B<no_insert>
+
+=item B<no_update>
+
+=item B<skip_undef>
+
+=item B<multivalue>
+
+=back
 
 B<conf_id_method( \%config )>
 

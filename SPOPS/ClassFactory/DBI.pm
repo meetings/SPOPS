@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 3.2 2003/01/02 06:00:24 lachoy Exp $
+# $Id: DBI.pm,v 3.3 2003/04/21 22:25:49 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-$SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 
@@ -246,7 +246,8 @@ my $generic_linksto = <<'LINKSTO';
                           ? $link_id_list : [ $link_id_list ];
         my $added = 0;
         $p->{db} ||= %%LINKSTO_CLASS%%->global_datasource_handle;
-        foreach my $link_id ( @{ $link_id_list } ) {
+        foreach my $link_item ( @{ $link_id_list } ) {
+            my $link_id = ( ref $link_item ) ? $link_item->id : $link_item;
             SPOPS::_wm( 1, $p->{DEBUG}, "Trying to add link to ID [$link_id]" );
             %%LINKSTO_CLASS%%->db_insert({ table => '%%LINKSTO_TABLE%%',
                                            field => [ '%%ID_FIELD%%', '%%LINKSTO_ID_FIELD%%' ],
@@ -264,10 +265,12 @@ my $generic_linksto = <<'LINKSTO';
         # Allow user to pass only one ID to remove (scalar) or an
         # arrayref (ref)
 
-        $link_id_list = ( ref $link_id_list ) ? $link_id_list : [ $link_id_list ];
+        $link_id_list = ( ref $link_id_list eq 'ARRAY' )
+                          ? $link_id_list : [ $link_id_list ];
         my $removed = 0;
         $p->{db} ||= %%LINKSTO_CLASS%%->global_datasource_handle;
-        foreach my $link_id ( @{ $link_id_list } ) {
+        foreach my $link_item ( @{ $link_id_list } ) {
+            my $link_id = ( ref $link_item ) ? $link_item->id : $link_item;
             SPOPS::_wm( 1, $p->{DEBUG}, "Trying to remove link to ID ($link_id)" );
             my $from_id_clause = $self->id_clause( undef, 'noqualify', $p  );
             my $to_id_clause   = %%LINKSTO_CLASS%%->id_clause( $link_id, 'noqualify', $p );

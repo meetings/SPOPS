@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.8 2003/02/21 05:48:44 lachoy Exp $
+# $Id: DBI.pm,v 3.11 2003/05/10 19:27:32 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -14,7 +14,7 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.8 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.11 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -98,8 +98,6 @@ sub class_initialize {
     my ( $class, $CONFIG )  = @_;
     $CONFIG ||= {};
     my $C = $class->CONFIG;
-    $C->{field_list}  = [ sort{ $C->{field}{$a} <=> $C->{field}{$b} }
-                          keys %{ $C->{field} } ];
     $C->{table_owner} = $CONFIG->{db_info}{db_owner};
     $C->{table_name}  = ( $C->{table_owner} )
                           ? "$C->{table_owner}.$C->{base_table}" : $C->{base_table};
@@ -411,16 +409,37 @@ sub _construct_group_select {
 
 sub fetch_count {
     my ( $class, $p ) = @_;
-    $p->{select} = [ $class->id_field_select( $p ) ];
-    my $sth = $class->_execute_multiple_record_query( $p );
     my $row_count = 0;
-    while ( my $row = $sth->fetch ) {
-        eval { $class->check_action_security({ id       => $row->[0],
-                                               required => SEC_LEVEL_READ }) };
-        next if ( $@ );
-        $row_count++;
+    if ( $p->{skip_security} ) {
+        $p->{select} = [ 'COUNT(*)' ];
+        my $db = $p->{db}
+                 || $class->global_datasource_handle( $p->{connect_key} );
+        my $row_count_rec = eval {
+            $class->db_select({ select => [ 'COUNT(*)' ],
+                                where  => $p->{where},
+                                value  => $p->{value},
+                                from   => $class->table_name,
+                                return => 'single',
+                                db     => $db })
+        };
+        $row_count = $row_count_rec->[0];
+        if ( $@ ) {
+            _w( 0, "Caught error running SELECT COUNT(*): $@" );
+        }
     }
-  return $row_count;
+    else {
+        $p->{select} = [ $class->id_field_select( $p ) ];
+        my $sth = $class->_execute_multiple_record_query( $p );
+        while ( my $row = $sth->fetch ) {
+            eval {
+                $class->check_action_security({ id       => $row->[0],
+                                                required => SEC_LEVEL_READ })
+            };
+            next if ( $@ );
+            $row_count++;
+        }
+    }
+    return $row_count;
 }
 
 
@@ -671,9 +690,9 @@ sub save {
     # Do not include these fields in the insert/update if they're not defined
     # (note that this includes blank/empty)
 
-    my $skip_undef   = $self->skip_undef;
     $p->{skip_undef} ||= [];
-    map { $skip_undef->{ $_ } = 1 } @{ $p->{skip_undef} };
+    my $skip_undef = $self->skip_undef || {};
+    $skip_undef->{ $_ }++ for ( @{ $p->{skip_undef} } );
 
     $p->{field} = [];
     $p->{value} = [];
@@ -788,6 +807,14 @@ sub _save_insert {
     unless ( $p->{no_sync} or $self->no_save_sync ) {
         my %fill_in_uniq = map { $_ => 1 } ( @{ $self->CONFIG->{sql_defaults} },
                                              keys %{ $p->{no_insert} } );
+
+        # Get rid of the ID field, since it's a) defined in the
+        # object, b) pre-fetched or c) post-fetched; if it's none of
+        # the three then that makes it difficult to get the default
+        # values :-)
+
+        delete $fill_in_uniq{ $self->id_field };
+
         my @fill_in_fields = sort keys %fill_in_uniq;
         if ( scalar @fill_in_fields ) {
             $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Fetching defaults for fields ",
@@ -799,7 +826,6 @@ sub _save_insert {
                                  db     => $p->{db},
                                  return => 'single',
                                  DEBUG  => $p->{DEBUG} }) };
-
             # Even though there was an error, we probably want to continue
             # processing... I'm ambivalent about this.
 
@@ -1666,12 +1692,13 @@ per-object basis by passing an arrayref with the relevant parameter:
  print $new_obj->{foo}; # Prints 'bar'
 
 You can also tell SPOPS not to insert or update fields when they are
-undefined using the 'skip_undef' configuration key. This is very
-useful on inserts when you have defaults defined in your database --
-since no value is inserted for the field, the database will fill in
-the default and SPOPS will re-sync after the insert so that your
-object is in the proper state. (Note that the value must be C<undef>,
-not merely false.)
+undefined using the 'skip_undef' configuration key. (Configuration is
+an arrayref which we transform for internal purposes to a hashref at
+class initialization.) This is very useful on inserts when you have
+defaults defined in your database -- since no value is inserted for
+the field, the database will fill in the default and SPOPS will
+re-sync after the insert so that your object is in the proper
+state. (Note that the value must be C<undef>, not merely false.)
 
 There are two phases where you can step in and generate or retrieve a
 generated value: C<pre_fetch_id()> and C<post_fetch_id()>. The first

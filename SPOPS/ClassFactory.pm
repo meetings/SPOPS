@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory;
 
-# $Id: ClassFactory.pm,v 3.1 2003/01/02 06:00:25 lachoy Exp $
+# $Id: ClassFactory.pm,v 3.3 2003/05/10 19:26:52 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -10,7 +10,7 @@ use Data::Dumper  qw( Dumper );
 use SPOPS         qw( _w DEBUG );
 use SPOPS::Exception;
 
-$SPOPS::ClassFactory::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::ClassFactory::EXPORT_OK = qw( OK DONE NOTIFY ERROR RESTART
                                       FACTORY_METHOD RULESET_METHOD );
 
@@ -259,11 +259,13 @@ sub find_behavior {
             next unless ( $typeof eq 'CODE' or $typeof eq' ARRAY' );
             DEBUG() && _w( 2, "Adding slot behaviors for ($slot_name)" );
             if ( $typeof eq 'CODE' ) {
-                push @{ $this_config->{ $PK }{behavior_table}{ $slot_name } }, $behaviors->{ $slot_name };
+                push @{ $this_config->{ $PK }{behavior_table}{ $slot_name } },
+                            $behaviors->{ $slot_name };
             }
             elsif ( $typeof eq 'ARRAY' ) {
                 next unless ( scalar @{ $behaviors->{ $slot_name } } );
-                push @{ $this_config->{ $PK }{behavior_table}{ $slot_name } }, @{ $behaviors->{ $slot_name } };
+                push @{ $this_config->{ $PK }{behavior_table}{ $slot_name } },
+                            @{ $behaviors->{ $slot_name } };
             }
             $behavior_map{ $behavior_gen_class }->{ $slot_name }++;
         }
@@ -277,6 +279,10 @@ sub find_behavior {
 
 sub find_parent_methods {
     my ( $class, $this_class, $added_classes, @method_list ) = @_;
+    return [] unless ( $this_class );
+    unless ( ref $added_classes eq 'ARRAY' ) {
+        $added_classes = [];
+    }
     my @all_classes = ( @{ $added_classes },
                         Class::ISA::self_and_super_path( $this_class ) );
     my @subs = ();
@@ -288,7 +294,7 @@ METHOD:
             if ( defined( $src->{ $method } ) and
                  defined( my $sub = *{ $src->{ $method } }{CODE} ) ) {
                 push @subs, [ $check_class, $sub ];
-                DEBUG() && _w( 2, "($this_class): Found ($method) in class ($check_class)\n" );
+                DEBUG() && _w( 2, "($this_class): Found ($method) in class ($check_class)" );
                 last METHOD;
             }
         }

@@ -1,24 +1,39 @@
 package SPOPS::Import::DBI::TableTransform;
 
-# $Id: TableTransform.pm,v 3.4 2003/01/07 03:23:54 lachoy Exp $
+# $Id: TableTransform.pm,v 3.6 2003/04/21 14:39:35 lachoy Exp $
 
 use strict;
 use base qw( Class::Factory );
 use SPOPS::Exception;
 
-$SPOPS::Import::DBI::TableTransform::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::VERSION  = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
+
+sub transform {
+    my ( $self, $sql ) = @_;
+    $self->increment( $sql );
+    $self->increment_type( $sql );
+    $self->datetime( $sql );
+}
 
 my %TYPES = (
  mysql     => 'SPOPS::Import::DBI::TableTransform::MySQL',
+ MySQL     => 'SPOPS::Import::DBI::TableTransform::MySQL',
  oracle    => 'SPOPS::Import::DBI::TableTransform::Oracle',
+ Oracle    => 'SPOPS::Import::DBI::TableTransform::Oracle',
  pg        => 'SPOPS::Import::DBI::TableTransform::Pg' ,
+ Pg        => 'SPOPS::Import::DBI::TableTransform::Pg' ,
  postgres  => 'SPOPS::Import::DBI::TableTransform::Pg',
  asany     => 'SPOPS::Import::DBI::TableTransform::Sybase',
+ ASAny     => 'SPOPS::Import::DBI::TableTransform::Sybase',
+ MSSQL     => 'SPOPS::Import::DBI::TableTransform::Sybase',
  mssql     => 'SPOPS::Import::DBI::TableTransform::Sybase',
  sybase    => 'SPOPS::Import::DBI::TableTransform::Sybase',
+ Sybase    => 'SPOPS::Import::DBI::TableTransform::Sybase',
  sqlite    => 'SPOPS::Import::DBI::TableTransform::SQLite',
+ SQLite    => 'SPOPS::Import::DBI::TableTransform::SQLite',
  interbase => 'SPOPS::Import::DBI::TableTransform::InterBase',
- firebird  => 'SPOPS::Import::DBI::TableTransform::InterBase',
+ InterBase => 'SPOPS::Import::DBI::TableTransform::InterBase',
+ Firebird  => 'SPOPS::Import::DBI::TableTransform::InterBase',
 );
 
 sub class_initialize {

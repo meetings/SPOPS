@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.9 2003/02/21 05:44:30 lachoy Exp $
+# $Id: SPOPS.pm,v 3.12 2003/05/10 19:28:46 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -11,8 +11,8 @@ use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.75';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.9 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.76';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.12 $ =~ /(\d+)\.(\d+)/);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -39,6 +39,8 @@ require SPOPS::Utility;
 
 sub behavior_factory {
     my ( $class ) = @_;
+
+    # use 'require' so we don't get in a import loop with DEBUG/_w
     require SPOPS::ClassFactory::DefaultBehavior;
     DEBUG() && _w( 1, "Installing SPOPS default behaviors for ($class)" );
     return { manipulate_configuration =>
@@ -437,25 +439,35 @@ sub clear_save   { $_[0]->{ IDX_SAVE() } = 0 }
 
 sub object_description {
     my ( $self ) = @_;
-    my $title_info = $self->CONFIG->{name};
+    my $object_type = $self->CONFIG->{object_name};
+    my $title_info  = $self->CONFIG->{name};
     my $title = '';
     if ( ref $title_info eq 'CODE' ) {
-        $title = $title_info->( $self );
+        warn "NOTE: Setting a coderef for the 'name' configuration ",
+             "key in [$object_type] is deprecated. It will be phased ",
+             "out.\n";
+        $title = eval { $title_info->( $self ) };
     }
-    elsif ( ! ref $title_info ) {
+    elsif ( exists $self->{ $title_info } ) {
         $title = $self->{ $title_info };
     }
+    else {
+        $title = eval { $self->$title_info() };
+    }
     $title ||= 'Cannot find name';
-    my $link_info = $self->CONFIG->{display};
     my $oid       = $self->id;
     my $id_field  = $self->id_field;
-    my $url       = "$link_info->{url}?" . $id_field . '=' . $oid;
-    my $url_edit  = "$link_info->{url}?edit=1;" . $id_field . '=' . $oid;
+    my $link_info = $self->CONFIG->{display};
+    my ( $url, $url_edit );
+    if ( $link_info->{url} ) {
+        $url       = "$link_info->{url}?" . $id_field . '=' . $oid;
+        $url_edit  = "$link_info->{url}?edit=1;" . $id_field . '=' . $oid;
+    }
     return { class     => ref $self,
              object_id => $oid,
              oid       => $oid,
              id_field  => $id_field,
-             name      => $self->CONFIG->{object_name},
+             name      => $object_type,
              title     => $title,
              security  => $self->{tmp_security_level},
              url       => $url,

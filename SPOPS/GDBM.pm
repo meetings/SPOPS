@@ -1,6 +1,6 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 3.1 2003/01/02 06:00:25 lachoy Exp $
+# $Id: GDBM.pm,v 3.2 2003/05/10 19:27:32 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS );
@@ -9,19 +9,14 @@ use GDBM_File;
 use SPOPS            qw( _w DEBUG );
 use SPOPS::Exception qw( spops_error );
 
-$SPOPS::GDBM::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::GDBM::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 # Make this the default for everyone -- they can override it
 # themselves...
 
 sub class_initialize {
     my ( $class, $CONFIG ) = @_;
-    my $C = $class->CONFIG;
-    if ( ref $C->{field} eq 'HASH' and ! $C->{field_list} ) {
-        $C->{field_list}  = [ sort{ $C->{field}{$a} <=> $C->{field}{$b} }
-                              keys %{ $C->{field} } ];
-    }
-    $class->_class_initialize( $CONFIG ); # allow subclasses to do their own thing
+    $class->_class_initialize( $class->CONFIG ); # allow subclasses to do their own thing
 
     # Turn off warnings in this block so we don't get the 'subroutine
     # id redefined' message (yes, we know what we're doing)

@@ -1,6 +1,6 @@
 package SPOPS::Import::DBI::Table;
 
-# $Id: Table.pm,v 3.3 2003/01/07 03:23:54 lachoy Exp $
+# $Id: Table.pm,v 3.5 2003/04/21 14:39:34 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
@@ -8,9 +8,9 @@ use Data::Dumper qw( Dumper );
 use SPOPS::Exception;
 use SPOPS::Import::DBI::TableTransform;
 
-$SPOPS::Import::DBI::Table::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::Table::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
-my @FIELDS = qw( database_type transforms print_only );
+my @FIELDS = qw( database_type transforms print_only return_only );
 SPOPS::Import::DBI::Table->mk_accessors( @FIELDS );
 
 ########################################
@@ -42,6 +42,10 @@ sub run {
     if ( $self->print_only ) {
         print $table_sql;
         return;
+    }
+
+    if ( $self->return_only ) {
+        return $table_sql;
     }
 
     my $object_class = $self->object_class;
@@ -79,12 +83,11 @@ sub transform_table {
 
     # Create a new transformer
 
-    my $transform = SPOPS::Import::DBI::TableTransform->new( $self->database_type );
+    my $transformer = SPOPS::Import::DBI::TableTransform->new( $self->database_type );
 
-    # These are the built-ins
+    # These are the built-ins (facade to all of them)
 
-    $transform->increment( \$table_sql, $self );
-    $transform->increment_type( \$table_sql, $self );
+    $transformer->transform( \$table_sql );
 
     # Run the custom transformations
 
@@ -93,7 +96,7 @@ sub transform_table {
                             ? $transforms : [ $transforms ];
     foreach my $transform_sub ( @{ $transforms_list } ) {
         next unless ( ref $transform_sub eq 'CODE' );
-        $transform_sub->( $transform, \$table_sql, $self );
+        $transform_sub->( $transformer, \$table_sql, $self );
     }
     return $table_sql;
 }
@@ -208,6 +211,11 @@ B<print_only> (boolean)
 
 If set to true, the final table will be printed to STDOUT rather than
 sent to a database.
+
+B<return_only> (boolean)
+
+If set to true, the final table will be returned from C<run()> rather
+than sent to a database.
 
 =head1 CUSTOM TRANSFORMATIONS
 

@@ -1,12 +1,12 @@
 package SPOPS::Import;
 
-# $Id: Import.pm,v 3.3 2003/01/02 06:00:25 lachoy Exp $
+# $Id: Import.pm,v 3.5 2003/04/19 13:31:16 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Class::Factory );
 use SPOPS::Exception qw( spops_error );
 
-$SPOPS::Import::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 use constant AKEY => '_attrib';
 
@@ -177,18 +177,21 @@ Subclasses should override the following methods.
 
 B<run()>
 
-Runs the import and returns an arrayref of status entries, one for
-each record it tried to import.
+Runs the import and, unless otherwise specified, returns an arrayref
+of status entries, one for each record it tried to import.
 
 Each status entry is an arrayref formatted:
 
  [ status (boolean), record, message ]
 
 If the import for this record was successful, the first (0) entry will
-be true and the third (2) entry will be undefined.
+be true, the second (1) will be the object inserted (if possible,
+otherwise it's the data structure as if the record failed), and the
+third (2) entry will be undefined.
 
 If the import for this record failed, the first (0) entry will be
-undefined and the third (2) entry will contain an error message.
+undefined, the second (1) will be the data structure we tried to insert,
+and the third (2) entry will contain an error message.
 
 Whether the import succeeds or fails, the second entry will contain
 the record we tried to import. The record is an arrayref, and if you
@@ -196,6 +199,15 @@ want to map the values to fields just ask the importer object for its
 fields:
 
  my $field_name = $importer->fields->[1];
+ 
+ # On a success (if possible):
+ 
+ foreach my $item ( @{ $status } ) {
+     print "Value of $field_name: ", $item->[1]->$field_name(), "\n";
+ }
+ 
+ # On a failure (or success, if not possible):
+ 
  foreach my $item ( @{ $status } ) {
     print "Value of $field_name: $item->[1][1]\n";
  }
@@ -206,11 +218,12 @@ None known.
 
 =head1 TO DO
 
-Nothing known.
+B<Import XML>
+
+We currently export XML documents but we don't import them. It would
+be useful to do this.
 
 =head1 SEE ALSO
-
-L<SPOPS::Import|SPOPS::Import>
 
 L<SPOPS::Manual::ImportExport|SPOPS::Manual::ImportExport>
 

@@ -1,5 +1,90 @@
 Revision history for Perl extension SPOPS.
 
+0.76  Sat May 10 15:29:09 EDT 2003
+
+Overall:
+
+   * A number of small bugfixes and enhancements.
+
+Individual:
+
+   * doc/Manual/Configuration.pod:
+
+     - Add note about 'name' being a property OR method, and about the
+     coderef option being phased out.
+
+   * SPOPS.pm:
+
+     - In object_description(), only pull information from
+     CONFIG->{display} if it's actually a hashref.
+
+     - In object_description(), the scalar in 'name' can be used to
+     specify a method on the object as well as a property of the
+     object; DEPRECATION NOTICE: the coderef option for 'name' will be
+     phased out eventually.
+
+   * SPOPS/ClassFactory/DBI.pm:
+
+     - The created foo_add() and foo_remove() methods when doing a
+     'links_to' relationship were supposed to take an object, or
+     arrayref of objects, to add/remove. They didn't. Now they 
+     do. Thanks to Nick Sutterer <nick@tesbo.com> for the report.
+
+   * SPOPS/ClassFactory/DefaultBehavior.pm:
+
+     - Entries that should be parsed into a hash can now take scalars
+     instead of just arrayrefs.
+
+     - Ensure that certain configuration entries that require an
+     arrayref can take a scalar
+
+   * SPOPS/DBI.pm:
+
+     - After an INSERT, don't refetch the ID value. (How did this work
+     before?)
+
+     - In fetch_group(), honor the 'skip_security' setting; thanks to
+     Peter Dragon <peterdragon@users.sourceforge.net> for the tip.
+
+   * SPOPS/Import.pm:
+
+     - Documentation updates
+
+   * SPOPS/Import/Object.pm:
+
+     - Return the object inserted instead of the data structure on
+     success.
+
+     - assign_raw_data() should make a copy of the data passed in
+     before ripping it up.
+
+   * SPOPS/Import/DBI/Table.pm:
+
+     - Add 'return_only' as property, and if set don't execute the
+     transformed table SQL against a database.
+
+   * SPOPS/Import/DBI/TableTransform.pm:
+
+     - Create facade 'transform()' method that includes all
+     transformation methods.
+
+     - Add factory type aliases to deal with capitalization issues.
+
+   * SPOPS/Secure.pm:
+
+     - Add empty implementations for global_user_current() and
+     global_group_current()
+
+   * SPOPS/Secure/DBI.pm:
+
+     - Don't die if an ID to check is defined.
+
+   * SPOPS/Tool/DBI/DiscoverField.pm:
+
+     - Set 'field' config property to an empty arrayref even if we
+     can't fetch the fields.
+
+
 0.75  Fri Feb 21 08:41:00 EST 2003
 
 Individual:

@@ -1,13 +1,13 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 3.6 2003/01/02 06:00:24 lachoy Exp $
+# $Id: Secure.pm,v 3.7 2003/05/10 19:25:29 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
 use vars  qw( $EMPTY );
 use Data::Dumper qw( Dumper );
 
-$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.7 $ =~ /(\d+)\.(\d+)/);
 
 # Stuff for security constants and exporting
 
@@ -688,6 +688,15 @@ sub remove_item_security {
     return $obj->remove;
 }
 
+
+########################################
+# SCOPE RETRIEVAL METHODS
+########################################
+
+# If no users/groups are available, these ensure we just check WORLD
+
+sub global_user_current  { return undef }
+sub global_group_current { return [] }
 
 
 ########################################
