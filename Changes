@@ -1,5 +1,26 @@
 Revision history for Perl extension SPOPS.
 
+0.64  Sun Aug 11 23:08:05 EDT 2002
+
+Individual:
+
+   * README
+
+     - Modified standalone script (we moved the tools to SPOPS::Tool)
+     and added Interbase/Firebird to the list of supported databases.
+
+   * SPOPS/DBI.pm:
+
+     - Update fetch() to check to see if the ID passed in is defined
+     *and* non-empty. Thanks to Hal Finkel for pointing this out. (SF
+     Bug #572661)
+
+   * t/30_dbi.t:
+
+     - Add tests to ensure that trying to fetch an object with a blank
+     ID and with an undef ID returns undef.
+
+
 0.63  Sat Aug 10 09:30:43 EDT 2002
 
 Overall:

@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.64  Sun Aug 11 23:08:05 EDT 2002
+
+  * Small fix to SPOPS::DBI to ignore empty $id on fetch()
+
+
 0.63 Sat Aug 10 09:30:43 EDT 2002
 
   * Small fix to LDAP test so it only runs when it's supposed to run
@@ -137,4 +142,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 2.5 2002/08/10 13:27:56 lachoy Exp $
+$Id: RELEASE,v 2.6 2002/08/12 03:28:12 lachoy Exp $

@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 2.5 2002/08/10 13:27:56 lachoy Exp $
+# $Id: SPOPS.pm,v 2.6 2002/08/12 03:28:11 lachoy Exp $
 
 use strict;
 use base  qw( Exporter Storable );
@@ -14,8 +14,8 @@ use Storable        qw( store retrieve nstore );
 
 $SPOPS::AUTOLOAD  = '';
 @SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
-$SPOPS::VERSION   = '0.63';
-$SPOPS::Revision  = substr(q$Revision: 2.5 $, 10);
+$SPOPS::VERSION   = '0.64';
+$SPOPS::Revision  = substr(q$Revision: 2.6 $, 10);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant

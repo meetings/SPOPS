@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 2.11 2002/08/10 03:13:12 lachoy Exp $
+# $Id: DBI.pm,v 2.12 2002/08/12 03:28:11 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -14,7 +14,7 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = substr(q$Revision: 2.11 $, 10);
+$SPOPS::DBI::VERSION = substr(q$Revision: 2.12 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -253,7 +253,7 @@ sub fetch {
 
     # No ID, no object
 
-    return undef  unless ( defined( $id ) and $id !~ /^tmp/ );
+    return undef  unless ( defined( $id ) and length( $id ) > 0 and $id !~ /^tmp/ );
 
     # Security violations bubble up to caller
 

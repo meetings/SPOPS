@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 2.7 2002/08/10 03:11:12 lachoy Exp $
+# $Id: 30_dbi.t,v 2.8 2002/08/12 03:52:42 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -9,7 +9,7 @@
 use strict;
 use Data::Dumper qw( Dumper );
 
-use constant NUM_TESTS       => 49;
+use constant NUM_TESTS       => 53;
 use constant TEST_TABLE_NAME => 'spops_test';
 
 my $SPOPS_CLASS = 'DBITest';
@@ -123,6 +123,18 @@ END {
         if ( $@ ) {
             warn "Error saving object: $@\n", Dumper( SPOPS::Error->get ), "\n";
         }
+    }
+
+    # Try to fetch an object with an empty ID
+
+    {
+        my $obj = eval { $SPOPS_CLASS->fetch( '', { db => $db, skip_cache => 1 }) };
+        ok( ! $@, 'Fetch object (empty ID)' );
+        is( $obj, undef, 'Fetched object with empty ID is undef' );
+
+        my $obj_u = eval { $SPOPS_CLASS->fetch( undef, { db => $db, skip_cache => 1 }) };
+        ok( ! $@, 'Fetch object (undef ID)' );
+        is( $obj, undef, 'Fetched object with undef ID is undef' );
     }
 
     # Fetch an object, then update it
