@@ -408,9 +408,9 @@ defined by the IDs in C<$id> or C<\@id_list>.
 
 =item *
 
-C<{$alias}_remove( $id | $object | \@id_list | \@object_list ) - Removes
-links to the related objects in C<$object> or C<\@object_list> or
-defined by the IDs in C<$id> or C<\@id_list>.
+C<{$alias}_remove( $id | $object | \@id_list | \@object_list )> -
+Removes links to the related objects in C<$object> or C<\@object_list>
+or defined by the IDs in C<$id> or C<\@id_list>.
 
 =back
 

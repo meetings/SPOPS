@@ -1,10 +1,11 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 2.1 2002/08/21 12:31:06 lachoy Exp $
+# $Id: Utility.pm,v 2.2 2002/08/26 12:33:01 lachoy Exp $
 
 use strict;
+use SPOPS qw( DEBUG _w );
 
-$SPOPS::Utility::VERSION  = substr(q$Revision: 2.1 $, 10);
+$SPOPS::Utility::VERSION  = substr(q$Revision: 2.2 $, 10);
 
 
 # initialize limit tracking vars -- the limit passed in can be:

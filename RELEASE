@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.66  Mon Aug 26 08:24:45 EDT 2002
+
+  * Quick bugfix release
+
+
 0.65  Wed Aug 21 17:12:34 EDT 2002
 
   * Modify build process to run without intervention
@@ -151,4 +156,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 2.7 2002/08/21 21:00:41 lachoy Exp $
+$Id: RELEASE,v 2.8 2002/08/26 12:33:01 lachoy Exp $

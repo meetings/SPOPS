@@ -1,5 +1,28 @@
 Revision history for Perl extension SPOPS.
 
+0.66  Mon Aug 26 08:24:45 EDT 2002
+
+Overall:
+
+   * Quick bugfix release
+
+Individual:
+
+   * SPOPS.pm:
+
+     - Move 'use SPOPS::Utility' to 'require SPOPS::Utility', after
+     the exporting stuff defined
+
+   * SPOPS/Utility.pm:
+
+     - Import the DEBUG and _w constants
+
+   * doc/Manual/Relationships.pod:
+
+     - Fixed POD error, thanks to Mike Castle <dalgoda@ix.netcom.com>
+     for the report.
+
+
 0.65  Wed Aug 21 17:12:34 EDT 2002
 
 Overall:

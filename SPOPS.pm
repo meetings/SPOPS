@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 2.11 2002/08/21 21:00:15 lachoy Exp $
+# $Id: SPOPS.pm,v 2.12 2002/08/26 12:33:01 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -9,11 +9,10 @@ use Data::Dumper    qw( Dumper );
 use SPOPS::Exception;
 use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
-use SPOPS::Utility  qw();
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.65';
-$SPOPS::Revision  = substr(q$Revision: 2.11 $, 10);
+$SPOPS::VERSION   = '0.66';
+$SPOPS::Revision  = substr(q$Revision: 2.12 $, 10);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -24,6 +23,7 @@ sub set_global_debug { $DEBUG = $_[1] }
 
 @SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
 
+require SPOPS::Utility;
 
 ########################################
 # CLASS CONFIGURATION

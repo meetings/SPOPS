@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 2.4 2002/08/21 21:00:13 lachoy Exp $
+# $Id: Makefile.PL,v 2.5 2002/08/26 12:34:07 lachoy Exp $
 
 # See 'README' for the environment variables we use in builds without
 # intervention.
@@ -43,7 +43,7 @@ my %MY_ARGS = map { $_ => 1 } qw( MANUAL );
     @ARGV = @mm_args;
 
     print '=' x 40, "\n",
-          qq(NOTE: Build process changed from 0.64 to 0.65. Default\n),
+          qq(NOTE: Build process changed as of version 0.65. Default\n),
           qq(build is now automated. See README for details.\n),
           '=' x 40, "\n\n";
 
