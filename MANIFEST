@@ -4,7 +4,6 @@ COPYING
 MANIFEST
 VERSION
 README
-check_config.pl
 SPOPS.pm
 SPOPS/Error.pm
 SPOPS/Tie.pm

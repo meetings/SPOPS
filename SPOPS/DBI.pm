@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/DBI.pm,v 1.52 2000/10/09 15:03:04 cwinters Exp $
+# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/DBI.pm,v 1.57 2000/10/27 04:05:45 cwinters Exp $
 
 use strict;
 use SPOPS;
@@ -11,7 +11,7 @@ use DBI           ();
 use Data::Dumper  qw( Dumper );
 
 @SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
-@SPOPS::DBI::VERSION   = sprintf("%d.%02d", q$Revision: 1.52 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::DBI::VERSION   = sprintf("%d.%02d", q$Revision: 1.57 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -23,10 +23,6 @@ use constant DEBUG_SAVE   => 0;
 
 # Called by save() and remove(); currently unimplemented
 sub log_action    { return 1; }
-
-# Called by save()
-sub pre_fetch_id  { return undef; }
-sub post_fetch_id { return undef; }
 
 # Point by default to configuration values; children
 # can override with hardcoded values if desired
@@ -65,7 +61,7 @@ sub class_initialize {
  #
  # Types can be: int, num, float, char, date
  #
- # Currently known offenders: DBD::ASAny
+ # Currently known offenders: none! (DBD::ASAny was fixed!)
  if ( ref $C->{dbi_type_info} eq 'HASH' ) {
    $class->assign_dbi_type_info( $C->{dbi_type_info} );
  }
@@ -219,15 +215,15 @@ sub set_cached_object {
  return  $self->global_cache->set( { data => $self } );
 }
 
-# Return 1 if we're using the cache; 0 if not
+# Return 1 if we're using the cache; undef if not
 sub use_cache {
  my $class = shift;
  my $p     = shift;
- return 0 if ( $p->{skip_cache} );
- return 0 if ( $class->no_cache );
+ return undef if ( $p->{skip_cache} );
+ return undef if ( $class->no_cache );
  my $C = $class->global_config;
- return 0 unless ( ref $C eq 'HASH' );
- return 0 unless ( $C->{cache}->{data}->{SPOPS} );
+ return undef unless ( ref $C eq 'HASH' );
+ return undef unless ( $C->{cache}->{data}->{SPOPS} );
  return 1;
 }
 
@@ -254,7 +250,7 @@ sub fetch {
 
  # Do any actions the class wants before fetching -- note that if any
  # of the actions returns undef (false), we bail.
- return undef unless ( $class->pre_fetch_action( { id => $id } ) );
+ return undef unless ( $class->pre_fetch_action( { %{ $p }, id => $id } ) );
 
  my $obj = undef;
 
@@ -322,7 +318,7 @@ sub fetch {
 
  # Execute any actions the class (or any parent) wants after 
  # creating the object (see SPOPS.pm)
- return undef unless ( $obj->post_fetch_action );
+ return undef unless ( $obj->post_fetch_action( $p ) );
 
  # Clear the 'changed' flag
  $obj->clear_change;
@@ -415,7 +411,7 @@ sub save {
  warn " (DBI/save): Security check passed ok. Continuing.\n"               if ( $DEBUG );
 
  # Callback for objects to do something before they're saved
- return undef unless ( $self->pre_save_action( { is_add => $is_add } ) );
+ return undef unless ( $self->pre_save_action( { %{ $p }, is_add => $is_add } ) );
 
  # Do not include these fields in the insert/update at all
  my $not_included = ( $is_add ) ? $self->no_insert : $self->no_update;
@@ -439,7 +435,7 @@ FIELD:
  else           { $self->_save_update( $p )  }
 
  # Do any actions that need to happen after you save the object
- return undef unless ( $self->post_save_action( { is_add => $is_add } ) );
+ return undef unless ( $self->post_save_action( { %{ $p }, is_add => $is_add } ) );
 
  # Save the newly-created/updated object to the cache
  $self->set_cached_object( $p );
@@ -455,6 +451,10 @@ FIELD:
  # Return this object's ID
  return $self->id;
 }
+
+# Called by _save_insert()
+sub pre_fetch_id  { return undef; }
+sub post_fetch_id { return undef; }
 
 sub _save_insert {
  my $self = shift;
@@ -586,7 +586,7 @@ sub remove {
  warn " (DBI/remove): Security check passed ok. Continuing.\n"             if ( $DEBUG );
 
  # Allow members to perform an action before getting removed
- return undef unless ( $self->pre_remove_action );
+ return undef unless ( $self->pre_remove_action( $p ) );
 
  # Do the removal, building the where clause if necessary
  my $where = ( $p->{where} ) ? $p->{where} : $self->id_clause( undef, undef, $p );
@@ -608,7 +608,7 @@ sub remove {
  $self->global_cache->clear( { data => $self } ) if ( $self->use_cache( $p ) );
 
  # ... execute any actions after a successful removal
- return undef unless ( $self->post_remove_action );
+ return undef unless ( $self->post_remove_action( $p ) );
  
  # ... and log the deletion
  $self->log_action( 'delete', $id );
@@ -616,6 +616,8 @@ sub remove {
 }
 
 1;
+
+__END__
 
 =pod
 
@@ -637,23 +639,31 @@ module should implement:
 
 =over 4
 
-=item * (optional) Methods to sort member objects or perform
-operations on groups of them at once.
+=item * 
 
-=item * (optional) Methods to relate an object of this class to
-objects of other classes -- for instance, to find all users within a
-group.
+(optional) Methods to sort member objects or perform operations on
+groups of them at once.
 
-=item * (optional) The initialization method (I<_class_initialize()>),
-which should create a I<config()> object stored in the package
-variable and initialize it with configuration information relevant to
-the class.
+=item * 
 
-=item * (optional) Methods to accomplish actions before/after many of
-the actions implemented here: fetch/save/remove.
+(optional) Methods to relate an object of this class to objects of
+other classes -- for instance, to find all users within a group.
 
-=item * (optional) Methods to accomplish actions before/after saving
-or removing an object from the cache.
+=item * 
+
+(optional) The initialization method (I<_class_initialize()>), which
+should create a I<config()> object stored in the package variable and
+initialize it with configuration information relevant to the class.
+
+=item * 
+
+(optional) Methods to accomplish actions before/after many of the
+actions implemented here: fetch/save/remove.
+
+=item * 
+
+(optional) Methods to accomplish actions before/after saving or
+removing an object from the cache.
 
 =back
 
@@ -667,9 +677,13 @@ object in two steps:
 
 =over 4
 
-=item 1. Create the configuration file (or add to the existing one)
+=item 1.
 
-=item 2. Create the database table the class depends on.
+Create the configuration file (or add to the existing one)
+
+=item 2.
+
+Create the database table the class depends on.
 
 =back
 
@@ -682,27 +696,41 @@ the class but are specific to the DBI subclass.
 
 =over 4
 
-=item * base_table ($): Just the table name, no owners or db names
-prepended.
+=item *
 
-=item * table_name ($): Fully-qualified table name
+base_table ($): Just the table name, no owners or db names prepended.
 
-=item * field (\%): Hashref of fields/properties (field is key, value
+=item *
+
+table_name ($): Fully-qualified table name
+
+=item *
+
+field (\%): Hashref of fields/properties (field is key, value is true)
+
+=item *
+
+field_list (\@): Arrayref of fields/propreties
+
+=item *
+
+no_insert (\%): Hashref of fields not to insert (field is key, value
 is true)
 
-=item * field_list (\@): Arrayref of fields/propreties
+=item *
 
-=item * no_insert (\%): Hashref of fields not to insert (field is key,
-value is true)
+no_update (\%): Hashref of fields not to update (field is key, value
+is true)
 
-=item * no_update (\%): Hashref of fields not to update (field is key,
-value is true)
+=item *
 
-=item * skip_undef (\%): Hashref of fields to skip update/insert if
-they are undefined (field is key, value is true)
+skip_undef (\%): Hashref of fields to skip update/insert if they are
+undefined (field is key, value is true)
 
-=item * field_alter (\%): Hashref of data-formatting instructions
-(field is key, instruction is value)
+=item *
+
+field_alter (\%): Hashref of data-formatting instructions (field is
+key, instruction is value)
 
 =back
 
@@ -906,6 +934,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
- Chris Winters (cwinters@intes.net)
+Chris Winters  <cwinters@intes.net>
+
 
 =cut

@@ -128,7 +128,7 @@ CONFIG
 # the contents of the Makefile that is written.
 WriteMakefile(
     'NAME'	=> 'SPOPS',
-    'VERSION_FROM' => 'VERSION', # finds $VERSION from file 'VERSION', included with dist
+    'VERSION_FROM' => 'VERSION',
     'AUTHOR' => 'Chris Winters (cwinters@intes.net)',
     'ABSTRACT' => 'Data abstraction layer used for object persistence and security',
     'PREREQ_PM' => { 'Date::Format' => 0,

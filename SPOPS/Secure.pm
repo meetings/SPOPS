@@ -1,6 +1,6 @@
 package SPOPS::Secure;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Secure.pm,v 1.25 2000/10/09 15:18:09 cwinters Exp $
+# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Secure.pm,v 1.29 2000/11/03 17:17:20 cwinters Exp $
 
 use strict;
 use Carp         qw( carp );
@@ -8,7 +8,7 @@ use Data::Dumper qw( Dumper );
 require Exporter;
 
 @SPOPS::Secure::ISA     = qw( Exporter );
-$SPOPS::Secure::VERSION = sprintf("%d.%02d", q$Revision: 1.25 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::VERSION = sprintf("%d.%02d", q$Revision: 1.29 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -329,7 +329,7 @@ sub set_item_security {
                                                          scope_id => $p->{scope_id} } ); };
  if ( $@ ) { 
    warn " (Secure/set_item_security): Error found trying to match parameters",
-        " to an existing object\nError: $SPOPS::Error::system_msg\n";
+        " to an existing object\nError: ($@) $SPOPS::Error::system_msg\n";
  }
 
  unless ( $obj ) {
@@ -569,6 +569,8 @@ MSG
 }
 
 1;
+
+__END__
 
 =pod
 
@@ -1089,6 +1091,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
- Chris Winters (cwinters@intes.net)
+Chris Winters  <cwinters@intes.net>
+
 
 =cut

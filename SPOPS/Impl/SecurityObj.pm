@@ -1,12 +1,12 @@
 package SPOPS::Impl::SecurityObj;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Impl/SecurityObj.pm,v 1.19 2000/10/09 15:18:10 cwinters Exp $
+# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Impl/SecurityObj.pm,v 1.21 2000/10/19 02:16:54 cwinters Exp $
 
 use strict;
 use SPOPS::Secure qw( :all );
 use Data::Dumper  qw( Dumper );
 
-$SPOPS::Impl::SecurityObj::VERSION = sprintf("%d.%02d", q$Revision: 1.19 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Impl::SecurityObj::VERSION = sprintf("%d.%02d", q$Revision: 1.21 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -290,6 +290,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
- Chris Winters (cwinters@intes.net)
+Chris Winters  <cwinters@intes.net>
+
 
 =cut

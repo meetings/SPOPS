@@ -1,11 +1,11 @@
 package SPOPS::DBI::Keypool;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/DBI/Keypool.pm,v 1.10 2000/10/09 15:07:50 cwinters Exp $
+# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/DBI/Keypool.pm,v 1.13 2000/10/27 04:05:45 cwinters Exp $
 
 use strict;
 
 @SPOPS::DBI::Keypool::ISA     = ();
-$SPOPS::DBI::Keypool::VERSION = sprintf("%d.%02d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Keypool::VERSION = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -48,6 +48,8 @@ sub pre_fetch_id  {
 }
 
 1;
+
+__END__
 
 =pod
 
@@ -100,6 +102,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
- Chris Winters (cwinters@intes.net)
+Chris Winters  <cwinters@intes.net>
+
 
 =cut

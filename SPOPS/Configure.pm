@@ -1,6 +1,6 @@
 package SPOPS::Configure;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Configure.pm,v 1.28 2000/10/16 16:33:06 cwinters Exp $
+# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Configure.pm,v 1.33 2000/11/02 23:49:29 cwinters Exp $
 
 use strict;
 use SPOPS::Error;
@@ -8,7 +8,7 @@ use SPOPS::Configure::Ruleset;
 use Data::Dumper  qw( Dumper );
 
 @SPOPS::Configure::ISA       = ();
-$SPOPS::Configure::VERSION   = sprintf("%d.%02d", q$Revision: 1.28 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Configure::VERSION   = sprintf("%d.%02d", q$Revision: 1.33 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -246,54 +246,80 @@ sub create_relationship {
 # with the new one ('MyApp::User'). We don't change the file, just the
 # text that's read into memory. Once that's done, we eval it and it
 # becomes part of the library!
+#
+#
+# Note that 'code_class' can also be an arrayref of classes, each of
+# which has its subroutines read into the main class
+#
+# Returns: arrayref of files used
+
 sub _read_code_class {
  my $class      = shift;
  my $this_class = shift;
  my $code_class = shift;
- warn " (Configure/read_code_class): Trying to read code from $code_class to $this_class\n" if ( DEBUG );
- my $filename = $code_class;
- $filename =~ s|::|/|g;
- my $final_filename = undef;
- foreach my $prefix ( @INC ) {
-   my $full_filename = "$prefix/$filename.pm";
-   warn " (Configure/read_code_class): Try file: $full_filename\n"         if ( DEBUG > 1 );
-   if (-f $full_filename ) {
-     $final_filename = $full_filename;
-     last;
-   }
+ my @files_used = ();
+ unless ( ref $code_class eq 'ARRAY' ) {
+   $code_class = [ $code_class ];
  }
- if ( $final_filename ) {
-   open( PKG, $final_filename ) || die;
-   my $code_pkg = undef;
-   while ( <PKG> ) {
-     if ( s/^\s*package $code_class\s*;\s*$/package $this_class;/ ) {
-       $code_pkg .= $_;
-       warn " (Configure/read_code_class): Package $code_class will be read in as $this_class\n" if ( DEBUG );
-       last;
+ foreach my $read_code_class ( @{ $code_class } ) {
+   warn " (Configure/read_code_class): Trying to read code from ",
+        "$read_code_class to $this_class\n"                                if ( DEBUG );
+   my $filename = $read_code_class;
+   $filename =~ s|::|/|g;
+   my $final_filename = undef;
+PREFIX:
+   foreach my $prefix ( @INC ) {
+     my $full_filename = "$prefix/$filename.pm";
+     warn " (Configure/read_code_class): Try file: $full_filename\n"       if ( DEBUG > 1 );
+     if (-f $full_filename ) {
+       $final_filename = $full_filename;
+       last PREFIX;
      }
-     $code_pkg .= $_;
    }
+
+   warn " (Configre/read_code_class): File ($final_filename) will be ",
+        "used for $read_code_class\n"                                      if ( DEBUG );
+   if ( $final_filename ) {
+     open( PKG, $final_filename ) || die $!;
+     my $code_pkg = undef;
+     push @files_used, $final_filename;
+
+CODEPKG:
+     while ( <PKG> ) {
+       if ( s/^\s*package $read_code_class\s*;\s*$/package $this_class;/ ) {
+         $code_pkg .= $_;
+         warn " (Configure/read_code_class): Package $read_code_class will be read in as $this_class\n" if ( DEBUG );
+         last CODEPKG;
+       }
+       $code_pkg .= $_;
+     }
    
-   # Use a block here because we want the $/ setting to
-   # NOT be localized in the while loop -- that would be bad, since
-   # the 'package' substitution would never work after the first one...
-   {
-     local $/ = undef;
-     $code_pkg .= <PKG>;
+     # Use a block here because we want the $/ setting to
+     # NOT be localized in the while loop -- that would be bad, since
+     # the 'package' substitution would never work after the first one...
+     {
+       local $/ = undef;
+       $code_pkg .= <PKG>;
+     }
+     close( PKG );
+     warn " (Configure/read_code_class): Going to eval code:\n\n$code_pkg\n" if ( DEBUG > 1 );
+     {
+       local $SIG{__WARN__} = sub { return undef };
+       eval $code_pkg;
+       die "(Configure/read_code_class): Could not read $code_class into $this_class\n",
+           "Error: $@\n$code_pkg\n\n" if ( $@ );
+     }
    }
-   close( PKG );
-   warn " (Configure/read_code_class): Going to eval code:\n\n$code_pkg\n" if ( DEBUG > 1 );
-   {
-     local $SIG{__WARN__} = sub { return undef };
-     eval $code_pkg;
+   else {  
+     warn " **Filename not found for code to be read in from $code_class\n";
    }
-   die "(Configure/read_code_class): Could not read $code_class into $this_class\n",
-       "Error: $@\n$code_pkg\n\n" if ( $@ );
  }
- else {  warn " **Filename not found for code in $code_class!\n" }
+ return \@files_used;
 }
 
 1;
+
+__END__
 
 =pod
 
@@ -401,6 +427,9 @@ B<_read_code_class>
 
 Used internally to emulate some of what 'require' does to find a file
 with code and then reads the subroutines into another package.
+
+Returns: arrayref of filenames that whose subroutines were read into
+the SPOPS object class.
 
 =head1 CONFIGURATION FIELDS EXPLAINED
 
@@ -631,6 +660,11 @@ Or:
 in the configuration field to 'SPOPS-class' so the configuration can
 be more flexible.)
 
+B<fetch_by> (\@)
+
+Create a 'fetch_by_{fieldname}' routine that simply returns an
+arrayref of objects that match the value of a particular field.
+
 B<links_to> (\@)
 
 (See L<SPOPS::Configure::DBI> for information.)
@@ -648,6 +682,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
- Chris Winters (cwinters@intes.net)
+Chris Winters  <cwinters@intes.net>
 
 =cut

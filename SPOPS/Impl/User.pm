@@ -1,13 +1,13 @@
 package SPOPS::User;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Impl/User.pm,v 1.4 2000/10/09 15:18:10 cwinters Exp $
+# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Impl/User.pm,v 1.6 2000/10/19 02:16:54 cwinters Exp $
 
 use strict;
 use Carp          qw( carp );
 use SPOPS::Secure qw( :level :scope );
 
 @SPOPS::User::ISA     = qw();
-$SPOPS::User::VERSION = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::User::VERSION = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 $SPOPS::User::C       = {};
 
 $SPOPS::User::crypt_password = undef;
@@ -142,6 +142,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
- Chris Winters (cwinters@intes.net)
+Chris Winters  <cwinters@intes.net>
+
 
 =cut

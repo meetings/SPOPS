@@ -1,6 +1,6 @@
 package SPOPS::GDBM;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/GDBM.pm,v 1.9 2000/10/15 18:48:31 cwinters Exp $
+# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/GDBM.pm,v 1.13 2000/11/03 17:16:43 cwinters Exp $
 
 use strict;
 use SPOPS;
@@ -9,7 +9,7 @@ use Data::Dumper  qw( Dumper );
 use GDBM_File;
 
 @SPOPS::GDBM::ISA       = qw( SPOPS );
-@SPOPS::GDBM::VERSION   = sprintf("%d.%02d", q$Revision: 1.9 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::GDBM::VERSION   = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG       => 0;
 use constant DEBUG_FETCH => 0;
@@ -66,7 +66,12 @@ sub global_gdbm_tie {
  $p->{perm} ||= 'read';
  my $gdbm_filename = $p->{filename};
  unless ( $gdbm_filename ) {
-   $gdbm_filename   = $item->{tmp_gdbm_filename} if ( ref $item );
+   if ( ref $item ) {
+     $gdbm_filename   = $item->{tmp_gdbm_filename};
+   }
+   if ( $item->CONFIG->{gdbm_info}->{file_fragment} and $p->{directory} ) {
+     $gdbm_filename ||= join( '/', $item->CONFIG->{gdbm_info}->{file_fragment}, $p->{directory} );
+   }
    $gdbm_filename ||= $item->CONFIG->{gdbm_info}->{filename};
    $gdbm_filename ||= $item->global_config->{gdbm_info}->{filename};
  }
@@ -194,6 +199,8 @@ sub remove {
 
 1;
 
+__END__
+
 =pod
 
 =head1 NAME
@@ -251,6 +258,13 @@ B<global_gdbm_tie( \%params )>
 
 Returns a tied hashref if successful. 
 
+There are many different ways of creating a filename used for
+GDBM. You can define a default filename in your package configuration;
+you can pass it in with every request (using the parameter
+'filename'); you can define a file fragment (non-specific directory
+name plus a filename, like 'conf/package.gdbm') and then pass a
+directory to anchor the filename with every request.
+
 Parameters:
 
  perm ($ (default 'read')
@@ -269,6 +283,11 @@ Parameters:
    'tmp_gdbm_filename' field of the object, and then the 'filename'
    key of the 'gdbm_info' key of the class config, and then the
    'filename' key of the 'gdbm_info' key of the global configuration.
+
+ directory ($) (optional)
+   Used if you have defined 'file_fragment' within your package
+   configuration; we join the directory and filename with a '/' to
+   create the gdbm filename.
 
 B<id>
 
@@ -353,6 +372,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
- Chris Winters (cwinters@intes.net)
+Chris Winters  <cwinters@intes.net>
+
 
 =cut

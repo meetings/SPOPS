@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS.pm,v 1.40 2000/10/15 18:47:43 cwinters Exp $
+# $Header: /usr/local/cvsdocs/SPOPS/SPOPS.pm,v 1.46 2000/11/10 02:43:49 cwinters Exp $
 
 use strict;
 use vars qw( $IDX_CHANGE );
@@ -14,7 +14,8 @@ use Date::Format  qw( time2str );
 
 $SPOPS::AUTOLOAD = '';
 @SPOPS::ISA      = qw( Exporter );
-$SPOPS::VERSION  = sprintf("%d.%02d", q$Revision: 1.40 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION  = '0.34';
+$SPOPS::RealVERSION = sprintf("%d.%02d", q$Revision: 1.46 $ =~ /(\d+)\.(\d+)/);
 
 @SPOPS::EXPORT_OK   = qw( now today generate_random_code crypt_it );
 %SPOPS::EXPORT_TAGS = (
@@ -295,6 +296,46 @@ sub now {
 
 sub today { return $_[0]->now( { format => '%Y-%m-%e' } ); }
 
+sub now_between_dates {
+ my $self = shift;
+ my $p    = shift;
+ return undef unless ( $p->{begin} or $p->{end} ); 
+ my @now = Date::Calc::Today();
+ my ( $begin_days, $end_days ) = undef;
+ my ( $begin_date, $end_date );
+
+ if ( $p->{begin} ) {
+   if ( ref $p->{begin} eq 'ARRAY' ) {
+     $begin_date = $p->{begin};
+   }
+   else {
+     @{ $begin_date } = $p->{begin} =~ /^(\d+)\-(\d+)\-(\d+)/;
+   }
+ 
+   # Good result: 1 (meaning 'begin' is one day before 'now')
+   $begin_days = Date::Calc::Delta_Days( @{ $begin_date }, @now );
+   return undef if ( $begin_days < 0 );
+ }
+
+ if ( $p->{end} ) {
+   if ( ref $p->{end} eq 'ARRAY' ) {
+     $end_date = $p->{end};
+   }
+   else {
+     @{ $end_date } = $p->{end} =~ /^(\d+)\-(\d+)\-(\d+)/;
+   }
+
+   # Good result: 1 (meaning 'now' is one day before begin)
+   $end_days = Date::Calc::Delta_Days( @now, @{ $end_date } );
+   return undef if ( $end_days < 0 );
+ }
+ return 1 unless ( defined $begin_days and defined $end_days );
+
+ my $spread_days = Date::Calc::Delta_Days( @{ $begin_date }, @{ $end_date } );
+ return undef if ( $end_days - $begin_days > $spread_days );
+ return 1;
+}
+
 # Pass in \@existing and \@new and get back a hashref:
 #   add    => \@: items in \@new but not in \@existing,
 #   keep   => \@: items in \@new and in \@existing,
@@ -334,11 +375,19 @@ sub AUTOLOAD {
  my $self = shift;
  my $request = $SPOPS::AUTOLOAD;
  $request =~ s/.*://;
- my $class = ref( $self ) || $self;
+
+ # First, give a nice warning and return undef if $self is just a
+ # class
+ my $class = ref $self;
+ unless ( $class ) {
+   carp " (SPOPS): Cannot fill request ($request) from class $self";
+   return undef;
+ }
+
  no strict 'refs';
  carp "  (SPOPS): Trying to fulfill $request from $class (ISA: ",
       join( " // ", @{ $class . '::ISA' } ), ")"                           if ( DEBUG );
- if ( $self->is_checking_fields ) {
+ if ( ref $self and $self->is_checking_fields ) {
    my $fields = $self->field || {};
    if ( exists $fields->{ $request } ) {
      carp " (SPOPS): $class to fill  param <<$request>>; returning data."    if ( DEBUG );
@@ -378,6 +427,8 @@ sub DESTROY {
 }
 
 1;
+
+__END__
 
 =pod
 
@@ -719,8 +770,9 @@ short-circuited (that is, a failing method bombs out of the
 action). More information on this is in L<Data Manipulation Callbacks:
 Rulesets> below.
 
-=cut
 
+
+=cut
 =head1 API
 
 The following includes methods within SPOPS and those that need to be
@@ -1347,6 +1399,34 @@ B<today()>
 
 Return a date (yyyy-mm-dd) for today.
 
+B<now_between_dates( { begin => ([y,m,d]|'yyyy-mm-dd'), end => $dateinfo } );
+
+Where $dateinfo is either a simple scalar ('yyyy-mm-dd') or an
+arrayref ([yyyy,mm,dd]).
+
+Note that you can also just pass one of the dates and the check will
+still perform ok.
+
+Returns 1 if 'now' is between the two dates (inclusive), undef
+otherwise.
+
+Examples:
+ 
+ # Today is '2000-10-31' in all examples
+
+ SPOPS->now_between_days( { begin => '2000-11-01' } );
+ ( returns 'undef' )
+
+ SPOPS->now_between_days( { end => '1999-10-31' } );
+ ( returns 'undef' )
+
+ SPOPS->now_between_days( { begin => [2000, 10, 1 ] } );
+ ( returns 1 )
+
+ SPOPS->now_between_days( { begin => '2000-10-01',
+                            end   => '2001-10-01' } );
+ ( returns 1 )
+
 B<list_process( \@existing, \@new )>
 
 Returns: hashref with three keys, each with an arrayref as the value:
@@ -1432,8 +1512,23 @@ Copyright (c) 2000 intes.net, inc.. All rights reserved.
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
+=head1 MORE INFORMATION
+
+Find out more about SPOPS -- current versions, updates, rants, ideas
+-- at:
+
+ http://www.openinteract.org/SPOPS/
+
 =head1 AUTHORS
 
- Chris Winters (cwinters@intes.net)
+Chris Winters <cwinters@intes.net>
+
+Christian Lemburg <clemburg@online-club.de> contributed some
+documentation and far too many good ideas to implement
+
+Rusty Foster <rusty@kuro5hin.org> was also influential in the early
+ days of this library.
+
+
 
 =cut

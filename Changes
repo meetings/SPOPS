@@ -1,5 +1,16 @@
 Revision history for Perl extension SPOPS.
 
+0.34 Nov 10
+
+     Switched some silly documentation stuff in all the files. Changed
+     SPOPS/DBI.pm to pass $p to the pre/post action rulesets so that
+     the caller can affect the ruleset (e.g., 'full_text_skip =>
+     1'). Modified SPOPS::Configure::_read_code_class to be able to
+     read in multiple code classes when creating an SPOPS object and
+     added some documentation to that file for the 'fetch_by'
+     relationship. Modify SPOPS.pm to only respond to AUTOLOAD
+     requests when the thing doing the requesting is an object.
+
 0.33 Oct 16
 
      Added lots of documentation to individual files; transition to

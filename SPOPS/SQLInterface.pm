@@ -1,6 +1,6 @@
 package SPOPS::SQLInterface;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/SQLInterface.pm,v 1.28 2000/10/09 15:18:09 cwinters Exp $
+# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/SQLInterface.pm,v 1.32 2000/10/27 12:49:27 cwinters Exp $
 
 use strict;
 use Carp         qw( carp );
@@ -8,7 +8,7 @@ use Data::Dumper qw( Dumper );
 use DBI          ();
 
 @SPOPS::SQLInterface::ISA     = ();
-$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 1.28 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 1.32 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG            => 0;
 use constant DEBUG_SELECT     => 0;
@@ -58,7 +58,7 @@ sub db_select {
  my $class = shift;
  my $p     = shift;
 
- my $DEBUG = DEBUG_SELECT || $p->{DEBUG};
+ my $DEBUG = DEBUG_SELECT || $p->{DEBUG} || 0;
  my $db    = $p->{db} || $class->global_db_handle;
 
  $p->{from} ||= $p->{table}; # allow an alias
@@ -78,7 +78,7 @@ sub db_select {
 
  # If we don't have any SQL, build it (straightforward).
  if ( ! $sql ) {
-   warn " (db_select): No SQL passed in to execute directly; building.\n"  if ( $DEBUG);
+   warn " (db_select): No SQL passed in to execute directly; building.\n"  if ( $DEBUG );
    $p->{select_modifier} ||= '';
    my $select = join ', ', @{ $p->{select} };
    my $from   = join ', ', @{ $p->{from} };
@@ -421,7 +421,7 @@ sub db_discover_types {
  # not process $sth->{TYPE} requests properly, so we need the
  # user to specify the types by hand (see assign_dbi_type_info() below)
  my $ti = $p->{dbi_type_info};
- if ( my $conf = $class->CONFIG ) {
+ if ( my $conf = eval { $class->CONFIG } ) {
    $ti = $conf->{dbi_type_info};
  }
  if ( $ti ) {
@@ -479,6 +479,8 @@ sub assign_dbi_type_info {
 sub sql_fetch_types { return "SELECT * FROM $_[1] where 1 = 0" }
 
 1;
+
+__END__
 
 =pod
 
@@ -542,32 +544,30 @@ for.
 
 Parameters:
 
-=over 4
-
-=item * B<select> (\@)
+B<select> (\@)
 
 Fields to select
 
-=item * B<select_modifier> ($)
+B<select_modifier> ($)
 
 Clause to insert between 'SELECT' and fields (e.g., DISTINCT)
 
-=item * B<from> (\@)
+B<from> (\@)
 
 List of tables to select from
 
-=item * B<order> ($) 
+B<order> ($) 
 
 Clause to order results by; if not given, the order depends
 entirely on the database.
 
-=item * B<where> ($) 
+B<where> ($) 
 
 Clause to limit results. Note that you can use '?' for 
 field values but they will get quoted as if they were
 a SQL_VARCHAR type of value.
 
-=item * B<return> ($)
+B<return> ($)
 
 B<list>: returns an arrayref of arrayrefs (default)
 
@@ -578,19 +578,17 @@ B<hash>: returns an arrayref of hashrefs
 B<single-list>: returns an arrayref with the first value of each
 record as the element.
 
-=item * B<value> (\@) 
+B<value> (\@) 
 
 List of values to bind, all as SQL_VARCHAR; they must match 
 order of '?' in the where clause either passed in or 
 within the SQL statement passed in.
 
-=item * B<sql> ($)
+B<sql> ($)
 
 Full statement to execute, although you may put '?' in the
 where clause and pass values for substitution. (No quoting
 hassles...)
-
-=back
 
 B<Examples>:
 
@@ -663,34 +661,30 @@ parameters passed in.
 
 Parameters:
 
-=over 4
-
-=item * B<table> ($)
+B<table> ($)
 
 Name of table to insert into
 
-=item * B<field> (\@) 
+B<field> (\@) 
 
 List of fieldnames to insert
 
-=item * B<value> (\@)
+B<value> (\@)
 
 List of values, matching up with order of field list.
 
-=item * B<no_quote> (\%)
+B<no_quote> (\%)
 
 Fields that we should not quote
 
-=item * B<sql> ($)
+B<sql> ($)
 
 Full SQL statement to run; you can still pass in values
 to quote/bind if you use '?' in the statement.
 
-=item * B<return_sth> ($)
+B<return_sth> ($)
 
 If true, return the statement handle rather than a status.
-
-=back
 
 B<Examples>:
 
@@ -730,36 +724,32 @@ parameters passed in.
 
 Parameters:
 
-=over 4
-
-=item * B<field> (\@) 
+B<field> (\@) 
 
 List of fieldnames we are updating 
 
-=item * B<value> (\@) 
+B<value> (\@) 
 
 List of values corresponding to the fields we are
 updating.
 
-=item * B<table> ($) 
+B<table> ($) 
 
 Name of table we are updating
 
-=item * B<where> ($) 
+B<where> ($) 
 
 Clause that specifies the rows we are updating
 
-=item * B<no_quote> (\%) 
+B<no_quote> (\%) 
 
 Specify fields not to quote
 
-=item * B<sql> ($) 
+B<sql> ($) 
 
 Full SQL statement to run; note that you can use '?' for 
 values and pass in the raw values via the 'value' parameter,
 and they will be quoted as necessary.
-
-=back
 
 B<Examples>:
 
@@ -783,29 +773,25 @@ Removes the record indicated by %params from the database.
 
 Parameters:
 
-=over 4
-
-=item * B<table> ($) 
+B<table> ($) 
 
 Name of table from which we are removing records.
 
-=item * B<where> ($) 
+B<where> ($) 
 
 Specify the records we are removing
 
-=item * B<value> (\@) 
+B<value> (\@) 
 
 List of values to bind to '?' that may be found either in 
 the where clause passed in or in the where clause found
 in the SQL statement.
 
-=item * B<sql> ($) 
+B<sql> ($) 
 
 Full SQL statement to execute directly, although you can 
 use '?' for values and pass the actual values in via the
 'value' parameter.
-
-=back
 
 Be careful: if you pass in the table but not the criteria,
 you will clear out your table! (Just like real SQL...)
@@ -831,6 +817,16 @@ SQL statement:
  DELETE FROM users
   WHERE last_name LIKE 'moo%'
 
+Perl statement:
+
+ $t->db_delete( { table => 'users' } );
+
+SQL statement:
+
+ DELETE FROM users
+
+Oops, just cleared out the 'users' table. Be careful!
+
 =head2 db_discover_types
 
 Basically issue a dummy query to a particular table to get
@@ -846,17 +842,13 @@ Return a hashref of fieldnames as keys and DBI types as values.
 
 Parameters:
 
-=over 4
-
-=item * B<table> ($)
+B<table> ($)
 
 The name of a particular table. Note that this routine is not
 smart enough to distinguish between: B<users> and B<dbo.users> 
 even though they might be the same table in the database. It is
 not particularly harmful if you use the same name twice in 
 this manner, the module just has to do a little extra work.
-
-=back
 
 =head1 ERROR HANDLING
 
@@ -865,6 +857,12 @@ error information saved in L<SPOPS::Error> and a die() being
 thrown. (More later.)
 
 =head1 TO DO
+
+B<DBI binding conventions>
+
+One of the things the DBI allows you to do is prepare a statement once
+and then execute it many times. It would be nice to allow that
+somehow.
 
 =head1 BUGS
 
@@ -881,9 +879,11 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
- Chris Winters (cwinters@intes.net)
+Chris Winters <cwinters@intes.net>
 
- Rusty Foster (rusty@kuro5hin.org) was also influential in the early
- days of this library.
+Rusty Foster <rusty@kuro5hin.org> was also influential in the early
+days of this library.
+
+
 
 =cut

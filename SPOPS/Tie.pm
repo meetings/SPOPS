@@ -1,6 +1,6 @@
 package SPOPS::Tie;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Tie.pm,v 1.10 2000/10/09 15:02:27 cwinters Exp $
+# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Tie.pm,v 1.13 2000/10/27 04:05:45 cwinters Exp $
 
 use strict;
 use vars qw( $PREFIX_TEMP $PREFIX_INTERNAL );
@@ -9,7 +9,7 @@ use Carp qw( carp );
 require Exporter;
 
 @SPOPS::Tie::ISA       = qw( Exporter );
-@SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP  
                              IDX_CHECK_FIELDS $PREFIX_TEMP $PREFIX_INTERNAL );
 
@@ -137,6 +137,8 @@ sub NEXTKEY {
 }
 
 1;
+
+__END__
 
 =pod
 
@@ -296,6 +298,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
- Chris Winters (cwinters@intes.net)
+Chris Winters  <cwinters@intes.net>
+
 
 =cut
