@@ -71,6 +71,10 @@ Detail about the SPOPS security system.
 
 Error handling in the SPOPS framework.
 
+=item L<SPOPS::Manual::ImportExport|SPOPS::Manual::ImportExport>
+
+Getting data in and out of datasources using SPOPS.
+
 =item L<SPOPS::Manual::Cookbook|SPOPS::Manual::Cookbook>
 
 Recipes for SPOPS usage.

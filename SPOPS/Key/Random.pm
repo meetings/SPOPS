@@ -1,6 +1,6 @@
 package SPOPS::Key::Random;
 
-# $Id: Random.pm,v 1.12 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Random.pm,v 1.13 2001/12/03 13:26:18 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
@@ -8,15 +8,20 @@ use SPOPS::Utility;
 
 @SPOPS::Key::Random::ISA      = ();
 $SPOPS::Key::Random::VERSION  = '1.90';
-$SPOPS::Key::Random::Revision = substr(q$Revision: 1.12 $, 10);
+$SPOPS::Key::Random::Revision = substr(q$Revision: 1.13 $, 10);
 
 use constant DEFAULT_ID_WIDTH => 8;
 
 sub pre_fetch_id  {
     my ( $class, $p ) = @_;
-    my $width = $p->{id_width} ||
-                $class->CONFIG->{id_width} ||
-                DEFAULT_ID_WIDTH;
+    my $width = $p->{id_width};
+    unless ( $width ) {
+        my $config = eval { $class->CONFIG };
+        if ( ref $config ) {
+            $width = $class->CONFIG->{id_width};
+        }
+        $width ||= DEFAULT_ID_WIDTH;
+    }
     my $code =  SPOPS::Utility->generate_random_code( $width );
     DEBUG() && _w( 1, "Created insert ID ($code)" );
     return $code;

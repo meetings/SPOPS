@@ -1,12 +1,12 @@
 package My::Doodad;
 
-# $Id: Doodad.pm,v 1.1 2001/10/15 04:23:18 lachoy Exp $
+# $Id: Doodad.pm,v 1.2 2001/12/19 06:32:04 lachoy Exp $
 
 use strict;
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::Doodad::VERSION = sprintf("%d.%02d", q$Revision: 1.1 $ =~ /(\d+)\.(\d+)/);
+$My::Doodad::VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
 
 sub _base_config {
    my $config = {
@@ -65,6 +65,7 @@ sub ruleset_factory {
 sub set_creator {
     my ( $self ) = @_;
     return 1 if ( $self->is_saved );
+    return 1 if ( $self->{created_by} );
     my $user = $self->global_user_current;
     $self->{created_by} = $user->id;
     return 1;

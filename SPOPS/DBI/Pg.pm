@@ -1,6 +1,6 @@
 package SPOPS::DBI::Pg;
 
-# $Id: Pg.pm,v 1.12 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Pg.pm,v 1.13 2001/12/26 16:50:44 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
@@ -8,7 +8,7 @@ use SPOPS::Key::DBI::Sequence;
 
 @SPOPS::DBI::Pg::ISA      = ();
 $SPOPS::DBI::Pg::VERSION  = '1.90';
-$SPOPS::DBI::Pg::Revision = substr(q$Revision: 1.12 $, 10);
+$SPOPS::DBI::Pg::Revision = substr(q$Revision: 1.13 $, 10);
 
 
 sub sql_quote {
@@ -33,6 +33,9 @@ sub pre_fetch_id {
 sub post_fetch_id {
     my ( $item, $p ) = @_;
     return undef unless ( $item->CONFIG->{increment_field} );
+    if ( my $custom_sequence_name = $item->CONFIG->{sequence_name} ) {
+        $p->{sequence_name} = $custom_sequence_name;
+    }
     unless ( $p->{sequence_name} ) {
         $p->{sequence_name} = join( '_', $item->CONFIG->{base_table}, $item->CONFIG->{id_field}, 'seq' );
     }
@@ -91,6 +94,17 @@ option by setting in your class configuration the key
        isa   => [ qw/ SPOPS::DBI::Pg  SPOPS::DBI / ],
        increment_field => 1,
        ...
+    },
+ };
+
+You can also specify the sequence name in the object configuration:
+
+ $spops = {
+    myobj => {
+       class => 'My::Object',
+       isa   => [ qw/ SPOPS::DBI::Pg  SPOPS::DBI / ],
+       increment_field => 1,
+       sequence_name => 'myobject_sequence',
     },
  };
 

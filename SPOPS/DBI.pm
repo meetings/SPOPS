@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 1.55 2001/11/25 01:25:00 lachoy Exp $
+# $Id: DBI.pm,v 1.56 2001/12/15 19:20:54 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -13,7 +13,7 @@ use SPOPS::Tie    qw( $PREFIX_INTERNAL );
 
 @SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
 $SPOPS::DBI::VERSION   = '1.90';
-$SPOPS::DBI::Revision  = substr(q$Revision: 1.55 $, 10);
+$SPOPS::DBI::Revision  = substr(q$Revision: 1.56 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -432,7 +432,17 @@ sub _fetch_select_fields {
     # group, then use all the fields
 
     $field_list ||= $class->field_list;
-    return ( $field_list, $class->format_select( $field_list, $p->{field_alter} ) );
+    my @alter_field_list = @{ $field_list };
+
+    # If the user passed in extra fields for the SELECT (for
+    # instances, if 'having' criteria is used) then they always go on
+    # the end of the SELECT
+
+    if ( $p->{field_extra} ) {
+        push @alter_field_list, ( ref $p->{field_extra} eq 'ARRAY' )
+                                  ? @{ $p->{field_extra} } : $p->{field_extra};
+    }
+    return ( $field_list, $class->format_select( \@alter_field_list, $p->{field_alter} ) );
 }
 
 

@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.55 Mon Dec 31 00:49:15 EST 2001
+
+  * Add Import/Export tools, new key generation method; minor bugfix.
+
+
 0.54 Tue Nov 27 07:42:59 EST 2001
 
   * Fix bug in clone() method.
@@ -78,4 +83,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 1.11 2001/11/27 12:24:31 lachoy Exp $
+$Id: RELEASE,v 1.12 2001/12/31 05:34:04 lachoy Exp $

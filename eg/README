@@ -69,7 +69,19 @@ How to use these:
 
  $ perl fetch_doodads.pl
 
- (8) Clear out the tables and do it all again, playing around with the
+ (8) Export the data to an SPOPS-importable format:
+
+ $ perl export_doodads.pl
+
+ (9) Import some data from an SPOPS-portable format:
+
+ $ perl import_doodads.pl
+
+ (10) Dump it back out to see what happened:
+
+ $ perl export_doodads.pl
+
+ (10) Clear out the tables and do it all again, playing around with the
  different scripts and classes.
 
  $ mysql--user=test --password=dingdong test < users_groups_clear.sql
@@ -110,6 +122,14 @@ Scripts to manipulate the objects:
      - fetch sample objects as two different users, displaying
      different security settings for each
 
+ export_doodads.pl
+
+     - export the doodads in the database to STDOUT
+
+ import_doodads.pl
+
+     - import some more doodads
+
 
 Object classes:
 
@@ -136,4 +156,4 @@ Object classes:
      - sample user object
 
 ========================================
-$Id: README,v 1.10 2001/11/25 01:04:17 lachoy Exp $
+$Id: README,v 1.12 2001/12/19 06:44:53 lachoy Exp $

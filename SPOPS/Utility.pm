@@ -1,12 +1,12 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 1.14 2001/11/06 21:39:59 lachoy Exp $
+# $Id: Utility.pm,v 1.15 2001/12/03 13:25:57 lachoy Exp $
 
 use strict;
 
 @SPOPS::Utility::ISA      = qw();
 $SPOPS::Utility::VERSION  = '1.90';
-$SPOPS::Utility::Revision = substr(q$Revision: 1.14 $, 10);
+$SPOPS::Utility::Revision = substr(q$Revision: 1.15 $, 10);
 
 
 # Return a random code of length $length. If $opt is 'mixed', then the
@@ -16,6 +16,7 @@ $SPOPS::Utility::Revision = substr(q$Revision: 1.14 $, 10);
 
 sub generate_random_code {
     my ( $class, $length, $opt ) = @_;
+    $opt ||= '';
     return undef unless ( $length );
     if ( $opt eq 'mixed' ) {
         return join '', map { ( $_ % 2 == 0 )

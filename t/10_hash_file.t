@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 10_hash_file.t,v 1.1 2001/07/30 22:11:49 lachoy Exp $
+# $Id: 10_hash_file.t,v 1.2 2001/12/03 13:30:21 lachoy Exp $
 
 use File::Copy;
 use Test::More tests => 10;
@@ -9,36 +9,35 @@ sub clean_config { unlink( 't/test.perl' ); File::Copy::cp( 't/hash_file_test.pe
 sub cleanup      { unlink( 't/test.perl' ); unlink( 't/test-new.perl' );  }
 
 {
-    eval { require SPOPS::HashFile };
-    ok( ! $@, 'SPOPS::HashFile require' );
- 
+    require_ok( 'SPOPS::HashFile' );
+
     # Test for reading file in using 'read' permission
-    { 
+    {
         clean_config();
-        my $config = eval { SPOPS::HashFile->new({ filename => 't/test.perl', 
+        my $config = eval { SPOPS::HashFile->new({ filename => 't/test.perl',
                                                    perm     => 'read' }) };
         ok( ! $@, 'HashFile read (read permission)' );
     }
 
     # Test for reading file in using 'write' permission
-    { 
+    {
         clean_config();
-        my $config = eval { SPOPS::HashFile->new({ filename => 't/test.perl', 
+        my $config = eval { SPOPS::HashFile->new({ filename => 't/test.perl',
                                                    perm     => 'write' } ) };
         ok( ! $@, 'HashFile read (write permission)' );
     }
-    
+
     # Tests for opening file that doesn't existing using 'new' permission
     # (we want the second one to fail)
-    { 
+    {
         clean_config();
-        my $config = eval { SPOPS::HashFile->new({ filename => 't/not_exist.perl', 
+        my $config = eval { SPOPS::HashFile->new({ filename => 't/not_exist.perl',
                                                    perm     => 'new' } ) };
         ok( ! $@, 'HashFile create (new permission)' );
 
-        my $config_two = eval { SPOPS::HashFile->new( { filename => 't/not_exist.perl', 
+        my $config_two = eval { SPOPS::HashFile->new( { filename => 't/not_exist.perl',
                                                         perm     => 'write' } ) };
-        ok( $@ =~ /^Cannot create object without existing file or 'new' permission/, 
+        ok( $@ =~ /^Cannot create object without existing file or 'new' permission/,
             'HashFile create (write permission)' );
     }
 
@@ -54,7 +53,7 @@ sub cleanup      { unlink( 't/test.perl' ); unlink( 't/test-new.perl' );  }
 
     {
         clean_config();
-        my $config = SPOPS::HashFile->new({ filename => 't/test.perl', 
+        my $config = SPOPS::HashFile->new({ filename => 't/test.perl',
                                             perm     => 'write' });
         eval { $config->remove };
         ok( ! $@ && ! -f 't/test.perl', 'HashFile remove' );
@@ -62,9 +61,9 @@ sub cleanup      { unlink( 't/test.perl' ); unlink( 't/test-new.perl' );  }
 
     {
         clean_config();
-        my $config = SPOPS::HashFile->new({ filename => 't/test.perl', 
+        my $config = SPOPS::HashFile->new({ filename => 't/test.perl',
                                             perm     => 'read' });
-        my $newconf = eval { $config->clone({ filename => 't/test-new.perl', 
+        my $newconf = eval { $config->clone({ filename => 't/test-new.perl',
                                               perm     => 'new' }) };
         ok( ! $@, 'HashFile clone' );
 

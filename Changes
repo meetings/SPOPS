@@ -1,5 +1,116 @@
 Revision history for Perl extension SPOPS.
 
+0.55  Mon Dec 31 00:49:15 EST 2001
+
+Overall:
+
+ - Added data import and export capabilities to SPOPS
+
+ - You can now use a UUID (Universally Unique Identifier) as a key
+
+Individual:
+
+   * eg/export_doodads.pl:
+
+     - Added sample for SPOPS::Export::Object
+
+   * eg/import_doodads.pl:
+
+     - Added sample for SPOPS::Import::Object
+
+   * SPOPS/DBI/Pg.pm:
+
+     - Fixed item to allow specification of the sequence name in
+     object configuration
+
+   * SPOPS/Export.pm:
+
+     - Added factory class and parent to exporting routines
+
+   * SPOPS/Export/Object.pm:
+
+     - Added simple class to take existing data and export it to a
+     portable format.
+
+   * SPOPS/Export/Perl.pm
+
+     - Added simple class to export SPOPS objects to a raw perl data
+     structure.
+
+   * SPOPS/Export/SQL.pm
+
+     - Added simplistic class to export SPOPS objects to a series of
+     SQL INSERT statements.
+
+   * SPOPS/Export/XML.pm:
+
+     - Added simplistic class to export SPOPS objects to XML format
+
+   * SPOPS/Import.pm:
+
+     - Added factory class and parent to importing routines
+
+   * SPOPS/Import/DBI/Table.pm:
+
+     - Added class for importing/translating DBI tables. This should
+     allow you to create a database-neutral schema and have SPOPS
+     translate it dynamically.
+
+   * SPOPS/Import/DBI/TableTransform.pm:
+
+     - Added parent factory class for creating transformation objects
+
+   * SPOPS/Import/DBI/TableTransform/MySQL.pm:
+
+     - Added transformer for generic tables to MySQL
+
+   * SPOPS/Import/DBI/TableTransform/Pg.pm:
+
+     - Added transformer for generic tables to PostgreSQL
+
+   * SPOPS/Import/DBI/TableTransform/Sybase.pm:
+
+     - Added transformer for generic tables to Sybase (ASE, ASA and MS
+     SQL)
+
+   * SPOPS/Import/Object.pm:
+
+     - Added a simple class to bring into an SPOPS datastore data
+     formatted by something like SPOPS::Export::Object.
+
+   * SPOPS/Key/Random.pm:
+
+     - Wrapped the call to $class->CONFIG in an eval {} in case we're not
+     calling this from an SPOPS class/object
+
+   * SPOPS/Key/UUID.pm:
+
+     - Created new method for generating keys. The Universally Unique
+     Identifier is a fairly long string whose uniqueness is (more or
+     less) guaranteed -- the docs for Data::UUID say that it's good
+     for millions of keys per second, which is good enough for me :-)
+     (Note: this apprently does not work on Win32 systems; pointers
+     are welcome for either a Perl module or an external program that
+     can do this.)
+
+   * SPOPS/Loopback.pm:
+
+     - Created a dummy SPOPS class useful for testing. It runs all the
+     pre/post actions, so you can test out your rules on it as well.
+
+   * SPOPS/Manual/ImportExport.pod
+
+     - Added manual section for importing and exporting data.
+
+   * t/03_uuid_key.t:
+
+     - Created test for SPOPS::Key::UUID
+
+   * t/04_random_key.t:
+
+     - Created test for SPOPS::Key::Random
+
+
 0.54  Tue Nov 27 07:42:59 EST 2001
 
 Overall:

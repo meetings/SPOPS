@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.12 2001/11/06 23:50:59 lachoy Exp $
+# $Id: Makefile.PL,v 1.13 2001/12/15 19:18:51 lachoy Exp $
 
 use strict;
 use ExtUtils::MakeMaker;
@@ -83,11 +83,12 @@ sub write_makefile {
     'VERSION_FROM' => 'SPOPS.pm',
     'AUTHOR'       => 'Chris Winters <chris@cwinters.com>',
     'ABSTRACT'     => 'Data abstraction layer used for object persistence and security',
-    'PREREQ_PM'    => { 'Storable'     => 1.00,
-                        'Class::ISA'   => undef,
-                        'Test::More'   => 0.07,
-                        'Data::Dumper' => undef,
-                        'Class::Date'  => 1.00 } );
+    'PREREQ_PM'    => { 'Storable'        => 1.00,
+                        'Class::ISA'      => undef,
+                        'Test::More'      => 0.07,
+                        'Data::Dumper'    => undef,
+                        'Class::Date'     => 1.00,
+                        'Class::Accessor' => undef } );
 }
 
 
