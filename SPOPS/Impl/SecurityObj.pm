@@ -1,12 +1,12 @@
 package SPOPS::Impl::Security;
 
-# $Id: SecurityObj.pm,v 1.24 2001/01/31 02:30:44 cwinters Exp $
+# $Id: SecurityObj.pm,v 1.1.1.1 2001/02/02 06:08:32 lachoy Exp $
 
 use strict;
 use SPOPS::Secure qw( :all );
 use Data::Dumper  qw( Dumper );
 
-$SPOPS::Impl::Security::VERSION = sprintf("%d.%02d", q$Revision: 1.24 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Impl::Security::VERSION = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 

@@ -1,13 +1,13 @@
 package SPOPS::Configure::DBI;
 
-# $Id: DBI.pm,v 1.32 2001/01/31 02:30:44 cwinters Exp $
+# $Id: DBI.pm,v 1.1.1.1 2001/02/02 06:08:29 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w );
 use SPOPS::Configure;
 
 @SPOPS::Configure::DBI::ISA     = qw( SPOPS::Configure );
-$SPOPS::Configure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.32 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Configure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 

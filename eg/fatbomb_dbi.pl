@@ -5,10 +5,10 @@ use DBI;
 use SPOPS::Configure::DBI;
 use Data::Dumper  qw( Dumper );
 
-{
+# Set to 1 to see SQL calls (and other stuff)
+use constant DEBUG => 0; 
 
-  # Set to 1 to see SQL calls (and other stuff)
-  my $DEBUG = 0; 
+{
 
   # Uncomment the following lines for MySQL
   my $DBI_DB_TYPE  = 'mysql';
@@ -91,6 +91,7 @@ SQL
   }
   elsif ( $DBI_DB_TYPE eq 'mysql' ) {
     $spops->{fatbomb}->{isa}          = [ qw/ SPOPS::DBI::MySQL SPOPS::DBI / ];
+    $spops->{fatbomb}->{increment_field} = 1;
   }
 
   SPOPS::Configure::DBI->process_config( { config      => $spops,
@@ -101,7 +102,7 @@ SQL
   $object->{calories} = 1500;
   $object->{cost}     = '$3.50';
   $object->{name}     = "Super Deluxe Jumbo Big Mac";
-  my $fb_id = eval { $object->save( { db => $db, DEBUG => $DEBUG } ) };
+  my $fb_id = eval { $object->save( { db => $db, DEBUG => DEBUG } ) };
   if ( $@ ) {
     my $ei = SPOPS::Error->get;
     die "Error found! ($@) Error information: ", Dumper( $ei ), "\n";
@@ -110,7 +111,7 @@ SQL
         "Object ID: $fb_id\n",
         "Servings:  $object->{servings}\n\n";
 
-  if ( $DEBUG ) {
+  if ( DEBUG ) {
     print "Dump of object:\n",
           Dumper( $object ), "\n";
   }
@@ -119,7 +120,7 @@ SQL
   undef $object;
   my $new_object = eval { My::ObjectClass->fetch( $fb_id, 
                                                   { db => $db,
-                                                    DEBUG => $DEBUG } )};
+                                                    DEBUG => DEBUG } )};
   if ( $@ ) {
     my $ei = SPOPS::Error->get;
     die "Error found! ($@) Error information: ", Dumper( $ei ), "\n";
@@ -128,12 +129,12 @@ SQL
         "Object ID: $new_object->{fatbomb_id}\n",
         "Servings:  $new_object->{servings}\n";
 
-  if ( $DEBUG ) {
+  if ( DEBUG ) {
     print "Dump of refetched object:\n",
           Dumper( $new_object ), "\n";
   }
 
-  if ( $DEBUG ) {
+  if ( DEBUG ) {
     print "Raw dump of table:\n";
     my $sql = qq/ 
       SELECT fatbomb_id, name, calories, cost, servings 

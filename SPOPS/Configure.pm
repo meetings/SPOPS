@@ -1,6 +1,6 @@
 package SPOPS::Configure;
 
-# $Id: Configure.pm,v 1.36 2001/01/31 02:29:50 cwinters Exp $
+# $Id: Configure.pm,v 1.2 2001/02/20 04:46:36 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w );
@@ -9,7 +9,7 @@ use SPOPS::Configure::Ruleset;
 use Data::Dumper  qw( Dumper );
 
 @SPOPS::Configure::ISA       = ();
-$SPOPS::Configure::VERSION   = sprintf("%d.%02d", q$Revision: 1.36 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Configure::VERSION   = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -18,8 +18,7 @@ my $DEFAULT_META = {
 };
 
 sub process_config {
-  my $class = shift;
-  my $p     = shift;
+  my ( $class, $p ) = @_;
   $p->{alias_list} ||= [ keys %{ $p->{config} } ];
 
   # So we can keep track of the classes we require/eval
@@ -75,9 +74,7 @@ my $GENERIC_TEMPLATE = <<'PACKAGE';
 PACKAGE
 
 sub create_spops_class {
-  my $class = shift;
-  my $p     = shift;
-  my $info  = shift;
+  my ( $class, $p, $info ) = @_;
   
   # Create the class on-the-fly (yee-haw!); just substitute our
   # keywords (currently only the class name) for the items in the
@@ -112,9 +109,7 @@ sub create_spops_class {
 }
 
 sub parse_config {
-  my $class = shift;
-  my $p     = shift;
-  my $info  = shift;
+  my ( $class, $p, $info ) = @_;
   my $meta = $p->{meta} || $p->{config}->{_meta} || $DEFAULT_META;
   my $this_class = $info->{class};
 
@@ -188,9 +183,9 @@ my $GENERIC_FETCH_BY = <<'FETCHBY';
        
 FETCHBY
 
+
 sub create_relationship {
-  my $class = shift;
-  my $info  = shift;
+  my ( $class, $info ) = @_;
   my $this_class = $info->{class};
   
   # First do the 'has_a' aliases; see POD documentation on this (below)
@@ -200,34 +195,43 @@ sub create_relationship {
     _w( 1, "Try to alias $this_class hasa $hasa_class" );
     my $hasa_config   = $hasa_class->CONFIG;
     my $hasa_id_field = $hasa_config->{id_field};
+    my $hasa_sub = $GENERIC_HASA;
+    $hasa_sub =~ s/%%CLASS%%/$this_class/g;
+    $hasa_sub =~ s/%%HASA_CLASS%%/$hasa_class/g;
+
     my $id_fields = ( ref $info->{has_a}->{ $hasa_class } eq 'ARRAY' )
                        ? $info->{has_a}->{ $hasa_class } 
                        : [ $info->{has_a}->{ $hasa_class } ];
     my $num_id_fields = scalar @{ $id_fields };
-    foreach my $usea_id_field ( @{ $id_fields } ) {
-      _w( 1, "Aliasing $hasa_class with field $usea_id_field ",
-             "within $this_class" );
-      my $hasa_sub = $GENERIC_HASA;
-      $hasa_sub =~ s/%%CLASS%%/$this_class/g;
-      $hasa_sub =~ s/%%HASA_CLASS%%/$hasa_class/g;
-      
-      my $hasa_alias = undef;
-      if ( $num_id_fields == 1 and $usea_id_field eq $hasa_id_field ) {
-        $hasa_alias = $hasa_config->{main_alias}
+    foreach my $usea_id_info ( @{ $id_fields } ) {
+      my ( $hasa_alias, $usea_id_field ) = '';
+      if ( ref $usea_id_info eq 'HASH' ) {
+        $usea_id_field = (keys %{ $usea_id_field })[0];
+        $hasa_alias    = $usea_id_info->{ $usea_id_field };
       }
       else {
-        $hasa_alias = join( '_', $usea_id_field, $hasa_config->{main_alias} );
+        $usea_id_field = $usea_id_info;
+        if ( $usea_id_field eq $hasa_id_field ) {
+          $hasa_alias = $hasa_config->{main_alias}
+        }
+        else {
+          $hasa_alias = join( '_', $usea_id_field, $hasa_config->{main_alias} );
+        }
       }
-      $hasa_sub =~ s/%%HASA_ALIAS%%/$hasa_alias/g;
-      $hasa_sub =~ s/%%HASA_ID_FIELD%%/$usea_id_field/g;
-      _w( 2, "Now going to eval the routine:\n$hasa_sub" );
+    
+      my $this_hasa_sub = $hasa_sub;
+      $this_hasa_sub =~ s/%%HASA_ALIAS%%/$hasa_alias/g;
+      $this_hasa_sub =~ s/%%HASA_ID_FIELD%%/$usea_id_field/g;
+      _w( 1, "Aliasing ($hasa_class) with field ($usea_id_field) ",
+             "using alias ($hasa_alias) within ($this_class)" );
+      _w( 2, "Now going to eval the routine:\n$this_hasa_sub" );
       {
         local $SIG{__WARN__} = sub { return undef };
-        eval $hasa_sub;
+        eval $this_hasa_sub;
       }
       if ( $@ ) {
         die " (Configure/create_relationship): Cannot eval has_a clause into $this_class. ",
-            "Error: $@\nRoutine: $hasa_sub";
+            "Error: $@\nRoutine: $this_hasa_sub";
       }
     }
   }
@@ -285,9 +289,7 @@ sub create_relationship {
 # Returns: arrayref of files used
 
 sub _read_code_class {
-  my $class      = shift;
-  my $this_class = shift;
-  my $code_class = shift;
+  my ( $class, $this_class, $code_class ) = @_;
   my @files_used = ();
   unless ( ref $code_class eq 'ARRAY' ) {
     $code_class = [ $code_class ];
@@ -518,7 +520,7 @@ on-the-fly from configuration information.
 
 =head2 Optional Fields
 
-B<code_class> ($)
+B<code_class> ($ or \@)
 
 Note: This is B<not> optional if you wish to draw code from a class
 separate from the one you are creating.
@@ -535,6 +537,17 @@ puts the subroutines into the class you are creating. For instance:
 Will read the routines from 'Food::Tofu' and put them into the
 'My::Tofu' namespace. (It will also currently put any lexical
 variables from the code class into your class, so be careful.)
+
+You can also bring in routines from multiple files:
+
+ ...
+ class      => 'My::Tofu',
+ code_class => [ 'Food::Tofu', 'Food::Soybean', 'Food::Vegan' ],
+ ...
+
+However, you should be careful with this. Possibilities abound for
+different classes defining the same subroutine and similar actions
+which are quite difficult to debug.
 
 B<no_security> ($)
 
@@ -570,19 +583,26 @@ How should this object be displayed? Currently, the hashref it points
 to must have at least one key 'url', to which SPOPS appends a query
 string to identify this object.
 
+The query string it appends is very simple, something like:
+
+ url . ? . $class->CONFIG->{id_field} . = . $object->id()
+
 B<name> (\&)
 
 How can we find the name of an individual object? For instance, in a
 contact database, the name of a person object is the full name of the
 person.
 
-Here we expect a code reference. It can do anything complicated you
-like, but more often than not it is just:
+Here we expect either a code reference or a scalar. Most often you
+will use a scalar, which just names the field within an object to use,
+such as:
 
- name => sub { return $_[0]->{my_name_field} }
+ name => 'title'
 
-Note: it is on the TO DO list for SPOPS to implement allowing a scalar
-which names the property to use for assigning a name to an object.
+The code reference can do anything complicated you like, but more
+often than not it is just something like:
+
+ name => sub { return join( ', ', $_[0]->{field1}, $_[0]->{field2} ) }
 
 B<object_name> ($)
 
@@ -642,61 +662,164 @@ These are typically database-specific.
 
 B<has_a> (\%)
 
-Define a one-to-one relationship between objects. Currently, this
-means that an object contains one or more fields that contain the ID
-value of another object.
+Define a one-to-one relationship from one object to
+another. Currently, this means that an object has one or more fields
+that contain the ID value of another object. The 'has_a' field of a
+configuration tells this class what these relationships are, and this
+class automatically builds the subroutines to make this happen.
 
-So the 'has_a' field of a configuration tells this class what these
-relationships are, and this class automatically builds the subroutines
-to make this happen.
+Here is a simple example that many people are familiar with in which a
+user can belong to a single group.
 
-Here is what you find in the 'has_a' field:
+ my $spops = {
+   user => {
+     field    => [ 'user_id', 'group_id', 'email' ],
+     id_field => 'user_id',
+     class    => 'My::User',
+     has_a    => { 'My::Group' => [ 'group_id' ] },
+     ...
+   },
+   group => {
+     field    => [ 'group_id', 'name' ],
+     id_field => 'group_id',
+     class    => 'My::Group',
+     ...
+   },
 
- { 
-  SPOPS-tag => [ 'field_with_id_value', 'field_with_id_value' ],
- }
+ };
 
-If you have the normal (simple) case, you will have something like:
+Here are the steps this class goes through to create a subroutine you
+can call from one object to retrieve its associated object. (Using the
+above example, to retrieve a C<My::Group> object given a C<My::User>
+object.)
 
-  user => [ 'user_id' ]
+=over 4
 
-Where the name of the 'field_with_id_value' matches up with the
-'id_field' from the SPOPS class you are linking to. In this case, your
-alias will simply be the SPOPS-tag:
+=item 1.
 
-  alias: 'user'
+Find the SPOPS configuration information matching the SPOPS class
+given as the key. ('My::Group' under {user}-E<gt>{has_a} in the example
+above.) We will call this the SPOPS-Has below.
 
-Which means you can call
+=item 2.
 
- my $user = $obj->user;
+Compare the 'id_field' in the SPOPS-Has information ('group_id' under
+{group}-E<gt>{id_field} in the example) to the field given as the key
+in the original link ('group_id' under
+{user}-E<gt>{has_a}-E<gt>{'My::Group'} in the example).
 
-And get back a SPOPS object.
+=item 3.
 
-However, if you have two or more items -- or one item that is not the
-same name as the id_field -- identified by a single type but different
-ID fields, e.g.
+If the 'id_field' and the linking field are the same, create a
+subroutine of the same name as the SPOPS-Has tag. This is true in the
+above example, so we can do:
 
-  user => [ 'created_by', 'fulfilled_by' ]
+ # Retrieve a My::User object
+ my $user = My::User->fetch( 13 );
 
-The alias created will be the id field followed by an underscore
-followed by the type; in this case:
+ # Retrieve the My::Group object related to this My::User object
+ my $group = $user->group();
 
-  alias: 'created_by_user'
-  alias: 'fulfilled_by_user'
+since the field specified in the user 'has_a' clause matches the
+id_field specified in the class it is linking to.
 
-Or:
+=item 4.
 
- my $create_user  = $obj->created_by_user;
- my $fulfill_user = $obj->fulfilled_by_user;
+If the 'id_field' and the linking field are B<not> the same we either
+create a subroutine automatically or allow the configuration to
+specify one for us. We will deal with both possibilities below.
 
-(Note: We are currently considering a proposal to change 'SPOPS-alias'
-in the configuration field to 'SPOPS-class' so the configuration can
-be more flexible.)
+First, the automatic creation. For this example, replace the above
+definition for 'user' with:
+
+   user => {
+     field    => [ 'user_id', 'group_id', 'subgroup_id', 'email' ],
+     id_field => 'user_id',
+     class    => 'My::User',
+     has_a    => { 'My::Group' => [ 'group_id', 'subgroup_id' ] },
+     ...
+   },
+
+Now we have two relationships: the user belongs to both a group and a
+subgroup. Both the group and subgroup are instances of the same class,
+so we cannot refer to both of them using the 'group' alias as we did
+in the previous example.
+
+Once the above configuration is processed, we can do:
+
+ # Retrieve a My::User object
+ my $user = My::User->fetch( 13 );
+
+ # Retrieve the My::Group object related to this My::User object by
+ # the 'group_id' field
+ my $group = $user->group();
+
+ # Retrieve the My::Group object related to this My::User object by
+ # the 'subgroup_id' field
+ my $subgroup = $user->subgroup_id_group();
+
+So we create a subroutine with the name:
+
+ my $subroutine_name = join( '_', $id_field, $link_alias );
+
+In this case, $id_field is 'subgroup_id' and $alias is 'group'.
+
+You can sometimes use this to your advantage but it makes for some
+awkward naming schemes. However, you can use another means of
+naming. The custom means allows you to do something like this:
+
+
+   user => {
+     field    => [ 'user_id', 'group_id', 'subgroup_id', 'email' ],
+     id_field => 'user_id',
+     class    => 'My::User',
+     has_a    => { 'My::Group' => [ 'group_id', 
+                                    { subgroup_id => 'subgroup' } ] },
+     ...
+   },
+
+Now you can do the following:
+
+ # Retrieve a My::User object
+ my $user = My::User->fetch( 13 );
+
+ # Retrieve the My::Group object related to this My::User object by
+ # the 'group_id' field
+ my $group = $user->group();
+
+ # Retrieve the My::Group object related to this My::User object by
+ # the 'subgroup_id' field
+ my $subgroup = $user->subgroup();
+
+Here, instead of relying on SPOPS to name the subroutine for us that
+maps to the $id_field 'subgroup_id', we named it ouselves. The only
+warning here is to ensure that you do not create a subroutine of the
+same name in a 'code_class', otherwise the 'code_class' routine will
+get overwritten.
 
 B<fetch_by> (\@)
 
 Create a 'fetch_by_{fieldname}' routine that simply returns an
 arrayref of objects that match the value of a particular field.
+
+Example:
+
+ my $spops = {
+   user => {
+     field    => [ 'user_id', 'group_id', 'subgroup_id', 'email' ],
+     id_field => 'user_id',
+     class    => 'My::User',
+     fetch_by => [ 'email' ],
+     ...
+   },
+ };
+
+Allows us to do:
+
+ my $user_list = My::User->fetch_by_email( 'allyour@base.ours.com' );
+ foreach my $user ( @{ $user_list } ) {
+   send_email( $user->{email}, "This is an invalid address" );
+ }
 
 B<links_to> (\@)
 

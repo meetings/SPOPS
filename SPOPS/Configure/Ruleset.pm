@@ -1,12 +1,12 @@
 package SPOPS::Configure::Ruleset;
 
-# $Id: Ruleset.pm,v 1.10 2001/01/31 02:30:44 cwinters Exp $
+# $Id: Ruleset.pm,v 1.1.1.1 2001/02/02 06:08:28 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w );
 
 @SPOPS::Configure::Ruleset::ISA     = ();
-$SPOPS::Configure::Ruleset::VERSION = sprintf("%d.%02d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Configure::Ruleset::VERSION = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 

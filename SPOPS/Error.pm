@@ -1,12 +1,12 @@
 package SPOPS::Error;
 
-# $Id: Error.pm,v 1.14 2001/01/31 02:30:44 cwinters Exp $
+# $Id: Error.pm,v 1.1.1.1 2001/02/02 06:08:16 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w );
 
 @SPOPS::Error::ISA     = ();
-$SPOPS::Error::VERSION = sprintf("%d.%02d", q$Revision: 1.14 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Error::VERSION = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::Error::user_msg   = undef;
 $SPOPS::Error::system_msg = undef;

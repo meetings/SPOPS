@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 1.61 2001/02/01 05:54:39 cwinters Exp $
+# $Id: DBI.pm,v 1.6 2001/02/25 18:50:19 lachoy Exp $
 
 use strict;
 use SPOPS         qw( _wm _w DEBUG );
@@ -11,7 +11,7 @@ use DBI           ();
 use Data::Dumper  qw( Dumper );
 
 @SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
-@SPOPS::DBI::VERSION   = sprintf("%d.%02d", q$Revision: 1.61 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::DBI::VERSION   = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -117,11 +117,28 @@ sub initialize {
 
 sub check_action_security {
   my ( $self, $p ) = @_;
-  
+
+  # since the assumption outlined above (only saved objects have ids)
+  # might not be true in all cases, provide an escape route for classes
+  # that need security and want to handle their ids themselves
+
+  return SEC_LEVEL_WRITE if ( $p->{is_add} ); 
+
   # If the class has told us they're not using security, then 
   # everyone can do everything
   
   return SEC_LEVEL_WRITE if ( $self->no_security );
+
+  # Check to see that the ID exists -- if not, it's an add and will
+  # not be checked since SPOPS relies on your application to implement
+  # who should and should not create an object. 
+  #
+  # NOTE:This is a source of some thoughts right now -- if you think
+  # SPOPS can/should implement this, hop on over to the
+  # openinteract-dev mailing list at:
+  #
+  # http://lists.sourceforge.net/lists/listinfo/openinteract-dev
+
   my $class = ref $self || $self;
   my $id    = ( ref $self ) ? $self->id : $p->{id};
   return SEC_LEVEL_WRITE unless ( $id ); 
@@ -249,8 +266,12 @@ sub fetch {
   my ( $class, $id, $p ) = @_;
   $id ||= 0;
   $p  ||= {};
-  _wm( 2, DEBUG_FETCH, "Trying to fetch an item of $class with ID $id and params ", 
-                       join( " // ", map { $_ . ' -> ' . $p->{$_} } keys %{ $p } ) );
+  _wm( 2, DEBUG_FETCH,
+       "Trying to fetch an item of $class with ID $id and params ", 
+       join " // ",
+            map { $_ . ' -> ' . ( defined( $p->{$_} ) ? $p->{$_} : '' ) }
+                keys %{ $p }
+  );
  
  # Return nothing if we are not passed an ID or if the 
  # ID passed is a temporary one.
@@ -353,6 +374,10 @@ sub fetch {
   
   $obj->clear_change;
   
+  # Mark this as being a saved object
+
+  $obj->has_save;
+
   # Set the security fetched from above into this object
   # as a temporary property (see SPOPS::Tie for more info 
   # on temporary properties); note that this is set whether
@@ -370,7 +395,7 @@ sub fetch_group {
   # the list of rows returned and do whatever desired with them...
 
   my @select = ( join( '.', $class->table_name, $class->id_field ) );
- push @select, @{ $p->{select} } if ( ref $p->{select} eq 'ARRAY' );
+  push @select, @{ $p->{select} } if ( ref $p->{select} eq 'ARRAY' );
 
   # Some databases have difficulty sorting by a value not
   # specified in the SELECT clause (particularly with the 
@@ -421,10 +446,10 @@ sub save {
   my $id = $self->id;
 
   # We can force save() to be an INSERT by passing in a true value for
-  # the is_add parameter; otherwise, we rely on there being either no
-  # value for the ID or a temporary value for the ID
+  # the is_add parameter; otherwise, we rely on the flag within
+  # SPOPS::Tie to reflect whether an object has been saved or not.
 
-  my $is_add = ( $p->{is_add} or ! $id or $id =~ /^tmp/ );
+  my $is_add = ( $p->{is_add} or ! $self->saved );
 
   # If this is an update and it hasn't changed, we don't need to do
   # anything.
@@ -443,7 +468,8 @@ sub save {
   my $action = ( $is_add ) ? 'create' : 'update';
   my ( $level );
   unless ( $p->{skip_security} ) {
-    $level = $self->check_action_security( { required => SEC_LEVEL_WRITE } );
+    $level = $self->check_action_security( { required => SEC_LEVEL_WRITE,
+                                             is_add   => $is_add } );
   }
   _wm( 1, $DEBUG, "Security check passed ok. Continuing." );
 
@@ -507,14 +533,17 @@ sub post_fetch_id { return undef; }
 
 sub _save_insert {
   my ( $self, $p ) = @_;
+  $p ||= {};
   my $DEBUG = DEBUG_SAVE || $p->{DEBUG};
   _wm( 1, $DEBUG, "Treating the save as an INSERT." );
+
+  my $db = $p->{db} || $self->global_db_handle;
   
   # Ability to get the ID you want before the insert statement
   # is executed. If something is returned, push the value
   # plus the ID field onto the appropriate stack.
   
-  my $pre_id = $self->pre_fetch_id;
+  my $pre_id = $self->pre_fetch_id( { %{ $p }, db => $db } );
   if ( $pre_id ) {
     $self->id( $pre_id );
     push @{ $p->{field} }, $self->id_field;
@@ -532,6 +561,7 @@ sub _save_insert {
 
   my %args = ( table => $self->table_name, 
                return_sth => 1, 
+               db => $db,
                %{ $p } );
   my $sth = eval { $self->db_insert( \%args ) };
 
@@ -549,7 +579,7 @@ sub _save_insert {
   # via an overridden subclass method; if something is
   # returned, set the ID in the object.
 
-  my $post_id = $self->post_fetch_id( $sth, $p );
+  my $post_id = $self->post_fetch_id( { %{ $p }, db => $db, statement => $sth } );
   if ( $post_id ) {	 
     $self->id( $post_id );
     _wm( 1, $DEBUG, "ID fetched after insert: $post_id" );
@@ -633,13 +663,15 @@ sub _save_update {
 
 sub remove {
   my ( $self, $p ) = @_;
-  my $id = $self->id;
-  return undef   unless ( $id and $id !~ /^tmp/ );
+
+  # Don't remove it unless it's been saved already
+  return undef   unless ( $self->has_save );
   my $DEBUG = DEBUG || $p->{DEBUG};
 
   my $level = SEC_LEVEL_WRITE;
   unless ( $p->{skip_security} ) {
-    $level = $self->check_action_security( { required => SEC_LEVEL_WRITE } );
+    $level = $self->check_action_security({ 
+                               required => SEC_LEVEL_WRITE });
   }
  _wm( 1, $DEBUG, "Security check passed ok. Continuing." );
 
@@ -650,6 +682,7 @@ sub remove {
   # Do the removal, building the where clause if necessary
 
   my $where = $p->{where} || $self->id_clause( undef, undef, $p );
+  my $id = $self->id;
   my $rv = eval { $self->db_delete({
                             table => $self->table_name,
                             where => $where,
@@ -914,7 +947,7 @@ join query:
                                                    'item.item_id = modifier.item_id',
                                           value => [ 'property value' ], } ); };
 
-B<save()>
+B<save( [ \%params ] )>
 
 Object method that saves this object to the data store.  Returns the
 new ID of the object if it is an add; returns the object ID if it is
@@ -932,6 +965,26 @@ Example:
  else {
    print "New object created with ID: $new_id\n";
  }
+
+The object can generally tell whether it should be created in the data
+store or whether it should update the data store values. Currently it
+determines this by the presence of an ID value. If an ID value exists,
+this is probably an update; if it does not exist, it is probably a
+save.
+
+You can give SPOPS hints otherwise. If you are controlling ID values
+yourself and an ID value exists in your object, you can do:
+
+ $obj->save({ is_add => 1 });
+
+to tell SPOPS to treat the request as a creation rather than an update.
+
+One other thing to note if you are using L<SPOPS::Secure> for
+security: SPOPS assumes that your application determines whether a
+user can create an object. That is, all requests to create an object
+are automatically approved. Once the object is created, the initial
+security logic kicks in and any further actions (fetch/save/remove)
+are controlled by C<SPOPS::Secure>.
 
 Note that if your database schema includes something like:
 
@@ -955,7 +1008,7 @@ inserted. If you want to skip this step, either pass a positive value
 for the 'no_sync' key or set 'no_save_sync' to a positive value in the
 CONFIG of the implementing class.
 
-B<remove()>
+B<remove( [ \%params ] )>
 
 Note that you can only remove a saved object (duh). Also tries to
 remove the object from the cache. The object will not actually be
@@ -1001,5 +1054,15 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
+
+The following people added to this module with patches and/or advice:
+
+=over 4
+
+=item *
+
+Christian Lemburg <clemburg@aixonix.de>
+
+=back
 
 =cut

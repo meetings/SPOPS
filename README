@@ -61,9 +61,10 @@ new object with our just-created class.
       fatbomb => {
         class        => 'My::ObjectClass',
         isa          => [ qw/ SPOPS::DBI::MySQL SPOPS::DBI / ],
-        field        => [ qw/ fatbomb_id calories cost name servings / ],
+        field        => [ qw/ fatbomb_id calories cost name servings / ],     
         base_table   => 'fatbomb',
         id_field     => 'fatbomb_id',
+        increment_field => 1,
         skip_undef   => [ qw/ servings / ],
         sql_defaults => [ qw/ servings / ],
       },
@@ -88,7 +89,8 @@ new object with our just-created class.
 
 We can strip out the 'skip_undef' and 'sql_defaults' items in the
 configuration and we'd have the bare minimum configuration for a
-SPOPS::DBI object.
+SPOPS::DBI object. (The 'increment_field' key exists because we're
+using the AUTO_INCREMENT feature of MySQL.)
 
 
 APPLICATION-SPECIFICITY 
@@ -168,34 +170,38 @@ DBI issues
  perldoc SPOPS::SQLInterface
  perldoc SPOPS::DBI::MySQL
  perldoc SPOPS::DBI::Sybase
- perldoc SPOPS::DBI::Randomcode
- perldoc SPOPS::DBI::Keypool
+ perldoc SPOPS::Key::DBI::HandleField
+ perldoc SPOPS::Key::DBI::Identity
+ perldoc SPOPS::Key::DBI::Pool
 
 Utilities that might be useful:
 
+ perldoc SPOPS::Key::Random
  perldoc SPOPS::Utility
 
 More information about how data are stored in an object
 
  perldoc SPOPS::Tie
+ perldoc SPOPS::Tie::StrictField
 
 
 IDEAS? SUGGESTIONS? PATCHES?
 ========================
 
 Send them in! We welcome patches and try to keep on top of new
-developments (such as new DBD drivers) as much as possible.
-
-We currently do not have a mailing list setup, but this will change
-shortly.
+developments (such as new DBD drivers) as much as possible. Send
+everything to the openinteract-dev mailing list (info below).
 
 
 CONTACT
 ========================
 
-Direct all questions, comments, etc. to:
+This module is supported by the openinteract-help (for help) and
+openinteract-dev (for developers) mailing lists. Find out more about
+them at:
 
- Chris Winters <chris@cwinters.com>
+  http://lists.sourceforge.net/lists/listinfo/openinteract-help
+  http://lists.sourceforge.net/lists/listinfo/openinteract-dev
 
 Also check out the SPOPS section of the OpenInteract website for
 up-to-date versions, support information, party hat designs, etc.
@@ -203,10 +209,38 @@ up-to-date versions, support information, party hat designs, etc.
  http://www.openinteract.org/SPOPS/
 
 
+AUTHORS
+=========================
+
+Chris Winters <chris@cwinters.com> is the primary author of SPOPS. 
+
+Other folks who have had a hand:
+
+=over 4
+
+=item *
+
+Rusty Foster <rusty@kuro5hin.org>
+
+=item *
+
+Christian Lemburg <lemburg@aixonix.de>
+
+=item *
+
+Marcus Baker <mbaker@intes.net>
+
+=item *
+
+Rick Myers <rik@sumthin.nu>
+
+=back
+
+
 COPYRIGHT AND DISCLAIMER
 ========================
 
-SPOPS is Copyright (c) 2000 by intes.net, inc. All rights reserved.
+SPOPS is Copyright (c) 2001 by intes.net, inc. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the Perl Artistic License or the GNU General
@@ -214,4 +248,5 @@ Public License as published by the Free Software Foundation; either
 version 2 of the License (see 'COPYING'), or (at your option) any
 later version.
 
-$Id: README,v 1.4 2000/11/18 21:05:04 cwinters Exp $
+=========================
+$Id: README,v 1.3 2001/02/25 19:11:10 lachoy Exp $

@@ -1,12 +1,12 @@
 package SPOPS::DBI::Sybase;
 
-# $Id: Sybase.pm,v 1.16 2001/01/31 02:30:44 cwinters Exp $
+# $Id: Sybase.pm,v 1.2 2001/02/20 04:37:15 lachoy Exp $
 
 use strict;
-use SPOPS  qw( _w );
+use SPOPS::Key::DBI::Identity;
 
 @SPOPS::DBI::Sybase::ISA     = ();
-$SPOPS::DBI::Sybase::VERSION = sprintf("%d.%02d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Sybase::VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_quote {
   my ( $class, $value, $type, $db ) = @_;
@@ -16,32 +16,16 @@ sub sql_quote {
 
 sub sql_current_date  { return 'GETDATE()' }
 
-# Ensure only POST_fetch_id used
 
-sub pre_fetch_id  { return undef }
+# Backward compatibility and convenience, so you don't have to specify
+# another item in the isa -- instead just set 'syb_identity' to true.
 
 sub post_fetch_id { 
-  my ( $self, $sth, $p ) = @_;
-  return unless ( $self->CONFIG->{syb_identity} );
-  $sth->finish;
-
-  my $db  = $self->global_db_handle || $p->{db};
-  my $sql = 'SELECT @@IDENTITY';
-  eval {
-    $sth = $db->prepare( $sql );
-    $sth->execute;
-  };
-  
- # Don't clear the error so it will persist from SELECT statement
-
-  if ( $@ ) {   
-    $SPOPS::Error::user_msg   = 'Record saved, but ID of record unknown';;
-    die $SPOPS::Error::user_msg;
-  }
-  my $row = $sth->fetchrow_arrayref;
-  _w( 1, "Found inserted ID ($row->[0])" );
-  return $row->[0];
+  my ( $item, @args ) = @_;
+  return undef unless ( $item->CONFIG->{syb_identity} );
+  return SPOPS::Key::DBI::Identity::post_fetch_id( $item, @args );
 }
+
 
 1;
 
@@ -55,14 +39,13 @@ SPOPS::DBI::Sybase -- Sybase-specific routines for the SPOPS::DBI
 
 =head1 SYNOPSIS
 
- # Using a class-only defintion
- package MySPOPS;
- @MySPOPS::ISA = qw( SPOPS::DBI::Sybase SPOPS::DBI );
+ # In your configuration:
 
- # Using a config-only definition
  'myspops' => {
      'isa' => [ qw/ SPOPS::DBI::Sybase SPOPS::DBI / ],
-     'syb_identity' => 1, # optional
+
+     # If you have an IDENTITY field, set syb_identity to true
+     'syb_identity' => 1,
      ...
  },
 
@@ -76,7 +59,7 @@ insert. Of course, this only works if you have an IDENTITY field in
 your table:
 
  CREATE TABLE my_table (
-   id    numeric( 8, 0 ) IDENTITY not null,
+   id  numeric( 8, 0 ) IDENTITY not null,
    ...
  )
 
@@ -99,7 +82,7 @@ the DBI-E<gt>quote call.
 
 =head1 SEE ALSO
 
-L<DBD::Sybase>, L<DBI>
+L<SPOPS::Key::DBI::Identity>, L<DBD::Sybase>, L<DBI>
 
 =head1 COPYRIGHT
 

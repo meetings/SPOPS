@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.11 2000/11/18 21:06:28 cwinters Exp $
+# $Id: Makefile.PL,v 1.2 2001/02/20 04:50:55 lachoy Exp $
 
 use ExtUtils::MakeMaker;
 
@@ -127,9 +127,10 @@ CONFIG
 WriteMakefile(
     'NAME'	=> 'SPOPS',
     'VERSION_FROM' => 'VERSION',
-    'AUTHOR' => 'Chris Winters <chris@cwinter.com>',
+    'AUTHOR' => 'Chris Winters <chris@cwinters.com>',
     'ABSTRACT' => 'Data abstraction layer used for object persistence and security',
-    'PREREQ_PM' => { 'Date::Format' => 2.09,
-                     'Data::Dumper' => 0,
+    'PREREQ_PM' => { 'Storable'     => 1.00,
+                     'Date::Format' => 2.09,
+                     'Data::Dumper' => undef,
                      'Date::Calc'   => 4.3 },
 );

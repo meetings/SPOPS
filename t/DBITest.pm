@@ -1,6 +1,6 @@
 package DBITest;
 
-# $Id: DBITest.pm,v 1.3 2000/11/18 21:09:05 cwinters Exp $
+# $Id: DBITest.pm,v 1.2 2001/02/25 19:10:34 lachoy Exp $
 
 use strict;
 use SPOPS::DBI;
@@ -26,7 +26,7 @@ sub RULESET { return $DBITest::RULESET };
 # property
 sub _assign_types {
  my $class = shift;
- $DBITest::C->{dbi_type_info} = { spops_id => 'num', spops_name => 'char',
+ $DBITest::C->{dbi_type_info} = { spops_id   => 'num',  spops_name => 'char',
                                   spops_goop => 'char', spops_num => 'num' };
 }
 

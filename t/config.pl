@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: config.pl,v 1.5 2000/11/18 21:09:05 cwinters Exp $
+# $Id: config.pl,v 1.1.1.1 2001/02/02 06:08:35 lachoy Exp $
 
 my $CONFIG_FILE = 'spops_test.conf';
 

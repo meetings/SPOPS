@@ -1,5 +1,114 @@
 Revision history for Perl extension SPOPS.
 
+0.39 Sun Feb 25 13:50:56 EST 2001
+
+   * SPOPS.pm, SPOPS/Tie.pm, SPOPS/DBI.pm: Created a 'saved' flag
+     within the tied hash so that we always know whether a record has
+     been retrieved from a data store or not.
+
+   * SPOPS/DBI.pm: Prompted by Christian Lemburg
+     <clemburg@aixonix.de>: modify check_action_security() to see
+     whether the action is an add or not, and if so pass back
+     SEC_LEVEL_WRITE since SPOPS relies on your application to ensure
+     that a user can create an object. (Should SPOPS implement this?
+     Let us know on the openinteract-dev mailing list at
+     http://lists.sourceforge.net/lists/listinfo/openinteract-dev)
+     Also added documentation to the save() method.
+
+   * SPOPS/DBI.pm, SPOPS/Key/Random.pm, SPOPS/Key/DBI/*.pm: Modified
+     how the pre_fetch_id() and post_fetch_id() methods are called --
+     instead of passing a db handle/statement handle as the arguments,
+     instead put everything in a hashref and read from that. (Prompted
+     by the fact that SPOPS/Key/Random.pm was trying to use a DBI
+     database handle as the width for the random code to
+     generate. Ouch!)
+
+   * SPOPS/Configure.pm: Thanks to questions and notes from Leon
+     Brocard <acme@astray.com>, we added documentation for the 'has_a'
+     configuration item for an SPOPS object as well as gave developers
+     the ability to define a custom alias for the returned object
+     alias. For instance, you can do something like:
+
+      user => {
+        field    => [ 'user_id', 'group_id', 'email' ],
+        id_field => 'user_id',
+        class    => 'My::User',
+        has_a    => { 'My::Group' => [ { group_id => 'zanybrainy' } ]
+        ...,
+      },
+
+     and call the 'zanybrainy' method of a C<My::User> object to get
+     back the associated C<My::Group> object. (This is a silly example
+     but it means we don't have to rely solely on the clunky
+     automatic naming anymore.)
+
+   * SPOPS/DBI/MySQL.pm: post_fetch_id() now first checks to see if
+     the 'increment_field' of the class configuration is set to a true
+     value and if so retrieves the value from the handle.
+
+     **THIS REQUIRES A CHANGE!!**
+
+     From now on to use AUTO_INCREMENT fields in MySQL and SPOPS, you
+     must set:
+
+       'increment_field' => 1
+
+     in the SPOPS configuration file for that class.
+
+   * SPOPS/DBI/Sybase.pm: post_fetch_id() now first checks to see if
+     the 'syb_identity' field of the class configuration is set to a
+     true value and if so retrieves the value from the handle. This is
+     no retrofit issue at all since we already required this.
+
+   * SPOPS/DBI.pm: _save_insert() now retrieves a db handle and
+     passes it to both the pre_fetch_id() and post_fetch_id()
+     methods as well as the appropriate (insert/update) SQLInterface
+     method.
+
+   * SPOPS.pm: added 'Storable' to the ISA list of SPOPS, which means
+     that every SPOPS object can now call store(), retrieve() and
+     nstore() get serialized in a network-transportable
+     format. Cool. Implications of this have yet to shake out,
+     however.
+
+     **POSSIBLE INTERFACE CONFLICT!!**
+
+     If you are using a routine with any of the following names:
+
+        store()
+        retrieve()
+        nstore()
+
+     then you will not be able to use the methods from Storable. If
+     you don't plan to use Storable then this is no big deal, but if
+     you do then you'll have to rename your class methods.
+
+   * SPOPS/Tie.pm: Functionality for doing field consistency checking
+     is now in the new SPOPS/Tie/StrictField.pm, which allows you to
+     create an SPOPS object without field restrictions and serialize
+     it to a datasource. This might not seem useful at first -- why
+     not just serialize a hashref? -- but we can treat all these
+     objects the same which will (trust me) be important to you at
+     some time or other. You also get builtin serialization and other
+     fun stuff for free.
+
+   * SPOPS/Key/Random.pm, SPOPS/Key/DBI/Pool.pm,
+     SPOPS/Key/DBI/Identity.pm, SPOPS/Key/DBI/HandleField.pm: Moved
+     all key-generation functions to the SPOPS::Key hierarchy. The
+     Identity.pm and HandleField.pm came out of SPOPS/DBI/Sybase.pm
+     and SPOPS/DBI/MySQL.pm, respectively, and Pool.pm is a rewritten
+     SPOPS/DBI/Keypool.pm. SPOPS/DBI/RandomCode.pm was just renamed to
+     Random.pm. (Hope that makes sense!) This might cause a little
+     pain but we'll see if we can keep backward compatibility.
+
+   * SPOPS.pm, SPOPS/DBI.pm, t/dbi.t: Applied patches from Rick Myers
+     <rik@sumthin.nu> to eliminate warnings regarding undefined items
+     under -w.
+
+   * SPOPS/GDBM.pm, t/gdbm.t: Applied patches from Rick Myers
+     <rik@sumthin.nu> to properly deal with GDBM_WRCREAT permissions
+     on new GDBM databases.
+
 0.38  Thu Feb  1 00:54:03 EST 2001
 
      Modified format of all files in the module to be more
@@ -13,14 +122,14 @@ Revision history for Perl extension SPOPS.
      'parse_into_hash' manipulations work as intended in
      SPOPS/Configure.pm.
 
-0.37 Wed Jan  3 22:53:46 EST 2001
+0.37  Wed Jan  3 22:53:46 EST 2001
 
      One small (but important) bugfix: an error in SPOPS::Secure was
      using an object as a classname and instead of putting
      'NS::MyObject' into the 'class' column of the 'sys_security'
      table, it put something like 'NS::MyObject=HASH(0x8b7bb12)'.
 
-0.36 Dec 20
+0.36  Dec 20
 
      SMALL API CHANGE: the return value from the 'fetch_by_object'
      method in the security object class is now undef if there are no
@@ -44,7 +153,7 @@ Revision history for Perl extension SPOPS.
      on) anything now, as long as you have a consistent categorical
      identifier and a unique identifier for each thing.
 
-0.35 Nov 18
+0.35  Nov 18
 
      Added SPOPS/Secure/Hierarchy.pm for finding security in a
      parent-child relationship, like filesystems. This involved
@@ -72,7 +181,7 @@ Revision history for Perl extension SPOPS.
      '$Id' and modified my email from chris@cwinters.com to
      chris@cwinters.com.
 
-0.34 Nov 10
+0.34  Nov 10
 
      Switched some silly documentation stuff in all the files. Changed
      SPOPS/DBI.pm to pass $p to the pre/post action rulesets so that
@@ -83,7 +192,7 @@ Revision history for Perl extension SPOPS.
      relationship. Modify SPOPS.pm to only respond to AUTOLOAD
      requests when the thing doing the requesting is an object.
 
-0.33 Oct 16
+0.33  Oct 16
 
      Added lots of documentation to individual files; transition to
      'use constant' for debugging values (much gets optimized away at
@@ -101,7 +210,7 @@ Revision history for Perl extension SPOPS.
      localized $SIG{__WARN__} handler to throw out any messages passed
      to STDERR so we can rely on our own error reporting
 
-0.32 Sep 27
+0.32  Sep 27
 
      Added lots of documentation (including a 'README' file) and made
      lots of changes to the configuration classes (SPOPS/Configure.pm
@@ -118,7 +227,7 @@ Revision history for Perl extension SPOPS.
 
      Added a couple of examples into the 'eg/' directory.
 
-0.31 Sep 26
+0.31  Sep 26
 
      Removed the html encoding/decoding stuff from SPOPS.pm. Cleaned
      up the initial_security stuff in SPOPS/Secure.pm -- better
@@ -128,7 +237,7 @@ Revision history for Perl extension SPOPS.
      Added the necessary information to license SPOPS under the
      Artistic/GPL licenses. Woo-hoo!
 
-0.30 Sep 15
+0.30  Sep 15
 
      More tests, now for DBI. These are pretty simple and don't go
      into security, but they should actually be quite useful to see if
@@ -145,7 +254,7 @@ Revision history for Perl extension SPOPS.
      ('int', 'num', 'char', etc.) and SPOPS will translate them to the
      DBI types for you.
 
-0.29 Sep 14
+0.29  Sep 14
 
      Added the second implementation for storing SPOPS objects:
      SPOPS/GDBM.pm. Tested with Interact::Package objects and so far
@@ -163,7 +272,7 @@ Revision history for Perl extension SPOPS.
      SPOPS/GDBM.pm and for SPOPS/HashFile.pm. DBI tests are going to
      be a little more difficult...
 
-0.28 Sep 11
+0.28  Sep 11
 
      Added the 'object_description' method to SPOPS.pm, since we
      really do not have a generic way to query an object for a general
@@ -179,7 +288,7 @@ Revision history for Perl extension SPOPS.
      subroutines if the configuration states that there is code behind
      the class.
 
-0.27 Aug 28
+0.27  Aug 28
 
      Moved all the ruleset initialization configuration actions to
      SPOPS/Configure/Ruleset.pm. This involved moving the package
@@ -195,7 +304,7 @@ Revision history for Perl extension SPOPS.
      deserve its own 'version', but we need to get this out for
      something :)
 
-0.26 Aug 16
+0.26  Aug 16
 
       Minor changes to reflect that we never need to call a
       global_error_class, and that the cache return has been named to
@@ -229,7 +338,7 @@ Revision history for Perl extension SPOPS.
       to a separate class, which processes it and adds/modifies a
       full-text search engine. Cool stuff :)
 
-0.25 Aug 2
+0.25  Aug 2
 
       Fixed a long-dormant buglet: this entire time, the
       SPOPS/DBI/save method was trying to retrieve the just-set values
@@ -240,7 +349,7 @@ Revision history for Perl extension SPOPS.
       and nothing to the others...  Good thing caching isn't activated
       yet :)
 
-0.24 Jul 26
+0.24  Jul 26
 
       Fixed some typos in SPOPS/Configure/DBI.pm in the eval'd
       routines (including one where we were fetching the linked
@@ -251,7 +360,7 @@ Revision history for Perl extension SPOPS.
       the save() method, so you can update the primary key field and
       still refer to the old ID.
 
-0.23 Jul 15
+0.23  Jul 15
 
       Radically changed how errors are thrown. Every error generated
       by SPOPS now sets the package variables user_msg, system_msg,
@@ -295,7 +404,7 @@ Revision history for Perl extension SPOPS.
 
 0.20  Jun 18
 
-       Paper bag fix in SPOPS/Secure.pm made by renaming a hash. <blush>
+      Paper bag fix in SPOPS/Secure.pm made by renaming a hash. <blush>
 
 0.19  Jun 18
 

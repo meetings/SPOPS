@@ -1,27 +1,26 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 1.53 2001/02/01 05:54:39 cwinters Exp $
+# $Id: SPOPS.pm,v 1.7 2001/02/25 18:50:19 lachoy Exp $
 
 use strict;
-use vars qw( $IDX_CHANGE );
 require Exporter;
-
-use SPOPS::Tie    qw( IDX_DATA IDX_CHANGE IDX_CHECK_FIELDS );
+use SPOPS::Tie    qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS );
 use SPOPS::Secure qw( SEC_LEVEL_WRITE );
+use Storable      qw( store retrieve nstore );
 
-$SPOPS::AUTOLOAD = '';
-@SPOPS::ISA       = qw( Exporter );
+$SPOPS::AUTOLOAD  = '';
+@SPOPS::ISA       = qw( Exporter Storable );
 @SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
 
 # Identify the SPOPS release version (so that
 #      $ perl -MSPOPS -e 'print SPOPS->VERSION' 
 # gives a right answer.
 
-$SPOPS::VERSION = '0.38';
+$SPOPS::VERSION = '0.39';
 
 # Internal use only -- CVS version
 
-$SPOPS::CVS_VERSION = sprintf("%d.%02d", q$Revision: 1.53 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::CVS_VERSION = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -135,13 +134,17 @@ sub create_initial_security { return 1;}
 sub new {
   my ( $pkg, $p ) = @_;
   my $class = ref $pkg || $pkg;
-  my ( %data );
   my $params = {};
-  my $fields = $class->field;
-  if ( keys %{ $fields } ) {
-    $params->{field} = [ keys %{ $fields } ];
+  my $tie_class = 'SPOPS::Tie';
+  if ( $class->CONFIG->{strict_field} ) {
+    my $fields = $class->field;
+    if ( keys %{ $fields } ) {
+      $params->{field} = [ keys %{ $fields } ];
+      $tie_class = 'SPOPS::Tie::StrictField'
+    }
   }
-  my $int = tie %data, 'SPOPS::Tie', $class, $params;
+  my ( %data );
+  my $int = tie %data, $tie_class, $class, $params;
   my $self = bless( \%data, $class );
   $self->initialize( $p );
   return $self;
@@ -191,11 +194,7 @@ sub set { return $_[0]->{ $_[1] } = $_[2]; }
 
 sub data {
   my ( $self ) = @_;
-  my $data = {};
-  while ( my ( $k, $v ) = each %{ $self } ) {
-    $data->{ $k } = $v;
-  }
-  return $data;
+  return { map { $_ => $self->{ $_ } } keys %{ $self } };
 }
 
 sub is_checking_fields { return tied( %{ $_[0] } )->{ IDX_CHECK_FIELDS() }; }
@@ -242,6 +241,12 @@ sub as_string {
 sub changed      { return $_[0]->{ IDX_CHANGE() }; }
 sub has_change   { $_[0]->{ IDX_CHANGE() } = 1;    }
 sub clear_change { $_[0]->{ IDX_CHANGE() } = 0;    }
+
+# Track whether this object has been saved
+
+sub saved        { return $_[0]->{ IDX_SAVE() };   }
+sub has_save     { $_[0]->{ IDX_SAVE() } = 1;      }
+sub clear_save   { $_[0]->{ IDX_SAVE() } = 0;      }
 
 # returns the timestamp value for this object, if
 # one has been defined
@@ -339,15 +344,17 @@ sub DESTROY {
 }
 
 sub _w {
-  return unless ( DEBUG >= shift );
+  my $lev   = shift || 0;
+  return unless ( DEBUG >= $lev );
   my ( $pkg, $file, $line ) = caller;
   my @ci = caller(1);
   warn "$ci[3] ($line) >> ", join( ' ', @_ ), "\n";
 }
 
 sub _wm {
-  my $lev = shift || '';
-  return unless ( $lev < shift );
+  my $lev   = shift || 0;
+  my $check = shift || 0;
+  return unless ( $check >= $lev );
   my ( $pkg, $file, $line ) = caller;
   my @ci = caller(1);
   warn "$ci[3] ($line) >> ", join( ' ', @_ ), "\n"; 
@@ -419,7 +426,8 @@ Make it easy to do common operations (fetch, save, remove)
 
 =item * 
 
-Get rid of as much SQL as possible, but...
+Get rid of as much SQL (or other domain-specific language) as
+possible, but...
 
 =item * 
 
@@ -428,6 +436,11 @@ Get rid of as much SQL as possible, but...
 =item * 
 
 Make applications easily portable from one database to another
+
+=item *
+
+Allow people to model objects to existing data without modifying the
+data
 
 =item * 
 
@@ -455,7 +468,7 @@ with a unique ID that the object magically appears. Similarly, all the
 object should know is that it calls I<save()> on itself and can
 reappear at any later date with the proper invocation.
 
-B<Tie Interface>
+=head2 Tie Interface
 
 This version of SPOPS supports using a L<tie> interface to get and set
 the individual data values. You can also use the more traditional OO
@@ -467,6 +480,18 @@ The tie interface allows the most common operations -- fetch data and
 put it into a data structure for later use -- to be done very
 easily. It also hides much of the complexity behind the object for you
 so that most of the time you are dealing with a simple hashref.
+
+=head2 Serialization
+
+Since the main SPOPS class from which all SPOPS objects derive has
+L<Storable> as a parent, you can call any of its methods from any
+SPOPS object and have a serialized version of your object. You can
+send it over the network, save it for later -- whatever you like.
+
+Note that this feature appeared starting version 0.39, so if you have
+any issues with it please e-mail the author. There are some issues to
+be worked out with configuration and the like, but it basically just
+works.
 
 =head2 What do the objects look like?
 
@@ -626,14 +651,18 @@ The typical class hierarchy for an SPOPS object looks like this:
 
 =over 4
 
-=item SPOPS
+=item *
+
+SPOPS
 
 Abstract base class, provides persistency and security framework
 (fetch, save, remove)
 
 Example: You are reading it now!
 
-=item SPOPS::MyStorageTechnology
+=item *
+
+SPOPS::MyStorageTechnology
 
 Concrete base class, provides technical implementation of framework
 for a particular storage technology (e.g., Filesystem, RDBMS, LDAP,
@@ -641,7 +670,9 @@ for a particular storage technology (e.g., Filesystem, RDBMS, LDAP,
 
 Example: SPOPS::DBI, SPOPS::GDBM, ...
 
-=item SPOPS::MyApplicationClass
+=item *
+
+SPOPS::MyApplicationClass
 
 User class, provides semantic implementation of framework
 (configuration of parent class, e.g., database connection strings,
@@ -1364,14 +1395,29 @@ Find out more about SPOPS -- current versions, updates, rants, ideas
 
  http://www.openinteract.org/SPOPS/
 
+CVS access and mailing lists (currently supported by the
+openinteract-dev list) are at:
+
+http://sourceforge.net/projects/openinteract/
+
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
 
 Christian Lemburg <clemburg@online-club.de> contributed some
-documentation and far too many good ideas to implement
+documentation and far too many good ideas to implement.
 
 Rusty Foster <rusty@kuro5hin.org> was also influential in the early
 days of this library.
+
+The following people have offered patches to SPOPS:
+
+=over 4
+
+=item *
+
+Rick Myers <rik@sumthin.nu>
+
+=back
 
 =cut

@@ -1,0 +1,19 @@
+RELEASE NOTES: SPOPS
+=========================
+
+0.39
+
+  * If you're using 'AUTO_INCREMENT' fields for SPOPS::DBI::MySQL, you
+    *must* create a new key in your object configuration:
+
+    'increment_field' => 1,
+
+    You don't need to modify anything else.
+
+  * SPOPS.pm (root class for all SPOPS objects) now inherits from
+    Storable, using the methods 'store()', 'retrieve()' and
+    'nstore()'. If you have methods with these names in your object
+    then you won't be able to use the Storable functionality.
+
+=========================
+$Id: RELEASE,v 1.1 2001/02/25 21:07:08 lachoy Exp $

@@ -1,6 +1,6 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 1.6 2001/01/31 02:30:45 cwinters Exp $
+# $Id: Hierarchy.pm,v 1.1.1.1 2001/02/02 06:08:34 lachoy Exp $
 
 use strict;
 use vars          qw( $ROOT_OBJECT_NAME );
@@ -9,7 +9,7 @@ use SPOPS::Secure qw( :scope :level $EMPTY );
 use Data::Dumper  qw( Dumper );
 require Exporter;
 
-$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Secure::Hierarchy::ISA       = qw( Exporter SPOPS::Secure );
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
 

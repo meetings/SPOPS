@@ -1,28 +1,26 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 1.16 2001/01/31 02:30:44 cwinters Exp $
+# $Id: MySQL.pm,v 1.2 2001/02/20 04:36:58 lachoy Exp $
 
 use strict;
-use SPOPS  qw( _w );
+use SPOPS::Key::DBI::HandleField;
 
 @SPOPS::DBI::MySQL::ISA     = ();
-$SPOPS::DBI::MySQL::VERSION = sprintf("%d.%02d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::MySQL::VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return 'NOW()' }
 
-sub pre_fetch_id      { return undef }
+
+# Backward compatibility (basically) -- you just have to set a true
+# value in the config if you have an auto-increment field in the
+# table. If so we call the post_fetch_id method from
+# SPOPS::Key::DBI::HandleField.
 
 sub post_fetch_id { 
-  my ( $self, $sth )  = @_;
-  my $id = $sth->{mysql_insertid};
-  _w( 1, "Found inserted ID ($id)" );
-  return $id  if ( $id );
-
-  my $msg = 'Record saved, but ID of record unknown';
-  SPOPS::Error->set({ user_msg => $msg, type => 'db',
-                      system_msg => "Cannot retrieve just-inserted ID from MySQL table $sth->{mysql_table}->[0]",
-                      method => 'post_fetch_id' });
- die $msg;
+  my ( $item, @args ) = @_;
+  return undef unless ( $item->CONFIG->{increment_field} );
+  $item->CONFIG->{handle_field} ||= 'mysql_insertid';
+  return SPOPS::Key::DBI::HandleField::post_fetch_id( $item, @args );
 }
 
 1;

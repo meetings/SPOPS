@@ -1,21 +1,18 @@
-package SPOPS::DBI::RandomCode;
+package SPOPS::Key::Random;
 
-# $Id: RandomCode.pm,v 1.2 2001/02/20 04:39:16 lachoy Exp $
+# $Id: Random.pm,v 1.3 2001/02/21 12:29:46 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w );
 
-@SPOPS::DBI::RandomCode::ISA     = ();
-$SPOPS::DBI::RandomCode::VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::Key::Random::ISA     = ();
+$SPOPS::Key::Random::VERSION = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
 
-my $DEFAULT_WIDTH = 8;
+use constant DEFAULT_WIDTH => 8;
 
 sub pre_fetch_id  { 
-  my ( $class, $width ) = @_;
-  warn "****SPOPS::DBI::RandomCode is deprecated and will probably be\n",
-       "removed in a future version of SPOPS. Please change your\n",
-       "classes to use 'SPOPS::Key::Random' instead.\n";
-  $width ||= $class->CONFIG->{id_width} || $DEFAULT_WIDTH;
+  my ( $class, $p ) = @_;
+  my $width = $p->{width} || $class->CONFIG->{id_width} || DEFAULT_WIDTH;
   my $code =  $class->generate_random_code( $width );
   _w( 1, "Created insert ID ($code)" );
   return $code; 
@@ -31,13 +28,13 @@ __END__
 
 =head1 NAME
 
-SPOPS::DBI::RandomCode - Creates a random code for the ID field
+SPOPS::Key::Random - Creates a random alphanumeric code for the ID field
 
 =head1 SYNOPSIS
 
  package MySPOPS;
 
- @MySPOPS::ISA = qw( SPOPS::DBI::RandomCode SPOPS::DBI );
+ @MySPOPS::ISA = qw( SPOPS::Key::Random SPOPS::DBI );
 
 =head1 DESCRIPTION
 

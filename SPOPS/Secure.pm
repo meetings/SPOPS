@@ -1,6 +1,6 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 1.37 2001/01/31 02:30:44 cwinters Exp $
+# $Id: Secure.pm,v 1.1.1.1 2001/02/02 06:08:26 lachoy Exp $
 
 use strict;
 use vars         qw( $EMPTY );
@@ -8,7 +8,7 @@ use Data::Dumper qw( Dumper );
 require Exporter;
 
 @SPOPS::Secure::ISA     = qw( Exporter );
-$SPOPS::Secure::VERSION = sprintf("%d.%02d", q$Revision: 1.37 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::VERSION = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
 
 # Stuff for security constants and exporting
 

@@ -1,6 +1,6 @@
 package GDBMTest;;
 
-# $Id: GDBMTest.pm,v 1.2 2000/11/18 21:09:05 cwinters Exp $
+# $Id: GDBMTest.pm,v 1.1.1.1 2001/02/02 06:08:35 lachoy Exp $
 
 use strict;
 use SPOPS::GDBM;

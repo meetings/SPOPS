@@ -1,13 +1,13 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 1.3 2001/01/31 02:30:44 cwinters Exp $
+# $Id: Utility.pm,v 1.1.1.1 2001/02/02 06:08:28 lachoy Exp $
 
 use strict;
 use Date::Format  qw( time2str );
 use Date::Calc    ();
 
 @SPOPS::Utility::ISA     = qw();
-$SPOPS::Utility::VERSION = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Utility::VERSION = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
 
 # Return a random code of length $length. If $opt is 'mixed', then the
 # code is filled with both lower- and upper-case charaters.

@@ -1,11 +1,124 @@
-package SPOPS::TieFileHash;
+package SPOPS::HashFile;
 
-# $Id: HashFile.pm,v 1.14 2001/01/31 02:30:44 cwinters Exp $
+# $Id: HashFile.pm,v 1.2 2001/02/20 04:36:08 lachoy Exp $
+
+use strict;
+use SPOPS;
+use Data::Dumper;
+
+@SPOPS::HashFile::ISA       = qw( SPOPS );
+$SPOPS::HashFile::VERSION   = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+
+# Just grab the tied hash from the SPOPS::TieFileHash
+
+sub new {
+  my ( $pkg, $p ) = @_;
+  my $class = ref $pkg || $pkg;
+  my ( %data );
+  my $int = tie %data, 'SPOPS::TieFileHash', $p->{filename}, $p->{perm};
+  my $object = bless( \%data, $class );
+  $object->initialize( $p );
+  return $object;
+}
+
+# Subclasses can override
+
+sub initialize { return 1; }
+
+sub class_initialize {
+  my ( $class, $CONF ) = @_;
+  return $class->_class_initialize( $CONF );
+}
+
+
+# Just pass on the parameters to 'new'
+
+sub fetch {
+  my ( $class, $filename, $p ) = @_;
+  $p ||= {};
+  return undef unless ( $class->pre_fetch_action( $filename, $p ) );
+  my $object = $class->new( { filename => $filename, %{ $p } } );
+  return undef unless( $object->post_fetch_action( $filename, $p ) );
+  return $object;
+}
+
+
+# Ensure we can write and that the filename is kosher, then
+# dump out the data to the file.
+
+sub save {
+  my ( $self, $p ) = @_;
+  my $obj = tied %{ $self };
+  unless ( $obj->{perm} eq 'write' ) {
+    die "Cannot save $obj->{filename}: it was opened as read-only.\n";
+  }
+  unless ( $obj->{filename} ) {
+    die "Cannot save data: the filename has been erased. Did you assign an empty hash to the object?\n";
+  }
+  if ( -f $obj->{filename} ) {
+    rename( $obj->{filename}, "$obj->{filename}.old" ) 
+          || die "Cannot rename old file to make room for new one. Error: $!";
+  }
+  return undef unless ( $self->pre_save_action( $p ) );
+  my %data = %{ $obj->{data} };
+  $p->{dumper_level} ||= 2;
+  local $Data::Dumper::Indent = $p->{dumper_level};
+  my $string = Data::Dumper->Dump( [ \%data ], [ 'data' ] ); 
+  eval { open( INFO, "> $obj->{filename}" ) || die $! };
+  if ( $@ ) {
+    rename( "$obj->{filename}.old", $obj->{filename} ) 
+          || die "Cannot open file for writing (reason: $@ ) and ",
+                 "cannot move backup file to original place. Reason: $!";
+    die "Cannot open file for writing. Backup file restored. Error: $@";
+  }
+  print INFO $string;
+  close( INFO );
+  if ( -f "$obj->{filename}.old" ) {
+    unlink( "$obj->{filename}.old" ) 
+          || warn "Cannot remove the old data file. It still lingers in $obj->{filename}.old....\n";
+  }
+  return undef unless ( $self->post_save_action( $p ) );
+  return 1;
+}
+
+
+sub remove {
+  my ( $self, $p ) = @_;
+  my $obj = tied %{ $self };
+  unless ( $obj->{perm} eq 'write' ) {
+    die "Cannot save $obj->{filename}: it was opened as read-only.\n";
+  }
+  unless ( $obj->{filename} ) {
+    die "Cannot save data: the filename has been erased. Did you assign an empty hash to the object?\n";
+  }
+  return undef unless ( $self->pre_remove_action( $p ) );
+  my $rv = %{ $self } = ();
+  return undef unless ( $self->post_remove_action( $p ) );
+  return $rv;
+}
+
+
+# Create a new object from an old one, allowing any passed-in
+# values to override the ones from the old object
+
+sub clone {
+  my ( $self, $p ) = @_;
+  $p->{filename} ||= tied %{ $self }->{filename};
+  my $new = $self->new( { filename => $p->{filename}, perm => $p->{perm} } ); 
+  while ( my ( $k, $v ) = each %{ $self } ) {
+    $new->{ $k } = $p->{ $k } || $v;
+  }
+  return $new;
+}
+
+
+
+package SPOPS::TieFileHash;
 
 use strict;
 
 @SPOPS::TieFileHash::ISA       = ();
-$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.14 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
 
 # These are all very standard routines for a tied hash; more info: see
 # 'perldoc Tie::Hash'
@@ -16,18 +129,25 @@ $SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.14 $ =~ /(\d+)
 # object, and the 'data' key holds the actual information
 
 sub TIEHASH {
-  my $class = shift;
-  my ( $filename, $perm ) = @_;
+  my ( $class, $filename, $perm ) = @_;
   $perm ||= 'read';
-  die "Valid permissions: read | write | new (Value: $perm)\n" if ( $perm !~ /^(read|write|new)$/ );
+  if ( $perm !~ /^(read|write|new|write\-new)$/ ) {
+    die "Valid permissions: read | write | new | write-new (Value: $perm)\n";
+  }
   unless ( $filename ) {
     die "You must pass a filename to use for reading and writing.\n";
   }
-  my $file_exists = 0;
-  $file_exists++  if ( -f $filename );
-  if ( $perm ne 'new' and ! $file_exists ) {
-    die "Cannot create object without existing file or 'new' permission (File: $filename)\n";
+  my $file_exists = ( -f $filename ) ? 1 : 0;
+  unless ( $file_exists ) {
+    if ( $perm eq 'write-new' or $perm eq 'new' ) {
+      $perm = 'new';
+    }
+    else {
+      die "Cannot create object without existing file or 'new' permission (File: $filename; Permission: $perm)\n";
+    }
   }
+  if ( $perm eq 'write-new' ) { $perm = 'write' }
+
   my $data = undef;
   if ( $file_exists ) {
     open( PD, $filename ) || die "Cannot open ($filename). Reason: $!";
@@ -83,7 +203,9 @@ sub DELETE {
 
 sub CLEAR {
   my ( $self ) = @_;
-  die "Cannot remove $self->{filename}; permission set to read-only.\n" if ( $self->{perm} ne 'write' );
+  if ( $self->{perm} ne 'write' ) {
+    die "Cannot remove $self->{filename}; permission set to read-only.\n";
+  }
   unlink( $self->{filename} ) 
         || die "Cannot remove file $self->{filename}. Reason: $!";
   $self->{data} = undef;
@@ -103,100 +225,6 @@ sub NEXTKEY {
   my $next_key = each %{ $self->{data} };
   return undef unless ( $next_key );
   return $next_key;
-}
-
-1;
-
-
-
-
-
-package SPOPS::HashFile;
-
-use strict;
-use SPOPS;
-use Data::Dumper;
-
-@SPOPS::HashFile::ISA       = qw( SPOPS );
-$SPOPS::HashFile::VERSION   = sprintf("%d.%02d", q$Revision: 1.14 $ =~ /(\d+)\.(\d+)/);
-
-# Just grab the tied hash from the package above
-sub new {
- my $pkg   = shift;
- my $class = ref $pkg || $pkg;
- my $p     = shift;
- my ( %data );
- my $int = tie %data, 'SPOPS::TieFileHash', $p->{filename}, $p->{perm};
- return bless( \%data, $class );
-}
-
-# Just pass on the parameters to 'new'
-sub fetch {
- my ( $class, $filename, $p ) = @_;
- $p ||= {};
- return $class->new( { filename => $filename, %{ $p } } );
-}
-
-# Ensure we can write and that the filename is kosher, then
-# dump out the data to the file.
-sub save {
- my $self = shift;
- my $p    = shift;
- my $obj = tied %{ $self };
- unless ( $obj->{perm} eq 'write' ) {
-   die "Cannot save $obj->{filename}: it was opened as read-only.\n";
- }
- unless ( $obj->{filename} ) {
-   die "Cannot save data: the filename has been erased. Did you assign an empty hash to the object?\n";
- }
- if ( -f $obj->{filename} ) {
-   rename( $obj->{filename}, "$obj->{filename}.old" ) 
-         || die "Cannot rename old file to make room for new one. Error: $!";
- }
- my %data = %{ $obj->{data} };
- $p->{dumper_level} ||= 2;
- local $Data::Dumper::Indent = $p->{dumper_level};
- my $string = Data::Dumper->Dump( [ \%data ], [ 'data' ] ); 
- eval { open( INFO, "> $obj->{filename}" ) || die $! };
- if ( $@ ) {
-   rename( "$obj->{filename}.old", $obj->{filename} ) 
-         || die "Cannot open file for writing (reason: $@ ) and ",
-                "cannot move backup file to original place. Reason: $!";
-   die "Cannot open file for writing. Backup file restored. Error: $@";
- }
- print INFO $string;
- close( INFO );
- if ( -f "$obj->{filename}.old" ) {
-   unlink( "$obj->{filename}.old" ) 
-         || warn "Cannot remove the old data file. It still lingers in $obj->{filename}.old....\n";
- }
- return 1;
-}
-
-sub remove {
- my $self = shift;
- my $p    = shift;
- my $obj = tied %{ $self };
- unless ( $obj->{perm} eq 'write' ) {
-   die "Cannot save $obj->{filename}: it was opened as read-only.\n";
- }
- unless ( $obj->{filename} ) {
-   die "Cannot save data: the filename has been erased. Did you assign an empty hash to the object?\n";
- }
- return %{ $self } = ();
-}
-
-# Create a new object from an old one, allowing any passed-in
-# values to override the ones from the old object
-sub clone {
- my $self = shift;
- my $p    = shift;
- $p->{filename} ||= tied %{ $self }->{filename};
- my $new = $self->new( { filename => $p->{filename}, perm => $p->{perm} } ); 
- while ( my ( $k, $v ) = each %{ $self } ) {
-   $new->{ $k } = $p->{ $k } || $v;
- }
- return $new;
 }
 
 
@@ -288,6 +316,10 @@ This overrides the I<clone()> method from SPOPS.
 
 B<No use of SPOPS::Tie>
 
+=head1 TO DO
+
+B<Use SPOPS::Tie>
+
 This is one of the few SPOPS implementations that will never use the
 C<SPOPS::Tie> class to implement its data holding. We still use a tied
 hash, but it is much simpler -- no field checking, no ensuring that
@@ -295,11 +327,14 @@ the keys match in case, etc. This just stores some information about
 the object (filename, permission, and data) and lets you go on your
 merry way.
 
-=head1 TO DO
+However, since we recently changed L<SPOPS::Tie> to make
+field-checking optional we might be able to use it.
 
 =head1 BUGS
 
 =head1 SEE ALSO
+
+L<SPOPS>, L<Data::Dumper>
 
 =head1 COPYRIGHT
 
@@ -311,6 +346,5 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
 
 =cut

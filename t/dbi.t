@@ -1,4 +1,4 @@
-# $Id: dbi.t,v 1.8 2000/11/18 21:09:05 cwinters Exp $
+# $Id: dbi.t,v 1.3 2001/02/25 19:10:34 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -31,6 +31,7 @@ print "1..$num_tests\n";
 
 # If the driver is *known* not to process {TYPE} info, we tell the test
 # class to include the type info in its configuration
+
 my %no_TYPE_dbd_drivers = ();
 my $driver_name = $config->{DBI_driver};
 if ( $driver_name eq 'ASAny' ) {
@@ -40,7 +41,10 @@ if ( $driver_name eq 'ASAny' ) {
     print "Cannot require DBD::ASAny module. Do you have it installed? (Error: $@)\n";
     exit;
   }
-  my $dumb_ver = $DBD::ASAny::VERSION; # get around annoying (!) -w declaration that var is only used once...
+
+  # get around annoying (!) -w declaration that var is only used once...
+
+  my $dumb_ver = $DBD::ASAny::VERSION; 
   if ( $DBD::ASAny::VERSION < 1.09 ) {
     print "1..0\n";
     print "-- The DBD::ASAny driver prior version 1.09 did not support the {TYPE} attribute\n",
@@ -50,10 +54,11 @@ if ( $driver_name eq 'ASAny' ) {
     exit;
   }
 }
+
 if ( $no_TYPE_dbd_drivers{ $driver_name } ) {
-  DBITest->_assign_types();
   warn "\nDBD Driver $driver_name does not support {TYPE} information\n",
        "Installing manual types for test.\n";
+  DBITest->_assign_types();
 }
 
 my %dbd_driver_actions = (
@@ -63,6 +68,7 @@ my %dbd_driver_actions = (
 $dbd_driver_actions{ $driver_name }->( $config ) if ( ref $dbd_driver_actions{ $driver_name } eq 'CODE' );
 
 # First connect to the database
+
 my $db = eval { DBI->connect( $config->{DBI_dsn}, $config->{DBI_user}, $config->{DBI_password},
                               { AutoCommit => 1, PrintError => 0, ChopBlanks => 1 } ) 
                   || die $DBI::errstr };
@@ -78,7 +84,10 @@ my $table_name = 'spops_test';
 
 # This is standard, plain vanilla SQL; I don't want to have to do a
 # vendor-specific testing suite (argh!) -- although we could just
-# create sql files and read them in...
+# create sql files and read them in. Adapting the
+# OpenInteract::SQLInstall for strict SPOPS use might be
+# interesting...
+
 my $table_sql = qq/
   CREATE TABLE $table_name (
     spops_id    int not null primary key,
@@ -190,7 +199,8 @@ my $table_sql = qq/
 # Create another object, but this time don't define the spops_num
 # field and see if the default comes through
 {
- my $obj = DBITest->new( { spops_id => 1588, spops_goop => 'here we go!' } );
+ my $obj = DBITest->new( { spops_id => 1588, spops_goop => 'here we go!', 
+                           spops_name => 'AnotherProject' } );
  eval { $obj->save( { is_add => 1, db => $db, skip_cache => 1 } ) };
  if ( $@ ) {
    warn "Cannot save object: $@\n", Dumper( SPOPS::Error->get ), "\n";

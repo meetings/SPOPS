@@ -1,6 +1,6 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 1.17 2001/01/31 02:30:44 cwinters Exp $
+# $Id: GDBM.pm,v 1.2 2001/02/11 21:07:07 lachoy Exp $
 
 use strict;
 use SPOPS         qw( _w );
@@ -9,14 +9,13 @@ use Data::Dumper  qw( Dumper );
 use GDBM_File;
 
 @SPOPS::GDBM::ISA       = qw( SPOPS );
-@SPOPS::GDBM::VERSION   = sprintf("%d.%02d", q$Revision: 1.17 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::GDBM::VERSION   = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
 
 # Make this the default for everyone -- they can override it
 # themselves...
 
 sub class_initialize {
-  my $class  = shift;
-  my $CONFIG = shift;
+  my ( $class, $CONFIG ) = @_;
   my $C = $class->CONFIG;
   if ( ref $C->{field} eq 'HASH' ) {
     $C->{field_list}  = [ sort{ $C->{field}->{$a} <=> $C->{field}->{$b} } keys %{ $C->{field} } ];
@@ -33,8 +32,7 @@ sub _class_initialize { return 1; }
 # fields
 
 sub initialize {
-  my $self = shift;
-  my $p    = shift;
+  my ( $self, $p ) = @_;
   return unless ( ref $p and scalar( keys %{ $p } ) );
   
   # Set the GDBM filename if it was passed
@@ -64,11 +62,9 @@ sub initialize {
 # Override this to get the db handle from somewhere else, if necessary
 
 sub global_gdbm_tie {
-  my $item = shift;
-  my $p     = shift;
+  my ( $item, $p ) = @_;
   return $p->{db}    if ( ref $p->{db} );
   
-  $p->{perm} ||= 'read';
   my $gdbm_filename = $p->{filename};
   unless ( $gdbm_filename ) {
     if ( ref $item ) {
@@ -85,19 +81,29 @@ sub global_gdbm_tie {
   unless ( $gdbm_filename ) {
     die "Insufficient/incorrect information to tie to GDBM file! ($gdbm_filename)\n";
   }
+
+  _w( 2, "Beginning perm: ", defined( $p->{perm} ) ? $p->{perm} : '' );
+  $p->{perm}   = 'create' unless ( -e $gdbm_filename );
+  $p->{perm} ||= 'read';
+  _w( 2, "Final perm: $p->{perm}" );
+
   my $perm = GDBM_File::GDBM_READER;
   $perm    = GDBM_File::GDBM_WRITER  if ( $p->{perm} eq 'write' );
   $perm    = GDBM_File::GDBM_WRCREAT if ( $p->{perm} eq 'create' );
   _w( 1, "Trying to use perm ($perm) to connect" );
   my %db = ();
   tie( %db, 'GDBM_File', $gdbm_filename, $perm, 0666 );
+  if ( $p->{perm} eq 'create' && ! -w $gdbm_filename ) {
+    die "Failed to create GDBM file! ($gdbm_filename)\n";
+  }
+
   return \%db;
 }
 
 # Override the SPOPS method for finding ID values
 
 sub id {
-  my $self = shift;
+  my ( $self ) = @_;
   if ( my $id_field = $self->id_field ) {
     return $self->{ $id_field };
   }
@@ -105,8 +111,7 @@ sub id {
 }
 
 sub object_key {
-  my $self = shift;
-  my $id   = shift;
+  my ( $self, $id ) = @_;
   $id ||= $self->id  if ( ref $self );
   die "Cannot create object key without object or id!\n"  unless ( $id );
   my $class = ref $self || $self;
@@ -116,9 +121,7 @@ sub object_key {
 # Given a key, return the data structure from the db file
 
 sub _return_structure_for_key {
-  my $class = shift;
-  my $key   = shift;
-  my $p     = shift;
+  my ( $class, $key, $p ) = @_;
   my $db    = $class->global_gdbm_tie( $p );
   my $item_info = $db->{ $key };
   return undef unless ( $item_info );
@@ -134,9 +137,7 @@ sub _return_structure_for_key {
 # Retreive an object 
 
 sub fetch {
-  my $class = shift;
-  my $id    = shift;
-  my $p     = shift;
+  my ( $class, $id, $p ) = @_;
   my $data = $p->{data};
   unless ( $data ) {
     return undef unless ( $id and $id !~ /^tmp/ );
@@ -154,8 +155,7 @@ sub fetch {
 # Return all objects in a particular class
 
 sub fetch_group {
-  my $item = shift;
-  my $p    = shift;
+  my ( $item, $p ) = @_;
   my $db = $item->global_gdbm_tie( $p );
   my $class = ref $item || $item;
   _w( 1, "Trying to find keys beginning with ($class)" );
@@ -173,8 +173,7 @@ sub fetch_group {
 # Save (either insert or update) an item in the db
 
 sub save {
-  my $self = shift;
-  my $p    = shift;
+  my ( $self, $p ) = @_;
   $p->{perm} ||= 'write';
   
   _w( 1, "Trying to save a <<", ref $self, ">>" );
@@ -207,8 +206,7 @@ sub save {
 # Remove an item from the db
 
 sub remove {
-  my $self = shift;
-  my $p    = shift;
+  my ( $self, $p ) = @_;
   my $obj_index  = $self->object_key;
   my $db = $self->global_gdbm_tie({ perm => 'write',
                                      %{ $p } });

@@ -1,13 +1,13 @@
 package SPOPS::User;
 
-# $Id: User.pm,v 1.8 2001/01/31 02:30:44 cwinters Exp $
+# $Id: User.pm,v 1.1.1.1 2001/02/02 06:08:32 lachoy Exp $
 
 use strict;
 use Carp          qw( carp );
 use SPOPS::Secure qw( :level :scope );
 
 @SPOPS::User::ISA     = qw();
-$SPOPS::User::VERSION = sprintf("%d.%02d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::User::VERSION = sprintf("%d.%02d", q$Revision: 1.1.1.1 $ =~ /(\d+)\.(\d+)/);
 $SPOPS::User::C       = {};
 
 $SPOPS::User::crypt_password = undef;

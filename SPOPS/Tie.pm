@@ -1,6 +1,6 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 1.16 2001/01/31 02:30:44 cwinters Exp $
+# $Id: Tie.pm,v 1.3 2001/02/25 18:50:19 lachoy Exp $
 
 use strict;
 use vars qw( $PREFIX_TEMP $PREFIX_INTERNAL );
@@ -9,30 +9,28 @@ use Carp qw( carp );
 require Exporter;
 
 @SPOPS::Tie::ISA       = qw( Exporter );
-@SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
-@SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP  
+@SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_INTERNAL IDX_TEMP  
                              IDX_CHECK_FIELDS $PREFIX_TEMP $PREFIX_INTERNAL );
 
 use constant IDX_DATA          => '_collection_data';
 use constant IDX_CHANGE        => '_changed';
+use constant IDX_SAVE          => '_saved';
 use constant IDX_INTERNAL      => '_internal';
 use constant IDX_TEMP          => '_temp_data';
 use constant IDX_CHECK_FIELDS  => '_CHECK_FIELD_LIST';
+
 $PREFIX_TEMP       = 'tmp_';
 $PREFIX_INTERNAL   = '_internal';
 
 use constant DEBUG => 0;
-
-# Use this for setting up field lists to check
-
-my %FIELDS = ();
 
 # Tie interface stuff below here; see 'perldoc perltie' for what
 # each method does. (Or better yet, read Damian Conway's discussion
 # of tie in 'Object Oriented Perl'.)
 
 
-# First ensure the fieldnames are registered, then return the
+# First activate the callback for the field check, then return the
 # object. The object always keeps track of the actual properties, the
 # class, whether the object's properties have been changed and keeps
 # any temporary data that lives only for the object's lifetime.
@@ -43,20 +41,17 @@ sub TIEHASH {
   # If we haven't already stored the fields associated with
   # this class, do so
 
-  my $HAS_FIELD = 0;
-  if ( $base_class and ref $p->{field} eq 'ARRAY' and ! $FIELDS{ $base_class } ) {
-    foreach my $key ( @{ $p->{field} } ) {
-      $FIELDS{ $base_class }->{ lc $key } = 1;
-    }   
-    $HAS_FIELD = 1;
-  }
+  my $HAS_FIELD = $class->_field_check( $base_class, $p );
   return bless ({ class              => $base_class, 
                   IDX_TEMP()         => {},
                   IDX_INTERNAL()     => {},
                   IDX_CHANGE()       => 0, 
+                  IDX_SAVE()         => 0,
                   IDX_DATA()         => {},
                   IDX_CHECK_FIELDS() => $HAS_FIELD }, $class );
 }
+
+sub _field_check {}
 
 # Just go through each of the possible things that could be
 # set and do the appropriate action.
@@ -65,30 +60,29 @@ sub FETCH {
   my ( $self, $key ) = @_;
   if ( DEBUG ) { warn " tie: Trying to retrieve value for ($key)\n"; }
   return $self->{ IDX_CHANGE() }                if ( $key eq IDX_CHANGE );
+  return $self->{ IDX_SAVE() }                  if ( $key eq IDX_SAVE );
   return $self->{ IDX_TEMP() }->{ lc $key }     if ( $key =~ /^$PREFIX_TEMP/ );
   return $self->{ IDX_INTERNAL() }->{ lc $key } if ( $key =~ /^$PREFIX_INTERNAL/ );
-  return $self->{ IDX_DATA() }->{ lc $key }     if ( ! $self->{ IDX_CHECK_FIELDS() } or 
-                                                     $FIELDS{ $self->{class} }->{ lc $key } );
-  carp "Error retrieving field ($key): it is not a valid field";
-  return undef;
+  return $self->_fetch( $key );
 }
 
-# Similar to FETCH, including the blabbing about whether the field is valid
+sub _fetch { return $_[0]->{ IDX_DATA() }->{ lc $_[1] } }
+
+
+# Similar to FETCH
 
 sub STORE {
   my ( $self, $key, $value ) = @_;
   if ( DEBUG ) { warn " tie: Trying to store in ($key) value ($value)\n"; }
   return $self->{ IDX_CHANGE() } = $value                if ( $key eq IDX_CHANGE );
+  return $self->{ IDX_SAVE() } = $value                  if ( $key eq IDX_SAVE );
   return $self->{ IDX_TEMP() }->{ lc $key } = $value     if ( $key =~ /^$PREFIX_TEMP/ );
   return $self->{ IDX_INTERNAL() }->{ lc $key } = $value if ( $key =~ /^$PREFIX_INTERNAL/ );
-  if ( ! $self->{ IDX_CHECK_FIELDS() } or 
-       $FIELDS{ $self->{class} }->{ lc $key } ) { 
-    $self->{ IDX_CHANGE() }++;
-    return $self->{ IDX_DATA() }->{ lc $key } = $value;
-  }
-  carp "Error setting value for field ($key): it is not a valid field";
-  return undef;
+  return $self->_store( $key, $value );
 }
+
+sub _store { $_[0]->{ IDX_CHANGE() }++; return $_[0]->{ IDX_DATA() }->{ lc $_[1] } = $_[2] }
+
 
 # For EXISTS and DELETE, We can only do these actions on the actual
 # data; use the object methods for the other information.
@@ -96,22 +90,18 @@ sub STORE {
 sub EXISTS {
   my ( $self, $key ) = @_;
   if ( DEBUG ) { warn " tie: Checking for existence of ($key)\n"; }
-  if ( ! $self->{ IDX_CHECK_FIELDS() } or $FIELDS{ $self->{class} }->{ lc $key } ) { 
-    return exists $self->{ IDX_DATA() }->{ lc $key };
-  }
+  return exists $self->{ IDX_DATA() }->{ lc $key };
   carp "Cannot check existence for field ($key): it is not a valid field";
 }
+
 
 sub DELETE {
   my ( $self, $key ) = @_;
   if ( DEBUG ) { warn " tie: Clearing value for ($key)\n"; }
-  if ( ! $self->{ IDX_CHECK_FIELDS() } or 
-       $FIELDS{ $self->{class} }->{ lc $key } ) { 
-    $self->{ IDX_DATA() }->{ lc $key } = undef;
-    $self->{ IDX_CHANGE() }++;
-  }
-  carp "Cannot remove data for field ($key): it is not a valid field";
+  $self->{ IDX_DATA() }->{ lc $key } = undef;
+  $self->{ IDX_CHANGE() }++;
 }
+
 
 # We've disabled the ability to do: $object = {} or %{ $object } = ();
 # nothing bad happens, it's just a no-op
@@ -120,6 +110,7 @@ sub CLEAR {
   my ( $self ) = @_;
   carp 'Trying to clear object through hash means failed; use object interface';
 }
+
 
 # Note that you only see the data when you cycle through the keys 
 # or even do a Data::Dumper::Dumper( $object ); you do not see
@@ -133,6 +124,7 @@ sub FIRSTKEY {
   return undef unless defined $first_key;
   return $first_key;
 }
+
 
 sub NEXTKEY {
   my ( $self ) = @_;
@@ -169,11 +161,6 @@ SPOPS::Tie - Simple class implementing tied hash with some goodies
  # Store a temporary property
  $data{tmp_rebound_avg} = 11.3;
 
- # Trigger a warning by trying to store a misspelled 
- # or unknown property
- $data{login_name}  = 'cb';  # 'login' is correct
- $data{middle_name} = 'Amadeus'; # not in @fields list
-
  while ( my ( $prop, $val ) = each %data ) {
   printf( "%-15s: %s\n", $prop, $val );
  }
@@ -189,30 +176,6 @@ SPOPS::Tie - Simple class implementing tied hash with some goodies
 Stores data for a SPOPS object, and also some accompanying materials
 such as whether the object has been changed and any temporary
 variables.
-
-=head2 Validating Object Properties
-
-When you tie the hash, you also pass it a hashref of extra
-information. This can currently include the 'field' parameter.
-
-The 'field' parameter specifies what keys may be used to access data
-in the hash. This is to ensure that when you set or retrieve a
-property it is properly spelled. For instance:
-
- my ( %data );
- my $class = 'SPOPS::User';
- tie %data, 'SPOPS::Tie', $class, [ qw/ first_name last_name login / ];
- $data{firstname} = 'Chucky';
-
-would result in a message to STDERR, something like:
-
- Error setting value for field (firstname): it is not a valid field
- at my_tie.pl line 9
-
-since you have misspelled the property, which should be 'first_name'.
-
-If you do not pass this information, C<SPOPS::Tie> will not do the
-checking for you.
 
 =head2 Checking Changed State
 
@@ -305,6 +268,5 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
 
 =cut
