@@ -1,6 +1,6 @@
 package SPOPS::Exception;
 
-# $Id: Exception.pm,v 3.1 2002/10/23 03:29:44 lachoy Exp $
+# $Id: Exception.pm,v 3.2 2003/01/02 06:00:25 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Exporter );
@@ -8,7 +8,7 @@ use overload '""' => \&stringify;
 use Devel::StackTrace;
 use SPOPS::Error;
 
-$SPOPS::Exception::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Exception::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Exception::EXPORT_OK = qw( spops_error );
 
 use constant DEBUG => 0;
@@ -402,6 +402,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 =cut

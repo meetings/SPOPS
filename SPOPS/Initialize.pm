@@ -1,12 +1,12 @@
 package SPOPS::Initialize;
 
-# $Id: Initialize.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: Initialize.pm,v 3.1 2003/01/02 06:00:25 lachoy Exp $
 
 use strict;
 use SPOPS        qw( _w DEBUG );
 use SPOPS::ClassFactory;
 
-$SPOPS::Initialize::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Initialize::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 # Main interface -- take the information read in from 'read_config()'
 # and create SPOPS classes, then initialize them
@@ -312,6 +312,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 =cut

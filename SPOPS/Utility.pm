@@ -1,11 +1,11 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 3.2 2002/09/09 12:36:40 lachoy Exp $
+# $Id: Utility.pm,v 3.3 2003/01/02 06:00:24 lachoy Exp $
 
 use strict;
 use SPOPS qw( DEBUG _w );
 
-$SPOPS::Utility::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Utility::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 
 # initialize limit tracking vars -- the limit passed in can be:
@@ -251,7 +251,7 @@ B<today()>
 
 Return a date (yyyy-mm-dd) for today.
 
-B<now_between_dates( { begin => $dateinfo, end => $dateinfo } );
+B<now_between_dates( { begin =E<gt> $dateinfo, end =E<gt> $dateinfo } )>
 
 Where $dateinfo is either a simple scalar ('yyyy-mm-dd') or an
 arrayref ([yyyy,mm,dd]).
@@ -299,7 +299,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 See the L<SPOPS|SPOPS> module for the full author list.
 

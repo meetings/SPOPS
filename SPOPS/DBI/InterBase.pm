@@ -1,11 +1,11 @@
 package SPOPS::DBI::InterBase;
 
-# $Id: InterBase.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
+# $Id: InterBase.pm,v 3.2 2003/01/02 06:00:24 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
-$SPOPS::DBI::InterBase::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::InterBase::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 # Values are:
 #   %s - Generator name (config item 'sequence_name'
@@ -190,4 +190,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters  E<lt>chris@cwinters.comE<gt>

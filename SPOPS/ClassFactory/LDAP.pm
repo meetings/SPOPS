@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::LDAP;
 
-# $Id: LDAP.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: LDAP.pm,v 3.1 2003/01/02 06:00:24 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-$SPOPS::ClassFactory::LDAP::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::LDAP::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 
 ########################################
@@ -290,8 +290,6 @@ sub conf_fetch_by {
 
 __END__
 
-=pod
-
 =head1 NAME
 
 SPOPS::ClassFactory::LDAP - Create relationships among LDAP objects
@@ -422,6 +420,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
-
-=cut
+Chris Winters E<lt>chris@cwinters.comE<gt>

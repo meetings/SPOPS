@@ -1,12 +1,12 @@
 package SPOPS::Tool::DBI::Datasource;
 
-# $Id: Datasource.pm,v 3.2 2002/10/10 12:07:13 lachoy Exp $
+# $Id: Datasource.pm,v 3.3 2003/01/02 06:00:21 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
 use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
 
-$SPOPS::Tool::DBI::Datasource::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tool::DBI::Datasource::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
@@ -151,7 +151,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 Thanks to jeffa on PerlMonks
 (http://www.perlmonks.org/index.pl?node_id=18800) for suggesting this!

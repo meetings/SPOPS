@@ -1,11 +1,11 @@
 package SPOPS::Export::XML;
 
-# $Id: XML.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
+# $Id: XML.pm,v 3.2 2003/01/02 06:00:23 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export );
 
-$SPOPS::Export::XML::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Export::XML::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEFAULT_DOC_TAG    => 'spops';
 use constant DEFAULT_OBJECT_TAG => 'spops-object';
@@ -106,7 +106,7 @@ Output the individual object.
 B<serialize_field_data( $data )>
 
 Escape relevant values in C<$data>. For right now, we just escape the
-'&', '<' and '>' characters.
+'&', 'E<lt>' and 'E<gt>' characters.
 
 =head1 BUGS
 
@@ -135,4 +135,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>

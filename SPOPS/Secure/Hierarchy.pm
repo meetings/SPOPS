@@ -1,6 +1,6 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 3.1 2002/09/16 20:41:33 lachoy Exp $
+# $Id: Hierarchy.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
 
 use strict;
 use base  qw( Exporter SPOPS::Secure );
@@ -13,7 +13,7 @@ use SPOPS::Secure qw( :scope :level $EMPTY );
 use SPOPS::Secure::Util;
 
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
-$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 
@@ -518,6 +518,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
-Christian Lemburg <lemburg@aixonix.de>
+Christian Lemburg E<lt>lemburg@aixonix.deE<gt>

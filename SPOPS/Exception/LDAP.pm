@@ -1,11 +1,11 @@
 package SPOPS::Exception::LDAP;
 
-# $Id: LDAP.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
+# $Id: LDAP.pm,v 3.1 2003/01/02 06:00:23 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
 
-$SPOPS::Exception::LDAP::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Exception::LDAP::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Exception::LDAP::EXPORT_OK = qw( spops_ldap_error );
 
 my @FIELDS = qw( code action filter error_text error_name );
@@ -99,6 +99,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 =cut

@@ -1,6 +1,6 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 3.1 2002/09/16 20:37:54 lachoy Exp $
+# $Id: Tie.pm,v 3.2 2003/01/02 06:00:24 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -12,7 +12,7 @@ use Data::Dumper qw( Dumper );
 @SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_INTERNAL IDX_TEMP
                              IDX_CHECK_FIELDS IDX_LAZY_LOADED
                              $PREFIX_TEMP $PREFIX_INTERNAL );
-$SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 use constant IDX_DATA          => '_dat';
 use constant IDX_CHANGE        => '_chg';
@@ -585,6 +585,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters  E<lt>chris@cwinters.comE<gt>
 
 =cut

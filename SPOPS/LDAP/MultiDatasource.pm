@@ -1,6 +1,6 @@
 package SPOPS::LDAP::MultiDatasource;
 
-# $Id: MultiDatasource.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
+# $Id: MultiDatasource.pm,v 3.1 2003/01/02 06:00:22 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::LDAP );
@@ -8,7 +8,7 @@ use base qw( SPOPS::LDAP );
 use SPOPS qw( DEBUG _w );
 use SPOPS::Exception::LDAP;
 
-$SPOPS::LDAP::MultiDatasource::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::LDAP::MultiDatasource::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEFAULT_CONNECT_KEY => 'main';
 
@@ -403,6 +403,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 =cut

@@ -1,6 +1,6 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: GDBM.pm,v 3.1 2003/01/02 06:00:25 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS );
@@ -9,7 +9,7 @@ use GDBM_File;
 use SPOPS            qw( _w DEBUG );
 use SPOPS::Exception qw( spops_error );
 
-$SPOPS::GDBM::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::GDBM::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 # Make this the default for everyone -- they can override it
 # themselves...
@@ -433,6 +433,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters  E<lt>chris@cwinters.comE<gt>
 
 See the L<SPOPS|SPOPS> module for the full author/helper list.

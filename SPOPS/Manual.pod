@@ -107,23 +107,6 @@ the C<process()> method.
 
 =back
 
-Class Factory
-
-This handles the code generation for objects at initialization. It's
-useful for hacking SPOPS.
-
-=over 4
-
-=item L<SPOPS::ClassFactory|SPOPS::ClassFactory>
-
-=item L<SPOPS::ClassFactory::DefaultBehavior|SPOPS::ClassFactory::DefaultBehavior>
-
-=item L<SPOPS::ClassFactory::DBI|SPOPS::ClassFactory::DBI>
-
-=item L<SPOPS::ClassFactory::LDAP|SPOPS::ClassFactory::LDAP>
-
-=back
-
 Error handling
 
 =over 4
@@ -142,9 +125,11 @@ Security
 
 =over 4
 
-=item L<SPOPS::Security|SPOPS::Security>
+=item L<SPOPS::Secure|SPOPS::Secure>
 
-=item L<SPOPS::Security::Hierarchy|SPOPS::Security::Hierarchy>
+=item L<SPOPS::Secure::DBI|SPOPS::Secure::DBI>
+
+=item L<SPOPS::Secure::Hierarchy|SPOPS::Secure::Hierarchy>
 
 =back
 
@@ -157,6 +142,8 @@ DBI items
 =item L<SPOPS::SQLInterface|SPOPS::SQLInterface>
 
 =item L<SPOPS::ClassFactory::DBI|SPOPS::ClassFactory::DBI>
+
+=item L<SPOPS::DBI::TypeInfo|SPOPS::DBI::TypeInfo>
 
 =item L<SPOPS::DBI::InterBase|SPOPS::DBI::InterBase>
 
@@ -183,6 +170,8 @@ DBI items
 =item L<SPOPS::Tool::DBI::DiscoverField|SPOPS::Tool::DBI::DiscoverField>
 
 =item L<SPOPS::Tool::DBI::FindDefaults|SPOPS::Tool::DBI::FindDefaults>
+
+=item L<SPOPS::Tool::DBI::MaintainLinkedList|SPOPS::Tool::DBI::MaintainLinkedList>
 
 =item L<SPOPS::Iterator::DBI|SPOPS::Iterator::DBI>
 
@@ -284,6 +273,38 @@ More information about how data are stored in an object
 
 =back
 
+Class Factory
+
+This handles the code generation for objects at initialization. It's
+useful for hacking SPOPS.
+
+=over 4
+
+=item L<SPOPS::ClassFactory|SPOPS::ClassFactory>
+
+=item L<SPOPS::ClassFactory::DefaultBehavior|SPOPS::ClassFactory::DefaultBehavior>
+
+=item L<SPOPS::ClassFactory::DBI|SPOPS::ClassFactory::DBI>
+
+=item L<SPOPS::ClassFactory::LDAP|SPOPS::ClassFactory::LDAP>
+
+=back
+
+=head1 SEE ALSO
+
+Find out more about SPOPS -- current versions, updates, rants, ideas
+-- at:
+
+ http://spops.sourceforge.net/
+
+CVS access and mailing lists (SPOPS is currently supported by the
+openinteract-dev list) are at:
+
+ http://sourceforge.net/projects/spops/
+
+Also see the 'Changes' file in the source distribution for comments
+about how the module has evolved.
+
 =head1 COPYRIGHT
 
 Copyright (c) 2001-2002 Chris Winters. All rights reserved.
@@ -297,7 +318,7 @@ Texts. A copy of the license is included in the file titled
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 The following people have offered patches, advice, development funds,
 etc. to SPOPS:
@@ -311,13 +332,13 @@ development from its inception.
 
 =item *
 
-Ray Zimmerman <rz10@cornell.edu> -- had offered tons of great design
+Ray Zimmerman E<lt>rz10@cornell.eduE<gt> -- had offered tons of great design
 ideas and general help, pushing SPOPS into new domains. Too much to
 list here.
 
 =item *
 
-Christian Lemburg <lemburg@aixonix.de> -- contributed excellent
+Christian Lemburg E<lt>lemburg@aixonix.deE<gt> -- contributed excellent
 documentation, too many good ideas to implement as well as design help
 with L<SPOPS::Secure::Hierarchy|SPOPS::Secure::Hierarchy> and the
 impetus for moving methods from the main SPOPS subclass to
@@ -333,38 +354,38 @@ L<SPOPS::Iterator::LDAP>.
 
 =item *
 
-Rusty Foster <rusty@kuro5hin.org> -- was influential in the early (!)
+Rusty Foster E<lt>rusty@kuro5hin.orgE<gt> -- was influential in the early (!)
 days of this library and offered up an implementation for 'limit'
 functionality in L<SPOPS::DBI|SPOPS::DBI>
 
 =item *
 
-Rick Myers <rik@sumthin.nu> -- got rid of lots of warnings when
+Rick Myers E<lt>rik@sumthin.nuE<gt> -- got rid of lots of warnings when
 running under C<-w> and helped out with permission issues with
 L<SPOPS::GDBM|SPOPS::GDBM>.
 
 =item *
 
-Harry Danilevsky <hdanilevsky@DeerfieldCapital.com> -- helped out with
+Harry Danilevsky E<lt>hdanilevsky@DeerfieldCapital.comE<gt> -- helped out with
 Sybase-specific issues, including inspiring
 L<SPOPS::Key::DBI::Identity|SPOPS::Key::DBI::Identity>.
 
 =item *
 
-Leon Brocard <acme@astray.com> -- prodded better docs of
+Leon Brocard E<lt>acme@astray.comE<gt> -- prodded better docs of
 C<SPOPS::Configure> (now deprecated, but folded into
 L<SPOPS::ClassFactory|SPOPS::ClassFactory>), specifically the linking
 semantics.
 
 =item *
 
-Gert Thiel <thiel@baerkatalog.de> -- prodded better docs for
+Gert Thiel E<lt>thiel@baerkatalog.deE<gt> -- prodded better docs for
 multifield primary keys in L<SPOPS::DBI|SPOPS::DBI> and for defining
 and using relationships.
 
 =item *
 
-David Boone <dave@bis.bc.ca> -- prodded the creation of
+David Boone E<lt>dave@bis.bc.caE<gt> -- prodded the creation of
 L<SPOPS::Initialize|SPOPS::Initialize>.
 
 =back

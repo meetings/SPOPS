@@ -1,11 +1,11 @@
 package SPOPS::DBI::Sybase;
 
-# $Id: Sybase.pm,v 3.2 2002/12/18 21:14:34 lachoy Exp $
+# $Id: Sybase.pm,v 3.3 2003/01/02 06:00:23 lachoy Exp $
 
 use strict;
 use SPOPS::Key::DBI::Identity;
 
-$SPOPS::DBI::Sybase::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Sybase::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_quote {
     my ( $class, $value, $type, $db ) = @_;
@@ -125,6 +125,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters  E<lt>chris@cwinters.comE<gt>
 
 See the L<SPOPS|SPOPS> module for the full author list.

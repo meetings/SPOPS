@@ -1,13 +1,13 @@
 package SPOPS::Loopback;
 
-# $Id: Loopback.pm,v 3.5 2002/09/16 20:35:42 lachoy Exp $
+# $Id: Loopback.pm,v 3.6 2003/01/02 06:00:24 lachoy Exp $
 
 use strict;
 use base qw( SPOPS );
 use Data::Dumper qw( Dumper );
 use SPOPS::Secure qw( :level );
 
-$SPOPS::Loopback::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Loopback::VERSION  = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
 
 # Save objects here, indexed by ID.
 
@@ -201,4 +201,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>

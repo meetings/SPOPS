@@ -1,6 +1,6 @@
 package SPOPS::Iterator::WrapList;
 
-# $Id: WrapList.pm,v 3.1 2002/09/11 13:06:16 lachoy Exp $
+# $Id: WrapList.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Iterator );
@@ -8,7 +8,7 @@ use base  qw( SPOPS::Iterator );
 use SPOPS           qw( DEBUG _w );
 use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 
-$SPOPS::Iterator::WrapList::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Iterator::WrapList::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 sub initialize {
     my ( $self, $p ) = @_;
@@ -105,6 +105,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 =cut

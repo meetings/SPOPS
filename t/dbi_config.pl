@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: dbi_config.pl,v 3.1 2002/10/10 12:07:42 lachoy Exp $
+# $Id: dbi_config.pl,v 3.2 2002/12/30 05:55:15 lachoy Exp $
 
 use strict;
 use DBI qw( SQL_VARCHAR SQL_INTEGER );
@@ -77,8 +77,10 @@ sub get_db_handle {
 sub create_table {
     my ( $db, $type, $name ) = @_;
     my ( $table_raw );
-    $table_raw = $SIMPLE_TABLE if ( $type eq 'simple' );
-    $table_raw = $MULTI_TABLE  if ( $type eq 'multi' );
+    if ( $type eq 'simple' )   { $table_raw = $SIMPLE_TABLE }
+    elsif ( $type eq 'multi' ) { $table_raw = $MULTI_TABLE  }
+    else                       { $table_raw = $type }
+
     my $table_sql = sprintf( $table_raw, $name );
     eval { $db->do( $table_sql ) };
     if ( $@ ) {

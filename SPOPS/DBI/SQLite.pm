@@ -1,6 +1,6 @@
 package SPOPS::DBI::SQLite;
 
-# $Id: SQLite.pm,v 3.2 2002/10/10 12:06:59 lachoy Exp $
+# $Id: SQLite.pm,v 3.3 2003/01/02 06:00:23 lachoy Exp $
 
 use strict;
 
@@ -9,7 +9,7 @@ use SPOPS  qw( _w DEBUG );
 use SPOPS::DBI::TypeInfo;
 use SPOPS::Utility;
 
-$SPOPS::DBI::SQLite::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::SQLite::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return SPOPS::Utility->now }
 
@@ -130,4 +130,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>

@@ -1,13 +1,13 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
+# $Id: MySQL.pm,v 3.2 2003/01/02 06:00:24 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK NOTIFY );
 use SPOPS::Key::DBI::HandleField;
 
-$SPOPS::DBI::MySQL::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::MySQL::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return 'NOW()' }
 
@@ -128,4 +128,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters  E<lt>chris@cwinters.comE<gt>

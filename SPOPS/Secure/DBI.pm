@@ -1,6 +1,6 @@
 package SPOPS::Secure::DBI;
 
-# $Id: DBI.pm,v 1.4 2002/09/16 20:38:35 lachoy Exp $
+# $Id: DBI.pm,v 1.5 2003/01/02 06:00:22 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -8,7 +8,7 @@ use SPOPS         qw( DEBUG _w _wm );
 use SPOPS::Secure qw( :level :scope );
 use SPOPS::Secure::Util;
 
-$SPOPS::Secure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.5 $ =~ /(\d+)\.(\d+)/);
 
 # Pass in:
 #  $class->fetch_by_object( $obj, [ { user  => $user_obj,
@@ -246,7 +246,7 @@ that.)
 
 =head1 METHODS
 
-B<fetch_by_object( $obj, [ { user => \@, group => \@ } ] )>
+B<fetch_by_object( $obj, [ { user =E<gt> \@, group =E<gt> \@ } ] )>
 
 Returns a hashref with security information for a particular
 object. The keys of the hashref are SEC_SCOPE_WORLD, 
@@ -277,7 +277,7 @@ Returns $obj security information for WORLD, USER 2 and GROUPs 817,
 Returns security information for the object of class C<My::Object>
 with the ID C<dandelion> for the current user and the user's groups.
 
-B<fetch_match( $obj, { scope => SCOPE, scope_id => $ } );
+B<fetch_match( $obj, { scope =E<gt> SCOPE, scope_id =E<gt> $ } )>
 
 Returns a security object matching the $obj for the scope and scope_id
 passed in, undef if none found.
@@ -319,4 +319,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>

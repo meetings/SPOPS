@@ -1,6 +1,6 @@
 package SPOPS::Tie::StrictField;
 
-# $Id: StrictField.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
+# $Id: StrictField.pm,v 3.1 2003/01/02 06:00:21 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Tie );
@@ -9,7 +9,7 @@ use Carp       qw( carp );
 use SPOPS::Tie qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP  
                    IDX_CHECK_FIELDS $PREFIX_TEMP $PREFIX_INTERNAL );
 
-$SPOPS::Tie::StrictField::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tie::StrictField::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 *_w    = *SPOPS::_w;
 *DEBUG = *SPOPS::DEBUG;
@@ -152,6 +152,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters  E<lt>chris@cwinters.comE<gt>
 
 =cut

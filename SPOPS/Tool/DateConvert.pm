@@ -1,6 +1,6 @@
 package SPOPS::Tool::DateConvert;
 
-# $Id: DateConvert.pm,v 1.2 2002/09/11 14:43:41 lachoy Exp $
+# $Id: DateConvert.pm,v 1.3 2003/01/02 06:00:21 lachoy Exp $
 
 use strict;
 
@@ -184,4 +184,4 @@ L<Class::Date|Class::Date>
 
 =head1 AUTHOR
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>

@@ -547,4 +547,4 @@ See L<SPOPS::Manual|SPOPS::Manual> for license.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>

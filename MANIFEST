@@ -10,9 +10,6 @@ SPOPS/ClassFactory.pm
 SPOPS/ClassFactory/DBI.pm
 SPOPS/ClassFactory/LDAP.pm
 SPOPS/ClassFactory/DefaultBehavior.pm
-SPOPS/Configure.pm
-SPOPS/Configure/DBI.pm
-SPOPS/Configure/Ruleset.pm
 SPOPS/DBI.pm
 SPOPS/DBI/InterBase.pm
 SPOPS/DBI/MySQL.pm
@@ -87,6 +84,7 @@ SPOPS/Tool/UTFConvert.pm
 SPOPS/Tool/DBI/DiscoverField.pm
 SPOPS/Tool/DBI/Datasource.pm
 SPOPS/Tool/DBI/FindDefaults.pm
+SPOPS/Tool/DBI/MaintainLinkedList.pm
 SPOPS/Tool/LDAP/Datasource.pm
 SPOPS/Utility.pm
 conf/find_table_datatypes.pl
@@ -135,6 +133,7 @@ t/32_dbi_inline_config.t
 t/33_dbi_discover_field.t
 t/34_dbi_find_defaults.t
 t/35_dbi_type_info.t
+t/36_dbi_linked_list.t
 t/40_ldap.t
 t/41_ldap_inline_config.t
 t/50_rule_create_only.t

@@ -1,11 +1,11 @@
 package SPOPS::Key::DBI::HandleField;
 
-# $Id: HandleField.pm,v 3.1 2002/09/03 11:43:21 lachoy Exp $
+# $Id: HandleField.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
-$SPOPS::Key::DBI::HandleField::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Key::DBI::HandleField::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 # Ensure only POST_fetch_id used
 
@@ -118,4 +118,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters  E<lt>chris@cwinters.comE<gt>

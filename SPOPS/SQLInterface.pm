@@ -1,6 +1,6 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 3.2 2002/10/10 12:13:41 lachoy Exp $
+# $Id: SQLInterface.pm,v 3.3 2003/01/02 06:00:24 lachoy Exp $
 
 use strict;
 use Data::Dumper          qw( Dumper );
@@ -10,7 +10,7 @@ use SPOPS::DBI::TypeInfo;
 use SPOPS::Exception      qw( spops_error );
 use SPOPS::Exception::DBI qw( spops_dbi_error );
 
-$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 my ( $DEBUG_SELECT, $DEBUG_INSERT, $DEBUG_UPDATE, $DEBUG_DELETE );
 sub DEBUG_SELECT     { return $DEBUG_SELECT }
@@ -908,24 +908,24 @@ Other parameters:
 
 =over 4
 
-=item *
-
-B<db> (object) (optional)
+=item B<db> (object) (optional)
 
 DBI database handle. (Optional only if you have a
 C<global_datasource_handle()> class method defined.
 
-B<DEBUG> ($) (optional)
+=item B<DEBUG> ($) (optional)
 
 Positive values trigger debugging with larger values triggering more
 debugging.
 
-B<dbi_type_info> (\%) (optional)
+=item B<dbi_type_info> (\%) (optional)
 
 If your DBD driver cannot retrieve type information from the database,
 you need to give this module a hint as to what type of datatypes you
 will be working with. See C<Fake Types> in
 L<SPOPS::DBI::TypeInfo|SPOPS::DBI::TypeInfo> for the types you can use.
+
+=back
 
 =head2 Debugging Methods
 
@@ -1004,7 +1004,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 See the L<SPOPS|SPOPS> module for the full author list.
 

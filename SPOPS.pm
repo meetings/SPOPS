@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.5 2002/12/18 21:15:00 lachoy Exp $
+# $Id: SPOPS.pm,v 3.7 2003/01/02 05:57:04 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -11,8 +11,8 @@ use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.72';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.73';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.7 $ =~ /(\d+)\.(\d+)/);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -1323,8 +1323,8 @@ B<as_html>
 
 Represents the SPOPS object as a string fit for HTML (browser)
 consumption. The SPOPS method is double extremely crude, since it just
-wraps the results of C<as_string()> (which itself is crude) in '<pre>'
-tags.
+wraps the results of C<as_string()> (which itself is crude) in
+'E<lt>preE<gt>' tags.
 
 =head2 Lazy Loading
 
@@ -1413,7 +1413,7 @@ These objects are tied together by just a few things:
 B<global_cache>
 
 A caching object. Caching in SPOPS is not tested but should work --
-see L<Caching> below>
+see L<Caching> below.
 
 =head2 Caching
 
@@ -1475,7 +1475,7 @@ can do:
 
  DEBUG && _w( 2, "This is a debugging message" );
 
-And have the C>_w( ... )> not even evaluated if debugging is turned
+And have the C<_w( ... )> not even evaluated if debugging is turned
 off.
 
 B<set_global_debug( $new_level )>
@@ -1586,7 +1586,7 @@ about how the module has evolved.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 The following people have offered patches, advice, development funds,
 etc. to SPOPS:
@@ -1595,13 +1595,13 @@ etc. to SPOPS:
 
 =item *
 
-Ray Zimmerman <rz10@cornell.edu> -- had offered tons of great design
+Ray Zimmerman E<lt>rz10@cornell.eduE<gt> -- had offered tons of great design
 ideas and general help, pushing SPOPS into new domains. Too much to
 list here.
 
 =item *
 
-Christian Lemburg <lemburg@aixonix.de> -- contributed excellent
+Christian Lemburg E<lt>lemburg@aixonix.deE<gt> -- contributed excellent
 documentation, too many good ideas to implement as well as design help
 with L<SPOPS::Secure::Hierarchy|SPOPS::Secure::Hierarchy>, the
 rationale for moving methods from the main SPOPS subclass to
@@ -1609,31 +1609,31 @@ L<SPOPS::Utility|SPOPS::Utility>
 
 =item *
 
-Rusty Foster <rusty@kuro5hin.org> -- was influential in the early (!)
+Rusty Foster E<lt>rusty@kuro5hin.orgE<gt> -- was influential in the early (!)
 days of this library and offered up an implementation for 'limit'
 functionality in L<SPOPS::DBI|SPOPS::DBI>
 
 =item *
 
-Rick Myers <rik@sumthin.nu> -- got rid of lots of warnings when
+Rick Myers E<lt>rik@sumthin.nuE<gt> -- got rid of lots of warnings when
 running under C<-w> and helped out with permission issues with
 SPOPS::GDBM.
 
 =item *
 
-Harry Danilevsky <hdanilevsky@DeerfieldCapital.com> -- helped out with
+Harry Danilevsky E<lt>hdanilevsky@DeerfieldCapital.comE<gt> -- helped out with
 Sybase-specific issues, including inspiring
 L<SPOPS::Key::DBI::Identity|SPOPS::Key::DBI::Identity>.
 
 =item *
 
-Leon Brocard <acme@astray.com> -- prodded better docs of
+Leon Brocard E<lt>acme@astray.comE<gt> -- prodded better docs of
 L<SPOPS::Configure|SPOPS::Configure>, specifically the linking
 semantics.
 
 =item *
 
-David Boone <dave@bis.bc.ca> -- prodded the creation of
+David Boone E<lt>dave@bis.bc.caE<gt> -- prodded the creation of
 L<SPOPS::Initialize|SPOPS::Initialize>.
 
 =item *

@@ -1,11 +1,11 @@
 package SPOPS::Key::DBI::Sequence;
 
-# $Id: Sequence.pm,v 3.1 2002/09/03 11:43:21 lachoy Exp $
+# $Id: Sequence.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
-$SPOPS::Key::DBI::Sequence::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Key::DBI::Sequence::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 # Default SELECT statement to use to retrieve the sequence -- you can
 # override this in your config or in the parameters passed to
@@ -158,4 +158,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters  E<lt>chris@cwinters.comE<gt>

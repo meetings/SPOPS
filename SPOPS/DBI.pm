@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.3 2002/12/18 21:16:34 lachoy Exp $
+# $Id: DBI.pm,v 3.6 2003/01/02 06:00:25 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -14,7 +14,7 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -660,6 +660,9 @@ sub save {
     $p->{skip_undef} ||= [];
     map { $skip_undef->{ $_ } = 1 } @{ $p->{skip_undef} };
 
+    $p->{field} = [];
+    $p->{value} = [];
+
 FIELD:
     foreach my $field ( keys %{ $self->field } ) {
         next FIELD if ( $not_included->{ $field } );
@@ -674,6 +677,13 @@ FIELD:
 
     if ( $is_add ) { $self->_save_insert( $p )  }
     else           { $self->_save_update( $p )  }
+
+    # Set the 'has_save' flag so that any saved changes to the object
+    # in the post_save will be an update rather than another insert;
+    # clear the changed fields for the same reason
+
+    $self->has_save;
+    $self->clear_change;
 
     # Do any actions that need to happen after you save the object
 
@@ -690,10 +700,6 @@ FIELD:
         $self->log_action( $action, scalar $self->id );
     }
 
-    # Set flags and return the object so we can do chained method calls
-
-    $self->has_save;
-    $self->clear_change;
     return $self;
 }
 
@@ -706,7 +712,8 @@ sub _save_insert {
     my ( $self, $p ) = @_;
     $p ||= {};
     $p->{DEBUG} ||= DEBUG_SAVE;
-    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Treating the save as an INSERT." );
+    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Treating the save as an INSERT ",
+                        "with fields [", join( ', ', @{ $p->{field} } ), "]" );
 
     my $db = $p->{db} || $self->global_datasource_handle( $p->{connect_key} );
 
@@ -846,7 +853,9 @@ sub _save_update {
     my $id_clause = ( $p->{use_id} )
                       ? $self->id_clause( $p->{use_id}, undef, $p )
                       : $self->id_clause( undef, undef, $p );
-    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Processing save as UPDATE with clause ($id_clause)" );
+    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Processing save as UPDATE with ",
+                        "clause [$id_clause] and fields [",
+                        join( ', ', @{ $p->{field} } ), "]" );
 
     # Note that the 'field' and 'value' parameters are in $p and
     # exist when the hashref is expanded into %args
@@ -946,7 +955,6 @@ sub field_update {
 	$p->{db}		||= $item->global_datasource_handle( $p->{connect_key} );
 
 	my $rv = $item->db_update( $p );
-    $rv = ( $rv ne '0' );            # ...only if >= 1 row is updated
 
 	# update values in object if db_update was successful and we
 	# passed in new values (vs. from object).
@@ -1833,12 +1841,17 @@ is no cache implementation right now, this point is moot but still
 might be worth mentioning for enterprising souls who wish to code a
 cache.)
 
+Returns: If the update successfully modifies rows in the database then
+the method returns the number of rows updated. Otherwise it returns
+false.
+
 Example:
 
  # Update all objects updated on '2002-08-02'
 
- $class->field_update( { status => 'Active' },
-                       { where => 'created_on = "2002-08-02"' } );
+ my $num_rows = $class->field_update( { status => 'Active' },
+                                      { where => 'created_on = "2002-08-02"' } );
+ print "Updated $num_rows rows";
 
 Parameters:
 
@@ -1944,6 +1957,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters  E<lt>chris@cwinters.comE<gt>
 
 See the L<SPOPS|SPOPS> module for the full author list.

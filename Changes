@@ -1,5 +1,55 @@
 Revision history for Perl extension SPOPS.
 
+0.73  Thu Jan  2 01:48:26 EST 2003
+
+Overall:
+
+   * Bugfix in SPOPS::DBI->field_update
+
+   * New tool to maintain bidirectional object links
+
+   * Lots of small POD fixes throughout many files
+
+   * Removed some previously deprecated classes
+
+Individual:
+
+   * SPOPS/Configure.pm, SPOPS/Configure/(DBI|Ruleset).pm:
+
+     - Removed classes that have been marked as deprecated since 0.50.
+
+   * SPOPS/DBI.pm:
+
+     - Fix field_update() to return the number of rows updated -- if
+     you call it from an object it will always return 1 if the update
+     succeeded. Thanks to Ray Zimmerman for catch.
+
+     - In save(), move the (saved) and (changed) flags *before* the
+     post_save_action(); if you don't, any updates you do to the
+     object in the post_save_action will be regarded as another INSERT
+     which will either fail (duplicate primary keys) or throw you into
+     an infinite loop (post_save_action keeps inserting new objects).
+
+     - In save(), ensure that the field/value parameters are cleared
+     out before we tell SQLInterface what we want to insert/update.
+
+   * SPOPS/Tool/DBI/MaintainLinkedList.pm:
+
+     - Add new tool to maintain previous/next links in a particular
+     object so you can always navigate. Links are created on an object
+     insert and reshuffled on an object remove. The tool also creates
+     methods 'next_in_list' and 'previous_in_list' so you don't have
+     to craft them by hand.
+
+   * t/30_dbi.t:
+
+     - Add more tests for field_update()
+
+   * t/36_dbi_linked_list.t:
+
+     - Create tests for SPOPS::Tool::DBI::MaintainLinkedList
+
+
 0.72  Fri Dec 20 08:34:44 EST 2002
 
 Overall:

@@ -1,11 +1,11 @@
 package SPOPS::Export::SQL;
 
-# $Id: SQL.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
+# $Id: SQL.pm,v 3.2 2003/01/02 06:00:23 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export );
 
-$SPOPS::Export::SQL::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Export::SQL::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEFAULT_RECORD_DELIMETER => ';';
 
@@ -117,4 +117,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>

@@ -1,6 +1,6 @@
 package SPOPS::Error;
 
-# $Id: Error.pm,v 3.1 2002/09/16 20:35:10 lachoy Exp $
+# $Id: Error.pm,v 3.2 2003/01/02 06:00:25 lachoy Exp $
 
 use strict;
 use vars         qw( @FIELDS );
@@ -9,7 +9,7 @@ use Data::Dumper qw( Dumper );
 *_w    = *SPOPS::_w;
 *DEBUG = *SPOPS::DEBUG;
 
-$SPOPS::Error::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Error::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 @FIELDS   = qw( user_msg system_msg type extra
                 package filename line method );
@@ -215,6 +215,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 =cut

@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 3.1 2002/10/10 12:07:43 lachoy Exp $
+# $Id: 30_dbi.t,v 3.2 2002/12/23 22:15:17 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -9,7 +9,7 @@
 use strict;
 use Data::Dumper qw( Dumper );
 
-use constant NUM_TESTS       => 56;
+use constant NUM_TESTS       => 60;
 use constant TEST_TABLE_NAME => 'spops_test';
 
 my $SPOPS_CLASS = 'DBITest';
@@ -186,7 +186,7 @@ END {
         eval { $obj->save({ is_add => 1, db => $db, skip_cache => 1,
                             insert_alter => { spops_goop => "'added -- %s'" } }) };
         ok( ! $@, 'Insert object with default data unspecified' );
-        ok( $obj->{spops_num} == 2, 'Fetch object (correct data with default)' );
+        is( $obj->{spops_num}, 2, 'Fetch object (correct data with default)' );
 
         my $redo_obj = eval { $SPOPS_CLASS->fetch( $obj->id,
                                                    { db => $db, skip_cache => 1 } ) };
@@ -248,6 +248,49 @@ END {
                                                          skip_cache => 1 } ) };
         is( $redo_obj->{spops_name}, $obj->{spops_name}, 'Field update (multiple) external match' );
         is( $redo_obj->{spops_num}, $obj->{spops_num}, 'Field update (multiple) external match' );
+    }
+
+    # Now do a field update with multiple objects (class-level call)
+    {
+        my $changed_text = 'Multi field update';
+        my $rv = eval { $SPOPS_CLASS->field_update( { spops_name => $changed_text },
+                                                    { db    => $db,
+                                                      where => 'spops_num > 0' } ) };
+        warn $@ if ( $@ );
+        is( $rv, 3, 'Field update (multiple object) execution' );
+        my $obj_list = eval { $SPOPS_CLASS->fetch_group({ db => $db, skip_cache => 1 }) };
+        warn $@ if ( $@ );
+        is( $obj_list->[0]->{spops_name}, $changed_text, 'Field update (multiple object 1) match' );
+        is( $obj_list->[1]->{spops_name}, $changed_text, 'Field update (multiple object 2) match' );
+        is( $obj_list->[2]->{spops_name}, $changed_text, 'Field update (multiple object 3) match' );
+    }
+
+    # Try a class-level field update where we match a single object
+
+    {
+        my $changed = 'Class level update';
+        my $rv = eval { $SPOPS_CLASS->field_update( { spops_name => $changed },
+                                                    { where => 'spops_num = 1066',
+                                                      db    => $db } ) };
+        warn $@ if ( $@ );
+        is( $rv, 1, 'Field update (multiple object) execution with one match' );
+        my $obj_list = eval { $SPOPS_CLASS->fetch_group({ where => 'spops_num = ?',
+                                                          value => [ 1066 ],
+                                                          db    => $db,
+                                                          skip_cache => 1 }) };
+        is( $obj_list->[0]{spops_name}, $changed, 'Field update (single object) match' );
+    }
+
+    # Try a field update with multiple objects (class-level call)
+    # where nothing matches
+
+    {
+        my $changed_text = 'Multi field update';
+        my $rv = eval { $SPOPS_CLASS->field_update( { spops_name => $changed_text },
+                                                    { db    => $db,
+                                                      where => 'spops_num < 0' } ) };
+        warn $@ if ( $@ );
+        is( int( $rv ), 0, 'Field update (multiple object) execution with no match' );
     }
 
     # Fetch the three objects in the db and be sure we got them all
@@ -325,24 +368,6 @@ END {
                                                   { db => $db, skip_cache => 1 }) };
         ok( ! $@, 'Refetch no_update object' );
         is( $new_obj->{spops_num}, $old_value, 'Old value not overwritten for no_update field' );
-    }
-
-    # Do a class-level field update
-
-    {
-        my $changed = 'Class level update';
-        eval { $SPOPS_CLASS->field_update( { spops_name => $changed },
-                                           { where => 'spops_num = 1066',
-                                             db    => $db } ) };
-        if ( $@ ) { warn $@; }
-        ok( ! $@, 'Class level field update' );
-        my $obj_list = eval { $SPOPS_CLASS->fetch_group({ where => 'spops_num = ?',
-                                                          value => [ 1066 ],
-                                                          db    => $db,
-                                                          skip_cache => 1 }) };
-        ok( ! $@, 'Fetch class level field updated objects' );
-        is( $obj_list->[0]{spops_name}, $changed,
-            'Object updated with class level update value' );
     }
 
 # Future testing ideas:

@@ -1,6 +1,6 @@
 package SPOPS::DBI::TypeInfo;
 
-# $Id: TypeInfo.pm,v 1.2 2002/12/20 13:35:59 lachoy Exp $
+# $Id: TypeInfo.pm,v 1.3 2003/01/02 06:00:23 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor );
@@ -377,7 +377,7 @@ Example:
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
-Thanks to Ray Zimmerman <rz10@cornell.edu> for pointing out the need
-for this module's functionality.
+Thanks to Ray Zimmerman E<lt>rz10@cornell.eduE<gt> for pointing out
+the need for this module's functionality.

@@ -1,13 +1,13 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 3.5 2002/12/20 13:26:03 lachoy Exp $
+# $Id: Secure.pm,v 3.6 2003/01/02 06:00:24 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
 use vars  qw( $EMPTY );
 use Data::Dumper qw( Dumper );
 
-$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
 
 # Stuff for security constants and exporting
 
@@ -1146,4 +1146,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <chris@cwinters.com>
+Chris Winters  E<lt>chris@cwinters.comE<gt>

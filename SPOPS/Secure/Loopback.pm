@@ -1,13 +1,13 @@
 package SPOPS::Secure::Loopback;
 
-# $Id: Loopback.pm,v 1.2 2002/09/16 20:39:39 lachoy Exp $
+# $Id: Loopback.pm,v 1.3 2003/01/02 06:00:22 lachoy Exp $
 
 use strict;
 use SPOPS         qw( DEBUG _w _wm );
 use SPOPS::Secure qw( :level :scope );
 use SPOPS::Secure::Util;
 
-$SPOPS::Secure::Loopback::VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::Loopback::VERSION = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
 
 sub fetch_by_object {
     my ( $class, $object, $p ) = @_;
@@ -106,4 +106,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>

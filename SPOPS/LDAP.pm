@@ -1,6 +1,6 @@
 package SPOPS::LDAP;
 
-# $Id: LDAP.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: LDAP.pm,v 3.1 2003/01/02 06:00:24 lachoy Exp $
 
 use strict;
 use base qw( SPOPS );
@@ -12,7 +12,7 @@ use SPOPS            qw( DEBUG _w );
 use SPOPS::Exception::LDAP;
 use SPOPS::Secure    qw( :level );
 
-$SPOPS::LDAP::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::LDAP::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 
 ########################################
@@ -914,4 +914,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>

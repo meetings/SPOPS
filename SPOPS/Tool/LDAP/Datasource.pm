@@ -1,12 +1,12 @@
 package SPOPS::Tool::LDAP::Datasource;
 
-# $Id: Datasource.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
+# $Id: Datasource.pm,v 3.1 2003/01/02 06:00:21 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
 use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
 
-$SPOPS::Tool::LDAP::Datasource::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tool::LDAP::Datasource::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
@@ -135,7 +135,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 Thanks to jeffa on PerlMonks
 (http://www.perlmonks.org/index.pl?node_id=18800) for suggesting this!

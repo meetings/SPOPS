@@ -1,13 +1,13 @@
 package SPOPS::Import::DBI::Data;
 
-# $Id: Data.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
+# $Id: Data.pm,v 3.2 2003/01/02 06:00:23 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
 use SPOPS::Exception;
 use SPOPS::SQLInterface;
 
-$SPOPS::Import::DBI::Data::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::Data::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 my @FIELDS = qw( table fields db );
 SPOPS::Import::DBI::Data->mk_accessors( @FIELDS );
@@ -154,4 +154,4 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>

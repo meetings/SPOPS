@@ -1,12 +1,12 @@
 package SPOPS::Iterator;
 
-# $Id: Iterator.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: Iterator.pm,v 3.1 2003/01/02 06:00:25 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
 use SPOPS qw( DEBUG _w );
 
-$SPOPS::Iterator::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Iterator::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Iterator::EXPORT_OK = qw( ITER_IS_DONE ITER_FINISHED );
 
 use constant ITER_POSITION      => '_position';
@@ -522,6 +522,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <chris@cwinters.com>
+Chris Winters E<lt>chris@cwinters.comE<gt>
 
 =cut
