@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 00_base.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: 00_base.t,v 3.1 2002/09/11 14:44:20 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
@@ -66,7 +66,8 @@ END {
         is( ref $item, $SPOPS_CLASS, 'Object class correct' );
 
         ok( $item->is_changed, 'Change state of new item' );
-        $item->{name} = "new";
+        $item->{name}        = 'new';
+        $item->{ $ID_FIELD } = 99;
         ok( $item->is_changed, 'Change state after property set' );
         $item->clear_change;
         ok( ! $item->is_changed, 'Change state after clear' );
@@ -151,7 +152,7 @@ END {
         my $data_hashref = $item_d->as_data_only;
         is( ref( $data_hashref ), 'HASH', 'Data only proper structure' );
         is( $data_hashref->{id_name}, $item_d->{id_name}, "Data only field 1" );
-        is( $data_hashref->{name}, $item_d->{name}, "Data only field 1" );
+        is( $data_hashref->{name}, $item_d->{name}, "Data only field 2" );
     }
 
     # AUTOLOAD-ed accessors

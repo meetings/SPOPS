@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 33_dbi_discover_field.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: 33_dbi_discover_field.t,v 3.1 2002/09/09 12:40:37 lachoy Exp $
 
 use strict;
 use constant NUM_TESTS       => 7;
@@ -49,6 +49,7 @@ sub DBIDiscoverTest::global_datasource_handle { return $db }
         },
     };
     my $class_init_list = eval { SPOPS::Initialize->process({ config => $spops_config }) };
+    diag( "Warning from initialize: $@" ) if ( $@ );
     ok( ! $@, 'Initialize process run' );
     is( $class_init_list->[0], $SPOPS_CLASS, 'Initialize class' );
 

@@ -1,12 +1,12 @@
 package SPOPS::Import::DBI::TableTransform;
 
-# $Id: TableTransform.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
+# $Id: TableTransform.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
 
 use strict;
 use base qw( Class::Factory );
 use SPOPS::Exception;
 
-$SPOPS::Import::DBI::TableTransform::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 my %INCLUDED   = ();
 sub get_factory_map  { return \%INCLUDED }
@@ -37,8 +37,6 @@ class_initialize();
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -159,6 +157,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut
-

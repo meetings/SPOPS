@@ -1,12 +1,12 @@
 package SPOPS::Import;
 
-# $Id: Import.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: Import.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Class::Factory );
 use SPOPS::Exception;
 
-$SPOPS::Import::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 use constant AKEY => '_attrib';
 
@@ -119,8 +119,6 @@ class_initialize();
 
 __END__
 
-=pod
-
 =head1 NAME
 
 SPOPS::Import - Factory and parent for importing SPOPS objects
@@ -228,5 +226,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut

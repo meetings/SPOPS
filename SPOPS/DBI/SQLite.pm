@@ -1,6 +1,6 @@
 package SPOPS::DBI::SQLite;
 
-# $Id: SQLite.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: SQLite.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
 
 use strict;
 
@@ -8,7 +8,7 @@ use DBI qw( SQL_VARCHAR );
 use SPOPS  qw( _w DEBUG );
 use SPOPS::Utility;
 
-$SPOPS::DBI::SQLite::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::SQLite::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return SPOPS::Utility->now }
 
@@ -46,8 +46,6 @@ sub db_discover_types {
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -125,5 +123,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut

@@ -1,6 +1,6 @@
 package SPOPS::Iterator::WrapList;
 
-# $Id: WrapList.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
+# $Id: WrapList.pm,v 3.1 2002/09/11 13:06:16 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Iterator );
@@ -8,13 +8,13 @@ use base  qw( SPOPS::Iterator );
 use SPOPS           qw( DEBUG _w );
 use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 
-$SPOPS::Iterator::WrapList::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Iterator::WrapList::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 sub initialize {
     my ( $self, $p ) = @_;
     $self->{_WRAP_LIST}      = $p->{object_list};
     $self->{_WRAP_OFFSET}    = $p->{offset};
-    $self->{_WRAP_MAX}       = $p->{max};
+    $self->{_WRAP_MAX}       = $p->{max} || scalar @{ $p->{object_list} };
     $self->{_WRAP_COUNT}     = 1;
     $self->{_WRAP_RAW_COUNT} = 0;
 }

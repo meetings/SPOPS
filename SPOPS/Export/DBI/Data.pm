@@ -1,11 +1,11 @@
 package SPOPS::Export::DBI::Data;
 
-# $Id: Data.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
+# $Id: Data.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export::Object );
 
-$SPOPS::Export::DBI::Data::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Export::DBI::Data::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 sub create_header {
     my ( $self, $fields ) = @_;
@@ -19,8 +19,6 @@ sub create_header {
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -67,5 +65,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut

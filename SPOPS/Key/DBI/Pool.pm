@@ -1,11 +1,11 @@
 package SPOPS::Key::DBI::Pool;
 
-# $Id: Pool.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
+# $Id: Pool.pm,v 3.1 2002/09/03 11:43:21 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
-$SPOPS::Key::DBI::Pool::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Key::DBI::Pool::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 
 # Ensure only PRE_fetch_id works.
@@ -51,8 +51,6 @@ sub pre_fetch_id  {
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -120,5 +118,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
-=cut

@@ -1,12 +1,12 @@
 package SPOPS::Tool::DBI::Datasource;
 
-# $Id: Datasource.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
+# $Id: Datasource.pm,v 3.1 2002/09/09 22:00:18 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
 use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
 
-$SPOPS::Tool::DBI::Datasource::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tool::DBI::Datasource::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
@@ -38,11 +38,10 @@ sub datasource_access {
     my $dbi_config = $class->CONFIG->{dbi_config};
     unless ( ref $dbi_config eq 'HASH' and
              $dbi_config->{dsn} and
-             $dbi_config->{username} and
-             $dbi_config->{password} ) {
+             $dbi_config->{username} ) {
       return ( NOTIFY, "Cannot create datasource access subroutine for ($class) " .
-                       "because you do not have 'dbi_config->dsn', " .
-                       "'dbi_config->username' and 'dbi_config->username' defined" );
+                       "because you do not have 'dbi_config->dsn' and " .
+                       "'dbi_config->username' defined" );
     }
 
     my $trace_level = $dbi_config->{trace} || 0;

@@ -1,12 +1,12 @@
 package SPOPS::Key::Random;
 
-# $Id: Random.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
+# $Id: Random.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 use SPOPS::Utility;
 
-$SPOPS::Key::Random::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Key::Random::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEFAULT_ID_WIDTH => 8;
 
@@ -30,8 +30,6 @@ sub post_fetch_id { return undef }
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -84,5 +82,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
-=cut

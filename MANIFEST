@@ -77,6 +77,7 @@ SPOPS/SQLInterface.pm
 SPOPS/Tie.pm
 SPOPS/Tie/StrictField.pm
 SPOPS/Tool/CreateOnly.pm
+SPOPS/Tool/DateConvert.pm
 SPOPS/Tool/ReadOnly.pm
 SPOPS/Tool/UTFConvert.pm
 SPOPS/Tool/DBI/DiscoverField.pm
@@ -130,8 +131,15 @@ t/32_dbi_inline_config.t
 t/33_dbi_discover_field.t
 t/34_dbi_find_defaults.t
 t/40_ldap.t
+t/41_ldap_inline_config.t
 t/50_rule_create_only.t
 t/51_rule_read_only.t
+t/52_rule_date_convert.t
+t/60_export_object.t
+t/61_export_xml.t
+t/62_export_perl.t
+t/63_export_sql.t
+t/64_export_dbdata.t
 t/config.pl
 t/dbi_config.pl
 t/hash_file_test.perl

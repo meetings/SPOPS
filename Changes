@@ -1,6 +1,74 @@
 Revision history for Perl extension SPOPS.
 
-0.68
+0.69  Wed Sep 11 10:59:30 EDT 2002
+
+Overall:
+
+   * Add new tool (SPOPS::Tool::DateConvert) to convert a date into a
+     date object on object fetch().
+
+   * Add tests for SPOPS::Export implementations and add features to
+     loopback tester.
+
+   * Other small bugfixes.
+
+Individual:
+
+   * SPOPS.pm:
+
+     - Add USE_CACHE() and set_global_use_cache() methods, which
+     checks and sets caching for all SPOPS objects in a process. Add
+     docs about caching.
+
+   * SPOPS/ClassFactory/DefaultBehavior.pm:
+
+     - In conf_modify_config() - ensure that the 'field' property is
+     an arrayref before derefenecing.
+
+   * SPOPS/Loopback.pm:
+
+     - fetch(), fetch_group(), save() and remove() will now interact
+     with simple in-memory storage so we can be a little trickier with
+     testing
+
+     - Add peek() for testing purposes.
+
+     - fetch_group() allows simple querying of in-memory storage (only
+     of the type field = value)
+
+     - Add fetch_iterator() which just wraps the result of
+     fetch_group() in a SPOPS::Iterator::WrapList object
+
+   * SPOPS/Tool/DateConvert.pm:
+
+     - Add new tool for converting dates into object (Class::Date or
+     Time::Piece) on fetch and into date string in save.
+
+   * SPOPS/Tool/DBI/Datasource.pm:
+
+     - Check for valid info should only ensure that DSN and username
+     are defined. An empty password should be ok. (Thanks to Ray
+     Zimmerman for the bug report.)
+
+   * SPOPS/Utility.pm:
+
+     - Modify format for today() to be %Y-%m-%d (Thanks to Swen
+     Thuemmler (swen@mediaways.net) for pointing it out.)
+
+   * t/41_ldap_inline_config.t:
+
+     - Create simple test for inlining an LDAP configuration.
+
+   * t/52_rule_date_convert.t:
+
+     - Add tests for SPOPS::Tool::DateConvert
+
+   * t/[60_export_object.t,61_export_xml.t,62_export_perl.t,
+        63_export_sql.t,64_export_dbdata.t]:
+     - Add tests for various SPOPS::Export implementations
+
+
+0.68  Wed Aug 28 12:36:31 EDT 2002
 
 Individual:
 

@@ -1,12 +1,12 @@
 package SPOPS::Export::Perl;
 
-# $Id: Perl.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
+# $Id: Perl.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export );
 use Data::Dumper qw( Dumper );
 
-$SPOPS::Export::Perl::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Export::Perl::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 my @track = ();
 
@@ -17,8 +17,6 @@ sub create_record { push @track, $_[1]; return '' }
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -72,5 +70,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut

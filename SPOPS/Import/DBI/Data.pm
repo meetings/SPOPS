@@ -1,13 +1,13 @@
 package SPOPS::Import::DBI::Data;
 
-# $Id: Data.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
+# $Id: Data.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
 use SPOPS::Exception;
 use SPOPS::SQLInterface;
 
-$SPOPS::Import::DBI::Data::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::Data::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 my @FIELDS = qw( table fields db );
 SPOPS::Import::DBI::Data->mk_accessors( @FIELDS );
@@ -87,8 +87,6 @@ sub assign_raw_data {
 
 __END__
 
-=pod
-
 =head1 NAME
 
 SPOPS::Import::DBI::Data - Import raw data to a DBI table
@@ -157,6 +155,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut
-

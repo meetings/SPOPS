@@ -1,17 +1,22 @@
 package SPOPS::Loopback;
 
-# $Id: Loopback.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: Loopback.pm,v 3.2 2002/09/11 12:45:20 lachoy Exp $
 
 use strict;
 use base qw( SPOPS );
 
-$SPOPS::Loopback::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Loopback::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
+# Save objects here, indexed by ID.
+
+my %BY_ID = ();
 
 sub fetch {
     my ( $class, $id ) = @_;
     return undef unless ( $class->pre_fetch_action( $id ) );
-    my $object = $_[0]->new({ id => $id });
+    my $object = ( $BY_ID{ $class . $id } )
+                 ? $class->new( $BY_ID{ $class . $id } )
+                 : $_[0]->new({ id => $id });
     return undef unless ( $object->post_fetch_action );
     $object->has_save;
     $object->clear_change;
@@ -20,8 +25,33 @@ sub fetch {
 
 
 sub fetch_group {
-    my ( $class ) = @_;
-    return [ map { $class->fetch( $_ ) } ( 1 .. 15 ) ];
+    my ( $class, $params ) = @_;
+    $params ||= {};
+    my @data_list = ();
+    if ( scalar keys %BY_ID == 0 ) {
+        @data_list = map { { id => $_ } } ( 1 .. 15 );
+    }
+    elsif ( $params->{where} ) {
+        my ( $field, $value ) = split /\s*=\s*/, $params->{where};
+        $value =~ s/[\'\"]//g;
+        foreach my $data ( values %BY_ID ) {
+            if ( exists $data->{ $field } and $data->{ $field } eq $value ) {
+                push @data_list, $data;
+            }
+        }
+    }
+    else {
+        @data_list = values %BY_ID;
+    }
+    return [ map { $class->new( $_ ) } @data_list ];
+}
+
+
+sub fetch_iterator {
+    my ( $class, $params ) = @_;
+    my $items = $class->fetch_group( $params );
+    require SPOPS::Iterator::WrapList;
+    return SPOPS::Iterator::WrapList->new({ object_list => $items });
 }
 
 
@@ -34,6 +64,7 @@ sub save {
         $self->id( $self->pre_fetch_id );
         $self->id( $self->post_fetch_id ) unless ( $self->id );
     }
+    $BY_ID{ ref( $self ) . $self->id } = $self->as_data_only;
     return undef unless ( $self->post_save_action );
     $self->has_save;
     $self->clear_change;
@@ -44,15 +75,21 @@ sub save {
 sub remove {
     my ( $self ) = @_;
     return undef unless ( $self->pre_remove_action );
+    delete $BY_ID{ ref( $self ) . $self->id };
     return undef unless ( $self->post_remove_action );
     return 1
+}
+
+
+sub peek {
+    my ( $class, $id, $field ) = @_;
+    return undef unless ( $BY_ID{ $class . $id } );
+    return $BY_ID{ $class . $id }->{ $field }
 }
 
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -87,11 +124,15 @@ just like any other objects, so it is useful for testing out rules.
 B<fetch( $id )>
 
 Returns a new object initialized with the ID C<$id>, calling the
-C<pre/post_fetch_action()> methods first.
+C<pre/post_fetch_action()> methods first. If the object has been
+previously saved we pull it from the in-memory storage, otherwise we
+return a new object initialized with C<$ID>.
 
 B<fetch_group()>
 
-Returns a list of new objects, initialized with IDs.
+Returns an arrayref of previously saved objects. If no objects have
+been saved, it returns an arrayref of new objects initialized with
+numeric IDs.
 
 B<save()>
 
@@ -103,9 +144,18 @@ actions.
 Saved and unsaved objects both have C<pre/post_save_action()> methods
 called.
 
+This also stores the object in-memory so you can call C<fetch()> on it
+later.
+
 B<remove()>
 
-Calls the C<pre/post_remove_action()>
+Calls the C<pre/post_remove_action()> and removes the object from the
+in-memory storage.
+
+B<peek( $id, $field )>
+
+Peeks into the in-memory store for the value of C<$field> for object
+C<$id>. Must be called as class method.
 
 =head1 BUGS
 
@@ -129,5 +179,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut

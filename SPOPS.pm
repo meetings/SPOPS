@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.1 2002/08/28 16:25:32 lachoy Exp $
+# $Id: SPOPS.pm,v 3.2 2002/09/09 12:41:23 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -11,15 +11,19 @@ use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.68';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.69';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
 
 my ( $DEBUG );
-sub DEBUG            { return $DEBUG }
-sub set_global_debug { $DEBUG = $_[1] }
+sub DEBUG                { return $DEBUG }
+sub set_global_debug     { $DEBUG = $_[1] }
+
+my ( $USE_CACHE );
+sub USE_CACHE            { return $USE_CACHE }
+sub set_global_use_cache { $USE_CACHE = $_[1] }
 
 @SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
 
@@ -554,7 +558,7 @@ sub set_cached_object {
 # always return undef since caching isn't enabled
 
 sub use_cache {
-    return undef;
+    return undef unless ( $USE_CACHE );
     my ( $class, $p ) = @_;
     return undef if ( $p->{skip_cache} );
     return undef if ( $class->no_cache );
@@ -1408,29 +1412,45 @@ These objects are tied together by just a few things:
 
 B<global_cache>
 
-A caching object. If you have
+A caching object. Caching in SPOPS is not tested but should work --
+see L<Caching> below>
 
- {cache}{SPOPS}{use}
+=head2 Caching
 
-in your configuration set to '0', then you do not need to worry about
-this. Otherwise, the caching module should implement:
+Caching in SPOPS is not tested but should work. If you would like to
+brave the rapids, then call at the beginning of your application:
 
-The method B<get()>, which returns the property values for a
-particular object.
+ SPOPS->set_global_use_cache(1);
 
- $cache->get({ class => 'SPOPS-class', id => 'id' })
+You will also need to make a caching object accessible to all of your
+SPOPS classes via a method C<global_cache()>. Each class can turn off
+caching by setting a true value for the configuration variable
+C<no_cache> or by passing in a true value for the parameter
+'skip_cache' as passed to C<fetch>, C<save>, etc.
 
-The method B<set()>, which saves the property values for an object
-into the cache.
+The object returned by C<global_cache()> should return an object which
+implements the methods C<get()>, C<set()>, C<clear()>, and C<purge()>.
+
+The method C<get()> should return the property values for a particular
+object given a class and object ID:
+
+ $cache->get({ class => 'SPOPS-class', object_id => 'id' })
+
+The method B<set()> should saves the property values for an object
+into the cache:
 
  $cache->set({ data => $spops_object });
 
+The method B<clear()> should clear from the cache the data for an
+object:
+
+ $cache->clear({ data => $spops_object });
+ $cache->clear({ class => 'SPOPS-class', object_id => 'id' });
+
+The method B<purge()> should remove B<all> items from the cache.
+
 This is a fairly simple interface which leaves implementation pretty
 much wide open.
-
-Note that subclasses may also have items that must be accessible to
-all children -- see L<SPOPS::DBI|SPOPS::DBI> and the
-C<global_datasource_handle> method.
 
 =head2 Timestamp Methods
 

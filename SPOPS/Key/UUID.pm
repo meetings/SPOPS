@@ -1,11 +1,11 @@
 package SPOPS::Key::UUID;
 
-# $Id: UUID.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
+# $Id: UUID.pm,v 3.1 2002/09/03 11:43:21 lachoy Exp $
 
 use strict;
 use SPOPS      qw( _w DEBUG );
 
-$SPOPS::Key::UUID::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Key::UUID::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 BEGIN { eval { require Data::UUID } }
 
@@ -21,8 +21,6 @@ sub post_fetch_id { return undef }
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -66,5 +64,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
-=cut

@@ -1,11 +1,11 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 3.1 2002/08/28 16:25:32 lachoy Exp $
+# $Id: Utility.pm,v 3.2 2002/09/09 12:36:40 lachoy Exp $
 
 use strict;
 use SPOPS qw( DEBUG _w );
 
-$SPOPS::Utility::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Utility::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 
 # initialize limit tracking vars -- the limit passed in can be:
@@ -80,7 +80,7 @@ sub now {
 #
 # Signature: $date_string = $class->today();
 
-sub today { return $_[0]->now( { format => '%Y-%m-%e' } ); }
+sub today { return $_[0]->now( { format => '%Y-%m-%d' } ); }
 
 
 # Return a true value if right now is between two other dates

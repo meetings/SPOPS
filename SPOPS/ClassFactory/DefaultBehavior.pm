@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 3.1 2002/09/09 12:37:06 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
-$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 my @PARSE_INTO_HASH = qw( field no_insert no_update skip_undef multivalue );
 
@@ -20,10 +20,12 @@ my @PARSE_INTO_HASH = qw( field no_insert no_update skip_undef multivalue );
 sub conf_modify_config {
     my ( $class ) = @_;
 
-    DEBUG() && _w( 1, "Trying to modify configuration for class ($class)" );
+    DEBUG() && _w( 1, "Trying to modify configuration for class [$class]" );
     my $CONFIG = $class->CONFIG;
 
-    $CONFIG->{field_list} = [ @{ $CONFIG->{field} } ];
+    if ( ref $CONFIG->{field} eq 'ARRAY' ) {
+        $CONFIG->{field_list} = [ @{ $CONFIG->{field} } ];
+    }
 
     # When we change a listref to a hashref, keep the order
     # by maintaining a count; that way they can be re-ordered

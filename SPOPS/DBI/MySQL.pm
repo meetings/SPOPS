@@ -1,13 +1,13 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: MySQL.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK NOTIFY );
 use SPOPS::Key::DBI::HandleField;
 
-$SPOPS::DBI::MySQL::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::MySQL::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return 'NOW()' }
 
@@ -75,8 +75,6 @@ sub find_mysql_defaults {
 
 __END__
 
-=pod
-
 =head1 NAME
 
 SPOPS::DBI::MySQL -- MySQL-specific code for DBI collections
@@ -131,5 +129,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
-=cut

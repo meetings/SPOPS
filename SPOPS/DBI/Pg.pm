@@ -1,11 +1,11 @@
 package SPOPS::DBI::Pg;
 
-# $Id: Pg.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: Pg.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
-$SPOPS::DBI::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 use constant PG_SEQUENCE_NEXT    => "NEXTVAL( '%s' )";
 use constant PG_SEQUENCE_CURRENT => "SELECT CURRVAL( '%s' )";
@@ -47,8 +47,6 @@ sub post_fetch_id {
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -197,5 +195,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
-=cut

@@ -1,11 +1,11 @@
 package SPOPS::DBI::Sybase;
 
-# $Id: Sybase.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: Sybase.pm,v 3.1 2002/09/03 11:43:22 lachoy Exp $
 
 use strict;
 use SPOPS::Key::DBI::Identity;
 
-$SPOPS::DBI::Sybase::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Sybase::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_quote {
     my ( $class, $value, $type, $db ) = @_;
@@ -30,8 +30,6 @@ sub post_fetch_id {
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -104,5 +102,3 @@ it under the same terms as Perl itself.
 Chris Winters  <chris@cwinters.com>
 
 See the L<SPOPS|SPOPS> module for the full author list.
-
-=cut
