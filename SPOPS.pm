@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.30 2004/03/12 14:53:16 lachoy Exp $
+# $Id: SPOPS.pm,v 3.31 2004/03/15 13:26:19 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -14,8 +14,8 @@ use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 my $log = get_logger();
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.81';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.30 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.82';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.31 $ =~ /(\d+)\.(\d+)/);
 
 # DEPRECATED
 
@@ -772,8 +772,6 @@ sub _wm {
 
 __END__
 
-=pod
-
 =head1 NAME
 
 SPOPS -- Simple Perl Object Persistence with Security
@@ -781,7 +779,7 @@ SPOPS -- Simple Perl Object Persistence with Security
 =head1 SYNOPSIS
 
  # Define an object completely in a configuration file
-
+ 
  my $spops = {
    myobject => {
     class   => 'MySPOPS::Object',
@@ -789,22 +787,22 @@ SPOPS -- Simple Perl Object Persistence with Security
     ...
    }
  };
-
+ 
  # Process the configuration and initialize the class
-
+ 
  SPOPS::Initialize->process({ config => $spops });
-
+ 
  # create the object
-
+ 
  my $object = MySPOPS::Object->new;
-
+ 
  # Set some parameters
-
+ 
  $object->{ $param1 } = $value1;
  $object->{ $param2 } = $value2;
-
+ 
  # Store the object in an inherited persistence mechanism
-
+ 
  eval { $object->save };
  if ( $@ ) {
    print "Error trying to save object: $@\n",
@@ -1048,7 +1046,7 @@ C<\%params>.
 Examples:
 
  # Create a new user bozo
-
+ 
  my $bozo = $user_class->new;
  $bozo->{first_name} = 'Bozo';
  $bozo->{last_name}  = 'the Clown';
@@ -1058,14 +1056,14 @@ Examples:
 
  # Clone bozo; first_name is 'Bozo' and last_name is 'the Clown',
  # as in the $bozo object, but login_name is 'bozojunior'
-
+ 
  my $bozo_jr = $bozo->clone({ login_name => 'bozojunior' });
  eval { $bozo_jr->save };
  if ( $@ ) { ... report error ... }
 
  # Copy all users from a DBI datastore into an LDAP datastore by
  # cloning from one and saving the clone to the other
-
+ 
  my $dbi_users = DBIUser->fetch_group();
  foreach my $dbi_user ( @{ $dbi_users } ) {
      my $ldap_user = $dbi_user->clone({ _class => 'LDAPUser' });
@@ -1258,9 +1256,9 @@ Example:
 
  my $id = 90192;
  my $data = eval { MyClass->fetch( $id ) };
-
+ 
  # Read in a data file and retrieve all objects matching IDs
-
+ 
  my @object_list = ();
  while ( <DATA> ) {
    chomp;
@@ -1473,8 +1471,6 @@ So with:
    url_edit => '/Foo/display_form',
  }
 
-You cou
-
 The defaults put together by SPOPS by reading your configuration file
 might not be sufficiently dynamic for your object. In that case, just
 override the method and substitute your own. For instance, the
@@ -1482,7 +1478,7 @@ following adds some sort of sales adjective to the beginning of every
 object title:
 
   package My::Object;
-
+ 
   sub object_description {
       my ( $self ) = @_;
       my $info = $self->SUPER::object_description();
@@ -1713,7 +1709,8 @@ None known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc; (c) 2003-2004 Chris
+Winters. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -1744,9 +1741,15 @@ etc. to SPOPS:
 
 =item *
 
-Ray Zimmerman E<lt>rz10@cornell.eduE<gt> -- had offered tons of great design
+Ray Zimmerman E<lt>rz10@cornell.eduE<gt> -- has offered tons of great design
 ideas and general help, pushing SPOPS into new domains. Too much to
 list here.
+
+=item *
+
+Simon Ilyushchenko E<lt>simonf@cshl.eduE<gt> -- real-world usage
+advice, work on improving the object linking semantics, lots of little
+items.
 
 =item *
 
@@ -1800,6 +1803,3 @@ L<SPOPS::LDAP::MultiDatasource|SPOPS::LDAP::MultiDatasource>, and
 L<SPOPS::Iterator::LDAP|SPOPS::Iterator::LDAP>.
 
 =back
-
-=cut
-<

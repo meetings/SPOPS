@@ -1,5 +1,19 @@
 Revision history for Perl extension SPOPS.
 
+0.82  Mon Mar 15 23:03:29 EST 2004
+
+Overall:
+
+ * Quick bugfix for SPOPS::DBI users with databases using sequences
+   (like Postgres).
+
+Individual:
+
+ * SPOPS/DBI.pm:
+
+   - We want to go ahead and fetch the ID after the row has been
+   inserted...
+
 0.81  Mon Mar 15 08:13:46 EST 2004
 
 Overall:

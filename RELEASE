@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.82  Mon Mar 15 23:03:29 EST 2004
+
+ * Quick bugfix in SPOPS::DBI
+
+
 0.81  Mon Mar 15 08:13:46 EST 2004
 
  * Use Log::Log4perl for logging/debugging
@@ -253,4 +258,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 3.16 2004/03/15 13:05:44 lachoy Exp $
+$Id: RELEASE,v 3.17 2004/03/16 03:56:01 lachoy Exp $

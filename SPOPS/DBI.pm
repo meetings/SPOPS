@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.19 2004/02/26 01:42:46 lachoy Exp $
+# $Id: DBI.pm,v 3.20 2004/03/16 03:55:58 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -15,7 +15,7 @@ use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
 my $log = get_logger();
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.19 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.20 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -812,15 +812,13 @@ sub _save_insert {
     # via an overridden subclass method; if something is
     # returned, set the ID in the object.
 
-    unless ( $self->id ) {
-        my $post_id = $self->post_fetch_id( { %{ $p },
-                                              db => $db,
-                                              statement => $sth } );
-        if ( $post_id ) {	
-            $self->id( $post_id );
-            $log->is_info &&
-                $log->info( "ID fetched after insert: $post_id" );
-        }
+    my $post_id = $self->post_fetch_id( { %{ $p },
+                                          db => $db,
+                                          statement => $sth } );
+    if ( $post_id ) {	
+        $self->id( $post_id );
+        $log->is_info &&
+        $log->info( "ID fetched after insert: $post_id" );
     }
 
     # Here we actually re-fetch any new information from the database
