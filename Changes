@@ -1,5 +1,13 @@
 Revision history for Perl extension SPOPS.
 
+0.63  Sat Aug 10 09:30:43 EDT 2002
+
+Overall:
+
+   * Small fix to t/40_ldap.t to ensure it doesn't run when it's not
+     supposed to
+
+
 0.62  Fri Aug  9 23:21:08 EDT 2002
 
 Overall:
