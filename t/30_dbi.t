@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 1.6 2002/01/14 02:53:13 lachoy Exp $
+# $Id: 30_dbi.t,v 1.7 2002/01/23 20:10:51 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -15,9 +15,13 @@ use constant TEST_TABLE_NAME => 'spops_test';
 my $SPOPS_CLASS = 'DBITest';
 my @ID_LIST     = ( 42, 1792, 1588 );
 
-my ( $db );
+my ( $db, $do_end );
 
-END { cleanup( $db, TEST_TABLE_NAME ) }
+END {
+    if ( $do_end ) {
+        cleanup( $db, TEST_TABLE_NAME );
+    }
+ }
 
 {
 
@@ -26,6 +30,8 @@ END { cleanup( $db, TEST_TABLE_NAME ) }
     do "t/dbi_config.pl";
 
     my $config = test_dbi_run();
+
+    $do_end++;
 
     require Test::More;
     Test::More->import( tests => NUM_TESTS );

@@ -1,28 +1,23 @@
 package SPOPS::Import;
 
-# $Id: Import.pm,v 1.9 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Import.pm,v 1.10 2002/01/28 17:55:27 lachoy Exp $
 
 use strict;
-use base qw( Class::Accessor );
+use base qw( Class::Accessor Class::Factory );
 use SPOPS::Exception;
 
 use constant AKEY => '_attrib';
 
 my %CLASSES = ();
+sub get_factory_map { return \%CLASSES }
 
 my @FIELDS = qw( object_class data DEBUG );
 SPOPS::Import->mk_accessors( @FIELDS );
 
 sub new {
     my ( $pkg, $type, $params ) = @_;
-    my $class = $CLASSES{ $type };
-    unless ( $class ) {
-        SPOPS::Exception->throw(
-                 "You must specify a type of import to run -- available " .
-                 "types are: ", join( ', ', sort keys %CLASSES ), "\n",
-                 "(You specified: [$type])" );
-    }
-
+    my $class = eval { $pkg->get_factory_class( $type ) };
+    if ( $@ ) { SPOPS::Exception->throw( $@ ) }
     my $self = bless( {}, $class );;
     foreach my $field ( $self->get_fields ) {
         $self->$field( $params->{ $field } );
@@ -38,29 +33,6 @@ sub get_fields { return @FIELDS }
 
 sub get { return $_[0]->{ AKEY() }{ $_[1] } }
 sub set { return $_[0]->{ AKEY() }{ $_[1] } = $_[2] }
-
-# Import types
-
-sub add_type {
-    my ( $class, $import_type, $import_class ) = @_;
-    unless ( $import_type )  { SPOPS::Exception->throw( "Cannot add import type: no type" ) }
-    unless ( $import_class ) { SPOPS::Exception->throw( "Cannot add import type: no class" ) }
-
-    eval "require $import_class";
-    if ( $@ ) {
-        SPOPS::Exception->throw( "Cannot add import type [$import_type]: " .
-                                 "class [$import_class] cannot be required [$@]" );
-    }
-
-    if ( $CLASSES{ $import_type } ) {
-        warn "[SPOPS::Import]: Attempt to add type ($import_type) redundant;\n",
-             "type already exists with class: $CLASSES{ $import_type }\n";
-    }
-    else {
-        $CLASSES{ $import_type } = $import_class;
-    }
-    return $CLASSES{ $import_type };
-}
 
 sub run { SPOPS::Exception->throw( "SPOPS::Import subclass should implement run()" ) }
 
@@ -134,9 +106,9 @@ sub read_fh {
 # Initialize
 
 sub class_initialize {
-    SPOPS::Import->add_type( object => 'SPOPS::Import::Object' );
-    SPOPS::Import->add_type( dbdata => 'SPOPS::Import::DBI::Data' );
-    SPOPS::Import->add_type( table  => 'SPOPS::Import::DBI::Table' );
+    SPOPS::Import->add_factory_type( object => 'SPOPS::Import::Object' );
+    SPOPS::Import->add_factory_type( dbdata => 'SPOPS::Import::DBI::Data' );
+    SPOPS::Import->add_factory_type( table  => 'SPOPS::Import::DBI::Table' );
 }
 
 class_initialize();
@@ -167,20 +139,6 @@ This class is a factory class for creating importer objects. It is
 also the parent class for the importer objects.
 
 =head1 METHODS
-
-B<add_type( $type, $class )>
-
-Lets C<SPOPS::Import> know about your custom import class so it can be
-created via the normal factory method. For instance:
-
- use SPOPS::Import;
-
- SPOPS::Import->add_type( 'myimport'. 'My::Import' );
- my $importer = SPOPS::Import->new( 'myimport' );
- $importer->object_class( 'My::Object' );
- $importer->fields( [ 'name', 'title', 'average' ] );
- $importer->data( get_data_structure() );
- $importer->run;
 
 =head2 I/O
 
@@ -253,6 +211,10 @@ Nothing known.
 L<SPOPS::Import|SPOPS::Import>
 
 L<SPOPS::Manual::ImportExport|SPOPS::Manual::ImportExport>
+
+L<Class::Accessor|Class::Accessor>
+
+L<Class::Factory|Class::Factory>
 
 =head1 COPYRIGHT
 

@@ -1,6 +1,6 @@
 package SPOPS::Import::DBI::Table;
 
-# $Id: Table.pm,v 1.3 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Table.pm,v 1.4 2002/02/23 04:16:08 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
@@ -12,7 +12,7 @@ my @FIELDS = qw( database_type transforms print_only );
 SPOPS::Import::DBI::Table->mk_accessors( @FIELDS );
 
 ########################################
-# Core API
+# CORE API
 
 sub get_fields { return ( $_[0]->SUPER::get_fields(), @FIELDS ) }
 
@@ -65,7 +65,7 @@ sub run {
 
 
 ########################################
-# Table Transformations
+# TABLE TRANSFORMATIONS
 
 sub transform_table {
     my ( $self ) = @_;
@@ -81,8 +81,8 @@ sub transform_table {
 
     # These are the built-ins
 
-    $transform->increment( \$table_sql );
-    $transform->increment_type( \$table_sql );
+    $transform->increment( \$table_sql, $self );
+    $transform->increment_type( \$table_sql, $self );
 
     # Run the custom transformations
 
@@ -163,7 +163,6 @@ SPOPS::Import::DBI::Table - Import a DBI table structure
  Output:
 
  CREATE TABLE sys_user (
-
   user_id       NUMERIC( 10, 0 ) IDENTITY NOT NULL,
   login_name    varchar(25) not null,
   password      varchar(30) not null,

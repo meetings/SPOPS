@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 04_random_key.t,v 1.1 2001/12/03 13:30:59 lachoy Exp $
+# $Id: 04_random_key.t,v 1.2 2002/02/23 06:05:04 lachoy Exp $
 
 use strict;
 use Test::More tests => 6;
@@ -42,7 +42,7 @@ use Test::More tests => 6;
     # TEST: 6
     my %track = ();
     for ( 1..100 ) {
-        my $new_key = SPOPS::Key::Random->pre_fetch_id;
+        my ( $new_key, $n ) = SPOPS::Key::Random->pre_fetch_id;
         $track{ $new_key }++;
     }
     is( scalar keys %track, 100, "Unique keys generated" );

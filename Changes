@@ -1,5 +1,116 @@
 Revision history for Perl extension SPOPS.
 
+0.57  Sat Feb 23 14:02:22 EST 2002
+
+Overall:
+
+   * SPOPS now works with Oracle! All tests pass and all the scripts
+     under eg/ work ok as well, but you might consider this support
+     beta until someone who actually knows Oracle takes a look.
+
+   * SPOPS now works with SQLite! SQLite is an embeddable database,
+     and DBD::SQLite comes with the database source ready to
+     compile. You can use it instead of DBD::Sprite or DBD::CSV -- it
+     is much faster and behaves like a real database. Kudos to the
+     indefatigable Matt Sergant!
+
+   * Fix tests and (hopefully) Makefile.PL to follow all dependencies
+     properly.
+
+Individual:
+
+   * Makefile.PL:
+
+     - Add 'Class::Factory' as a dependency
+
+   * eg/fetch_all.pl:
+
+     - Display all known objects in eg/ modules
+
+   * eg/users_groups_oracle.sql, eg/users_groups_clear_oracle.sql:
+
+     - Data create/clear scripts for Oracle
+
+   * eg/users_groups_sqlite.pl:
+
+     - Data create script for SQLite
+
+   * eg/My/(User|Group|Doodad|Security).pm:
+
+     - Use named sequences versus relying on default behavior
+
+   * SPOPS.pm:
+
+     - Modified clone() to respect false-but-defined values passed in
+     for the new object. Thanks to Ray Zimmerman <rz10@cornell.edu>
+     for the patch.
+
+   * SPOPS/DBI.pm:
+
+     - Add 'sql_case_insensitive' to allow drivers to specify a
+     case-insensitive operator. (Default: 'LIKE', which may or may not
+     work for all databases but at least it will not break anything.)
+
+     - Add docs for the pre_fetch_id() and post_fetch_id() callbacks
+     to get/find ID values on an insert.
+
+     - The return value from pre_fetch_id() is by default set to
+     no_quote -- the implementer of pre_fetch_id() is responsible for
+     either quoting it or for telling SPOPS::DBI that it is ok to
+     quote it using the normal means.
+
+   * SPOPS/DBI/Pg.pm:
+
+     - Specify the '~*' case-insensitive operator
+
+     - Modify how we fetch/retrieve sequence values.
+
+   * SPOPS/DBI/Oracle.pm:
+
+     - Hey, we support Oracle now! (See above)
+
+   * SPOPS/DBI/SQLite.pm:
+
+     - Hey, we support SQLite now! (See above)
+
+   * SPOPS/Exception.pm:
+
+     - You can now pass as many arguments as you want to throw() --
+     they will all get concatenated into the exception message unless
+     the last one is a hashref, which will be set to the optional
+     parameter hashref.
+
+   * SPOPS/Import.pm, SPOPS/Export.pm:
+
+     - Modify to use Class::Factory
+
+   * SPOPS/Import/TableTransform/(Oracle|SQLite).pm:
+
+     - Add table transforms for Oracle and SQLite
+
+   * SPOPS/Key/(Random|UUID).pm:
+
+     - Quote the return value from pre_fetch_id()
+
+   * SPOPS/Secure.pm:
+
+     - Add a 'require SPOPS::Exception::Security' to bring in the
+     module, but add it after all the constants have been defined so
+     we don't get into a deadlock
+
+   * t/05_exception.t:
+
+     - Modify stringification comparison to work properly all the time
+
+   * t/30_dbi.t, t/31_dbi_multifield.t, t/40_ldap.t:
+
+     - Only run the END {} if we're running the tests
+
+   * t/dbi_config.pl:
+
+     - Add Oracle-specific info
+
+
 0.56  Tue Jan 15 07:17:02 EST 2002
 
 Overall:

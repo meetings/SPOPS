@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 1.62 2002/01/14 02:54:28 lachoy Exp $
+# $Id: DBI.pm,v 1.67 2002/02/23 05:39:33 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -13,8 +13,7 @@ use SPOPS::SQLInterface;
 use SPOPS::Tie    qw( $PREFIX_INTERNAL );
 
 @SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
-$SPOPS::DBI::VERSION   = '1.90';
-$SPOPS::DBI::Revision  = substr(q$Revision: 1.62 $, 10);
+$SPOPS::DBI::VERSION   = substr(q$Revision: 1.67 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -80,7 +79,7 @@ sub global_db_handle         { my $o = shift; return $o->global_datasource_handl
 
 sub sql_current_date  { return 'CURRENT_TIMESTAMP()' }
 sub sql_fetch_types   { return "SELECT * FROM $_[1] WHERE 1 = 0" }
-
+sub sql_case_insensitive { return 'LIKE' }
 
 ########################################
 # CLASS INITIALIZATION
@@ -626,11 +625,12 @@ sub _save_insert {
     # is executed. If something is returned, push the value
     # plus the ID field onto the appropriate stack.
 
-    my $pre_id = $self->pre_fetch_id( { %{ $p }, db => $db } );
+    my ( $pre_id, $do_quote ) = $self->pre_fetch_id( { %{ $p }, db => $db } );
     if ( $pre_id ) {
         $self->id( $pre_id );
         push @{ $p->{field} }, $self->id_field;
         push @{ $p->{value} }, $self->id;
+        $p->{no_quote}{ $self->id_field } = 1 unless ( $do_quote );
         $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Retrieved ID before insert: $pre_id" );
     }
 
@@ -1262,6 +1262,36 @@ what is in the database once the record has been successfully
 inserted. If you want to skip this step, either pass a positive value
 for the 'no_sync' key or set 'no_save_sync' to a positive value in the
 CONFIG of the implementing class.
+
+SPOPS is generally smart about dealing with auto-generated field
+values on object creation as well. This is done for you in one of the
+C<SPOPS::DBI::> subclasses, or in one of the C<SPOPS::Key::> classes,
+but it is useful to mention it here.
+
+There are two phases where you can step in and generate or retrieve a
+generated value: C<pre_fetch_id()> and C<post_fetch_id()>. The first
+is called before the object is saved, the second is called after the
+object is saved.
+
+Use C<pre_fetch_id()> when you need to ask the database (or another
+resource) to create a value or command to use for the generated
+value. For instance the L<SPOPS::Key::Random|SPOPS::Key::Random> or
+L<SPOPS::Key::UUID|SPOPS::Key::UUID> key generators have a
+C<pre_fetch_id()> method which creates a (hopefully unique) key. The
+L<SPOPS::DBI::Oracle|SPOPS::DBI::Oracle> subclass creates a command
+which fetches the next value from a named sequence.
+
+The method should return a value that gets put directly into the SQL
+INSERT statement. Most of the time you will not want SPOPS to quote
+the value for you so you do not need any other arguments. If you want
+the value to get quoted in the normal fashion, just pass along a
+second argument with a true value.
+
+Use C<post_fetch_id()> when the database generates a value for you to
+retrieve after the INSERT. L<SPOPS::DBI::Sybase|SPOPS::DBI::Sybase>
+fetches the value of C<@@IDENTITY>, and
+L<SPOPS::DBI::MySQL|SPOPS::DBI::MySQL> gets the value of the
+auto-incremented field from the database handle.
 
 B<remove( [ \%params ] )>
 

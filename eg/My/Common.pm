@@ -1,6 +1,6 @@
 package My::Common;
 
-# $Id: Common.pm,v 1.5 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Common.pm,v 1.7 2002/02/23 05:42:55 lachoy Exp $
 
 # Common routines for the My:: classes.
 
@@ -16,8 +16,10 @@ use SPOPS::Utility;
 #     SPOPS::DBI::MySQL  if you're using MySQL
 #     SPOPS::DBI::Sybase if you're using Sybase ASA/ASE or MS SQL
 #     SPOPS::DBI::Pg     if you're using PostgreSQL
+#     SPOPS::DBI::Oracle if you're using Oracle
+#     SPOPS::DBI::SQLite if you're using SQLite
 
-my $SPOPS_DB = 'SPOPS::DBI::Pg';
+my $SPOPS_DB = 'SPOPS::DBI::SQLite';
 eval "require $SPOPS_DB";
 
 @My::Common::ISA = ( 'SPOPS::Utility', $SPOPS_DB, 'SPOPS::DBI' );
@@ -26,9 +28,9 @@ eval "require $SPOPS_DB";
 #
 # Modify database connection info as needed
 
-use constant DBI_DSN      => 'DBI:Pg:dbname=test';
-use constant DBI_USER     => 'postgres';
-use constant DBI_PASSWORD => 'postgres';
+use constant DBI_DSN      => 'DBI:SQLite:dbname=sqlite_test';
+use constant DBI_USER     => '';
+use constant DBI_PASSWORD => '';
 
 my ( $DB, $USER, $GROUP );
 

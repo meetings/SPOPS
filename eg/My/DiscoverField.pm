@@ -1,6 +1,6 @@
 package My::DiscoverField;
 
-# $Id: DiscoverField.pm,v 1.5 2002/01/02 02:37:02 lachoy Exp $
+# $Id: DiscoverField.pm,v 1.6 2002/02/22 20:40:07 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
@@ -28,7 +28,7 @@ sub discover_fields {
         $sth->execute;
     };
     return ( NOTIFY, "Cannot discover fields: $@" ) if ( $@ );
-    $CONFIG->{field} = $sth->{NAME};
+    $CONFIG->{field} = [ map { lc $_ } @{ $sth->{NAME} } ];
     DEBUG() && _w( 1, "Table: ($CONFIG->{base_table}); ",
 			          "Fields: (", join( ', ', @{ $CONFIG->{field} } ), ")" );
     return ( OK, undef );

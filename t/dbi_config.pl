@@ -1,25 +1,28 @@
 #!/usr/bin/perl
 
-# $Id: dbi_config.pl,v 1.2 2001/11/04 17:54:56 lachoy Exp $
+# $Id: dbi_config.pl,v 1.5 2002/02/23 06:04:50 lachoy Exp $
 
 use strict;
 use DBI;
 
 my %DRIVERS = (
-   Pg     => 'SPOPS::DBI::Pg',
-   Sybase => 'SPOPS::DBI::Sybase',
    ASAny  => 'SPOPS::DBI::Sybase',
    mysql  => 'SPOPS::DBI::MySQL',
+   Oracle => 'SPOPS::DBI::Oracle',
+   Pg     => 'SPOPS::DBI::Pg',
+   SQLite => 'SPOPS::DBI::SQLite',
+   Sybase => 'SPOPS::DBI::Sybase',
 );
 
-my %DRIVER_ACTIONS = ( Sybase =>  \&_sybase_setup );
+my %DRIVER_ACTIONS = ( Sybase => \&sybase_setup,
+                       Oracle => \&oracle_setup, );
 
 my %DRIVER_NO_TYPE = ();
 
 my $SIMPLE_TABLE = <<'SIMPLESQL';
 CREATE TABLE %s (
     spops_id    int not null primary key,
-    spops_name  char(20) null,
+    spops_name  char(20),
     spops_goop  char(20) not null,
     spops_num   int default 2
 )
@@ -29,8 +32,8 @@ my $MULTI_TABLE = <<'MULTISQL';
 CREATE TABLE %s (
    spops_time   int not null,
    spops_user   int not null,
-   spops_name   char(20) null,
-   spops_goop   char(2) not null,
+   spops_name   char(20),
+   spops_goop   char(20) not null,
    spops_num    int default 2,
    primary key( spops_time, spops_user )
 )
@@ -99,7 +102,17 @@ sub cleanup {
 
 sub sybase_setup {
      my ( $config ) = @_;
-     $ENV{SYBASE} = $config->{ENV_SYBASE} if ( $config->{ENV_SYBASE} );
+     if ( $config->{ENV_SYBASE} ) {
+         $ENV{SYBASE} = $config->{ENV_SYBASE};
+     }
+}
+
+
+sub oracle_setup {
+    my ( $config ) = @_;
+    if ( $config->{ENV_ORACLE_HOME} ) {
+        $ENV{ORACLE_HOME} = $config->{ENV_ORACLE_HOME};
+    }
 }
 
 

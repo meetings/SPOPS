@@ -1,12 +1,12 @@
 package My::Doodad;
 
-# $Id: Doodad.pm,v 1.2 2001/12/19 06:32:04 lachoy Exp $
+# $Id: Doodad.pm,v 1.6 2002/02/23 18:30:14 lachoy Exp $
 
 use strict;
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::Doodad::VERSION = sprintf("%d.%02d", q$Revision: 1.2 $ =~ /(\d+)\.(\d+)/);
+$My::Doodad::VERSION = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 
 sub _base_config {
    my $config = {
@@ -18,6 +18,7 @@ sub _base_config {
              field        => [],
              id_field     => 'doodad_id',
              increment_field => 1,
+             sequence_name => 'sp_doodad_seq',
              no_insert    => [ 'doodad_id' ],
              skip_undef   => [],
              no_update    => [ 'doodad_id' ],
@@ -37,8 +38,8 @@ sub _base_config {
              name         => 'name',
              object_name  => 'Doodad',
          }
-   };
-   return $config;
+    };
+    return $config;
 }
 
 

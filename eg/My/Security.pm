@@ -1,6 +1,6 @@
 package My::Security;
 
-# $Id: Security.pm,v 1.9 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Security.pm,v 1.13 2002/02/23 18:30:14 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -8,7 +8,7 @@ use SPOPS         qw( DEBUG );
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::Security::VERSION = sprintf("%d.%02d", q$Revision: 1.9 $ =~ /(\d+)\.(\d+)/);
+$My::Security::VERSION = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -22,6 +22,7 @@ sub _base_config {
            field        => [],
            id_field     => 'sid',
            increment_field => 1,
+           sequence_name => 'sp_security_seq',
            no_insert    => [ qw/ sid / ],
            skip_undef   => [ qw/ object_id scope_id / ],
            no_update    => [ qw/ sid object_id class scope scope_id / ],

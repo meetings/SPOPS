@@ -1,10 +1,10 @@
 package My::Group;
 
-# $Id: Group.pm,v 1.6 2001/10/15 04:25:35 lachoy Exp $
+# $Id: Group.pm,v 1.10 2002/02/23 18:30:14 lachoy Exp $
 
 use strict;
 
-$My::Group::VERSION = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+$My::Group::VERSION = sprintf("%d.%02d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
 
 my $USER_CLASS = 'My::User';
 
@@ -18,6 +18,7 @@ sub _base_config {
            field        => [],
            id_field     => 'group_id',
            increment_field => 1,
+           sequence_name => 'sp_group_seq',
            no_insert    => [ qw/ group_id / ],
            skip_undef   => [],
            no_update    => [ qw/ group_id / ],

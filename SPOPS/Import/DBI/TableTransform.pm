@@ -1,68 +1,33 @@
 package SPOPS::Import::DBI::TableTransform;
 
-# $Id: TableTransform.pm,v 1.3 2002/01/08 04:31:53 lachoy Exp $
+# $Id: TableTransform.pm,v 1.4 2002/02/23 04:15:40 lachoy Exp $
 
 use strict;
+use base qw( Class::Factory );
 use SPOPS::Exception;
 
-$SPOPS::Import::DBI::TableTransform::VERSION  = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::VERSION  = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 
-my %CLASSES = ();
+my %INCLUDED   = ();
+sub get_factory_map  { return \%INCLUDED }
+my %REGISTERED = ();
+sub get_register_map { return \%REGISTERED }
 
-sub new {
-    my ( $pkg, $type ) = @_;
-    my $class = $CLASSES{ $type };
-    unless ( $class ) {
-        SPOPS::Exception->throw(
-               "You must specify a database type so we know what to\n" .
-               "transform -- available database types are\n" .
-               join( ', ', sort keys %CLASSES ), "\n" .
-               "(You specified: [$type])" );
-    }
-    eval "require $class";
-    return bless( {}, $class );
-}
-
-sub add_type {
-    my ( $class, $transform_type, $transform_class ) = @_;
-    eval {
-        unless ( $transform_type )  { die "Cannot add transform type: no type" }
-        unless ( $transform_class ) { die "Cannot add transform type: no class" }
-    };
-    if ( $@ ) { SPOPS::Exception->throw( $@ ) }
-
-    eval "require $transform_class";
-    if ( $@ ) {
-        SPOPS::Exception->throw(
-               "Cannot add transform type [$transform_type]: class [$transform_class]\n",
-               "cannot be required: [$@]" );
-    }
-
-    if ( $CLASSES{ $transform_type } ) {
-        warn "[SPOPS::Import::DBI::TransformTable]: Attempt to add\n",
-             "type ($transform_type) redundant; type already exists\n",
-             "with class: $CLASSES{ $transform_type }\n";
-    }
-    else {
-        $CLASSES{ $transform_type } = $transform_class;
-    }
-    return $CLASSES{ $transform_type };
-
-}
+my %TYPES = (
+ mysql    => 'SPOPS::Import::DBI::TableTransform::MySQL',
+ oracle   => 'SPOPS::Import::DBI::TableTransform::Oracle',
+ pg       => 'SPOPS::Import::DBI::TableTransform::Pg' ,
+ postgres => 'SPOPS::Import::DBI::TableTransform::Pg',
+ asany    => 'SPOPS::Import::DBI::TableTransform::Sybase',
+ mssql    => 'SPOPS::Import::DBI::TableTransform::Sybase',
+ sybase   => 'SPOPS::Import::DBI::TableTransform::Sybase',
+ sqlite   => 'SPOPS::Import::DBI::TableTransform::SQLite',
+);
 
 sub class_initialize {
-    SPOPS::Import::DBI::TableTransform->add_type(
-                              sybase => 'SPOPS::Import::DBI::TableTransform::Sybase' );
-    SPOPS::Import::DBI::TableTransform->add_type(
-                              mssql => 'SPOPS::Import::DBI::TableTransform::Sybase' );
-    SPOPS::Import::DBI::TableTransform->add_type(
-                              asany => 'SPOPS::Import::DBI::TableTransform::Sybase' );
-    SPOPS::Import::DBI::TableTransform->add_type(
-                              postgres => 'SPOPS::Import::DBI::TableTransform::Pg' );
-    SPOPS::Import::DBI::TableTransform->add_type(
-                              pg => 'SPOPS::Import::DBI::TableTransform::Pg' );
-    SPOPS::Import::DBI::TableTransform->add_type(
-                              mysql => 'SPOPS::Import::DBI::TableTransform::MySQL' );
+    while ( my ( $type, $class ) = each %TYPES ) {
+        __PACKAGE__->register_factory_type( $type, $class );
+    }
 }
 
 class_initialize();
@@ -82,7 +47,7 @@ SPOPS::Import::DBI::TableTransform - Factory class for database-specific transfo
  my $table = qq/ CREATE TABLE blah ( id %%INCREMENT%% primary key,
                                      name varchar(50) ) /;
  my $transformer = SPOPS::Import::DBI::TableTransform->new( 'sybase' );
- $transformer->auto_increment( \$table );
+ $transformer->increment( \$table );
  print $table;
 
 =head1 DESCRIPTION
@@ -114,9 +79,11 @@ Available database types are:
 
 =item mysql: MySQL
 
+=item oracle: Oracle
+
 =back
 
-B<add_type( $database_type, $transform_class )>
+B<register_factory_type( $database_type, $transform_class )>
 
 Registers a new database type for a transformation class. You will
 need to run this every time you run the program.
@@ -155,7 +122,7 @@ subclass for a made up database:
 
 And then we could register the transformation agent with every run:
 
- SPOPS::Import::DBI::TableTransform->add_type(
+ SPOPS::Import::DBI::TableTransform->register_factory_type(
           'savmor', 'SPOPS::Import::DBI::TableTransform::SavMor' );
  my $transformer = SPOPS::Import::DBI::TableTransform->new( 'savmor' );
  my $sql = qq/ CREATE TABLE ( id %%INCREMENT%% primary key ) /;

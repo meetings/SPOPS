@@ -1,13 +1,11 @@
 package SPOPS::Key::UUID;
 
-# $Id: UUID.pm,v 1.2 2002/01/02 02:37:02 lachoy Exp $
+# $Id: UUID.pm,v 1.4 2002/02/23 05:35:54 lachoy Exp $
 
 use strict;
 use SPOPS      qw( _w DEBUG );
 
-@SPOPS::Key::UUID::ISA      = ();
-$SPOPS::Key::UUID::VERSION  = '0.10';
-$SPOPS::Key::UUID::Revision = substr(q$Revision: 1.2 $, 10);
+$SPOPS::Key::UUID::VERSION  = substr(q$Revision: 1.4 $, 10);
 
 BEGIN { eval { require Data::UUID } }
 
@@ -15,7 +13,7 @@ my $GENERATOR = Data::UUID->new();
 
 sub pre_fetch_id  {
     my ( $class, $p ) = @_;
-    return $GENERATOR->create_str();
+    return ( $GENERATOR->create_str(), 1, );
 }
 
 sub post_fetch_id { return undef }

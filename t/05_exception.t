@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 05_exception.t,v 1.3 2002/01/10 13:47:39 lachoy Exp $
+# $Id: 05_exception.t,v 1.4 2002/01/17 15:41:32 lachoy Exp $
 
 use strict;
 use Test::More  tests => 58;
@@ -19,7 +19,7 @@ use Test::More  tests => 58;
     ok( $e->line(), 'Line number set' );
     ok( $e->method(), 'Method set' );
     is( ref( $e->trace() ), 'Devel::StackTrace', 'Trace set' );
-    is( "$@", $e_message, '$@ stringified' );
+    is( "$e", $e_message, '$@ stringified' );
     my @stack = $e->get_stack();
     is( scalar @stack, 1, 'Stack set' );
 }
@@ -43,7 +43,7 @@ use Test::More  tests => 58;
     is( $s->security_found(), 1, 'Security found set'  );
     is( ref( $s->trace() ), 'Devel::StackTrace', 'Trace set' );
     my $stringified = "Security violation. Object requested [READ] and got [NONE]";
-    is( "$@", $stringified, 'Security $@ stringified' );
+    is( "$s", $stringified, 'Security $@ stringified' );
     my @stack = $s->get_stack();
     is( scalar @stack, 2, 'Stack set' );
 }
@@ -73,7 +73,7 @@ use Test::More  tests => 58;
     is( $d->bound_value()->[0], $bound->[0], 'DBI bound value 1 set' );
     is( $d->bound_value()->[1], $bound->[1], 'DBI bound value 2 set' );
     is( ref( $d->trace() ), 'Devel::StackTrace', 'Trace set' );
-    is( "$@", $d_message, 'DBI $@ stringified' );
+    is( "$d", $d_message, 'DBI $@ stringified' );
     my @stack = $d->get_stack();
     is( scalar @stack, 3, 'Stack set' );
 }
@@ -106,7 +106,7 @@ use Test::More  tests => 58;
     is( $l->error_name(), $error_name, 'LDAP error name set'  );
     is( $l->error_text(), $l_message, 'LDAP error text set'  );
     is( ref( $l->trace() ), 'Devel::StackTrace', 'Trace set' );
-    is( "$@", $l_message, 'LDAP $@ stringified' );
+    is( "$l", $l_message, 'LDAP $@ stringified' );
     my @stack = $l->get_stack();
     is( scalar @stack, 4, 'Stack set' );
 }

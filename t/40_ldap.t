@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 40_ldap.t,v 1.12 2002/01/14 02:53:23 lachoy Exp $
+# $Id: 40_ldap.t,v 1.14 2002/02/23 00:59:53 lachoy Exp $
 
 use strict;
 use constant NUM_TESTS => 37;
@@ -21,20 +21,26 @@ my @USER_DATA = (
    [ 'bofh', 'Joe Shmoe', 'Shmoe', 'Joe', 'dingdong@411.com' ]
 );
 
-my ( $ldap );
-END { tear_down( $ldap );
-      $ldap->unbind }
+my ( $ldap, $do_end );
+END {
+    if ( defined $do_end ) {
+        tear_down( $ldap );
+        $ldap->unbind;
+    }
+}
 
 {
     # Read in the config file and make sure we're supposed to run
 
     do "t/config.pl";
-    my $config = _read_config_file();
+    my $config = _read_config_file() || {};
     if ( $config->{LDAP_test} ne 'y' ) {
         print "1..0\n";
         print "Skipping test on this platform\n";
         exit;
     }
+
+    $do_end++;
 
     require Test::More;
     Test::More->import( tests => NUM_TESTS );

@@ -1,18 +1,19 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 1.19 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Hierarchy.pm,v 1.20 2002/01/21 13:49:55 lachoy Exp $
 
 use strict;
 use vars          qw( $ROOT_OBJECT_NAME );
-use SPOPS         qw( _w DEBUG );
-use SPOPS::Secure qw( :scope :level $EMPTY );
 use Data::Dumper  qw( Dumper );
+use SPOPS         qw( _w DEBUG );
+use SPOPS::Exception::Security;
+use SPOPS::Secure qw( :scope :level $EMPTY );
 require Exporter;
 
 @SPOPS::Secure::Hierarchy::ISA       = qw( Exporter SPOPS::Secure );
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
 $SPOPS::Secure::Hierarchy::VERSION   = '1.90';
-$SPOPS::Secure::Hierarchy::Revision  = substr(q$Revision: 1.19 $, 10);
+$SPOPS::Secure::Hierarchy::Revision  = substr(q$Revision: 1.20 $, 10);
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 

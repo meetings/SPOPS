@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 03_uuid_key.t,v 1.2 2001/12/31 16:10:36 lachoy Exp $
+# $Id: 03_uuid_key.t,v 1.3 2002/02/23 06:05:04 lachoy Exp $
 
 use strict;
 
@@ -57,7 +57,7 @@ use strict;
     # TEST: 6
     my %track = ();
     for ( 1..100 ) {
-        my $new_uuid = SPOPS::Key::UUID->pre_fetch_id;
+        my ( $new_uuid, $n ) = SPOPS::Key::UUID->pre_fetch_id;
         $track{ $new_uuid }++;
     }
     is( scalar keys %track, 100, "Unique keys generated" );

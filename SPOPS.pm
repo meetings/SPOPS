@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 1.63 2002/01/10 13:41:10 lachoy Exp $
+# $Id: SPOPS.pm,v 1.65 2002/02/23 00:59:09 lachoy Exp $
 
 use strict;
 use Data::Dumper    qw( Dumper );
@@ -14,8 +14,8 @@ use Storable        qw( store retrieve nstore );
 $SPOPS::AUTOLOAD  = '';
 @SPOPS::ISA       = qw( Exporter Storable );
 @SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
-$SPOPS::VERSION   = '0.56';
-$SPOPS::Revision  = substr(q$Revision: 1.63 $, 10);
+$SPOPS::VERSION   = '0.57';
+$SPOPS::Revision  = substr(q$Revision: 1.65 $, 10);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -183,7 +183,7 @@ sub clone {
     while ( my ( $k, $v ) = each %{ $self } ) {
         next unless ( $k );
         next if ( $id_field and $k eq $id_field );
-        $initial_data{ $k } = $p->{ $k } || $v;
+        $initial_data{ $k } = exists $p->{ $k } ? $p->{ $k } : $v;
     }
 
     return $class->new({ %initial_data, skip_default_values => 1 });

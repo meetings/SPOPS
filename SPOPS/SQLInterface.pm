@@ -1,6 +1,6 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 1.30 2002/01/08 04:31:53 lachoy Exp $
+# $Id: SQLInterface.pm,v 1.31 2002/02/22 20:40:28 lachoy Exp $
 
 use strict;
 use Data::Dumper qw( Dumper );
@@ -10,7 +10,7 @@ use SPOPS::Exception::DBI;
 
 @SPOPS::SQLInterface::ISA      = ();
 $SPOPS::SQLInterface::VERSION  = '1.90';
-$SPOPS::SQLInterface::Revision = substr(q$Revision: 1.30 $, 10);
+$SPOPS::SQLInterface::Revision = substr(q$Revision: 1.31 $, 10);
 
 use constant DEBUG_SELECT     => 0;
 use constant DEBUG_INSERT     => 0;
@@ -247,14 +247,14 @@ sub db_insert {
         my $count = 0;
         foreach my $field ( @{ $p->{field} } ) {
             next unless ( $field );
-            $DEBUG && _wm( 1, $DEBUG, "Trying to add value ($p->{value}->[$count]) with ",
-                                      "field <<$field>> and type info ($type_info->{ lc $field })" );
 
             # Quote the value unless the user asked us not to
             my $value = ( $p->{no_quote}{ $field } )
                           ? $p->{value}->[ $count ]
                           : $class->sql_quote( $p->{value}->[ $count ],
-					       $type_info->{ lc $field }, $db );
+                                               $type_info->{ lc $field }, $db );
+            $DEBUG && _wm( 1, $DEBUG, "Trying to add quoted value [$value] ",
+                                      "for field [$field]" );
             push @value_list, $value;
             $count++;
         }

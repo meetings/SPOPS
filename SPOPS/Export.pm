@@ -1,30 +1,23 @@
 package SPOPS::Export;
 
-# $Id: Export.pm,v 1.8 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Export.pm,v 1.9 2002/01/28 17:55:27 lachoy Exp $
 
 use strict;
-use base qw( Class::Accessor );
+use base qw( Class::Accessor Class::Factory );
 use SPOPS::Exception;
 
 use constant AKEY => '_attrib';
 
 my %CLASSES = ();
+sub get_factory_map { return \%CLASSES }
 
 my @FIELDS = qw( object_class where value include_id skip_fields DEBUG );
 SPOPS::Export->mk_accessors( @FIELDS );
 
 sub new {
     my ( $pkg, $type, $params ) = @_;
-    my $class = $CLASSES{ $type };
-    unless ( $class ) {
-        SPOPS::Exception->throw(
-                    "You must specify a type of export to run -- available " .
-                    "types are: ", join( ', ', sort keys %CLASSES ) .
-                    "(You specified: [$type])" );
-    }
-
-    # Now fill in the fields used by this class from the parameters
-
+    my $class = eval { $pkg->get_factory_class( $type ) };
+    if ( $@ ) { SPOPS::Exception->throw( $@ ) }
     my $self = bless( {}, $class );;
     foreach my $field ( $self->get_fields ) {
         $self->$field( $params->{ $field } );
@@ -42,34 +35,6 @@ sub get_fields { return @FIELDS }
 
 sub get { return $_[0]->{ AKEY() }{ $_[1] } }
 sub set { return $_[0]->{ AKEY() }{ $_[1] } = $_[2] }
-
-
-# Export types
-
-sub add_type {
-    my ( $class, $export_type, $export_class ) = @_;
-    eval {
-        unless ( $export_type )  { die "Cannot add export type: no type\n" }
-        unless ( $export_class ) { die "Cannot add export type: no class\n" }
-    };
-    if ( $@ ) { SPOPS::Exception->throw( $@ ) }
-
-    eval "require $export_class";
-    if ( $@ ) {
-        SPOPS::Exception->throw(
-                    "Cannot add export type [$export_type]: class [$export_class]\n",
-                    "cannot be required: [$@]" );
-    }
-
-    if ( $CLASSES{ $export_type } ) {
-        warn "[SPOPS::Export]: Attempt to add type ($export_type) redundant;\n",
-             "type already exists with class: $CLASSES{ $export_type }\n";
-    }
-    else {
-        $CLASSES{ $export_type } = $export_class;
-    }
-    return $CLASSES{ $export_type };
-}
 
 
 # Main event
@@ -125,11 +90,11 @@ sub _find_export_fields {
 # Initialize
 
 sub class_initialize {
-    SPOPS::Export->add_type( object => 'SPOPS::Export::Object' );
-    SPOPS::Export->add_type( xml    => 'SPOPS::Export::XML' );
-    SPOPS::Export->add_type( perl   => 'SPOPS::Export::Perl' );
-    SPOPS::Export->add_type( sql    => 'SPOPS::Export::SQL' );
-    SPOPS::Export->add_type( dbdata => 'SPOPS::Export::DBI::Data' );
+    SPOPS::Export->add_factory_type( object => 'SPOPS::Export::Object' );
+    SPOPS::Export->add_factory_type( xml    => 'SPOPS::Export::XML' );
+    SPOPS::Export->add_factory_type( perl   => 'SPOPS::Export::Perl' );
+    SPOPS::Export->add_factory_type( sql    => 'SPOPS::Export::SQL' );
+    SPOPS::Export->add_factory_type( dbdata => 'SPOPS::Export::DBI::Data' );
 }
 
 class_initialize();
@@ -264,19 +229,6 @@ B<run()>
 
 Runs the configured export, returning a string with the exported data.
 
-B<add_type( $type, $class )>
-
-Lets C<SPOPS::Export> know about a new type of export. Using this you
-can create your own custom exporter and run it without modifying this
-module. For instance:
-
- use SPOPS::Export;
-
- SPOPS::Export->add_type( 'myexport'. 'My::Export' );
- my $exporter = SPOPS::Export->new( 'myexport' );
- $exporter->object_class( 'My::Object' );
- print $exporter->run;
-
 =head1 SUBCLASS METHODS
 
 If you want to write your own exporter, you just need to create a
@@ -316,6 +268,10 @@ Nothing known.
 =head1 SEE ALSO
 
 L<SPOPS::Manual::ImportExport|SPOPS::Manual::ImportExport>
+
+L<Class::Accessor|Class::Accessor>
+
+L<Class::Factory|Class::Factory>
 
 =head1 COPYRIGHT
 

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: stock_user_group.pl,v 1.3 2001/10/15 04:25:35 lachoy Exp $
+# $Id: stock_user_group.pl,v 1.4 2002/02/23 05:42:08 lachoy Exp $
 
 # stock_user_group.pl
 #
@@ -53,10 +53,13 @@ my @GROUP_DATA  = (
 
     # Finally the memberships
 
-    my $public_group = My::Group->fetch_by_name( 'public', { return_single => 1 } );
-    my $admin_group  = My::Group->fetch_by_name( 'admin', { return_single => 1 } );
-    my $mgr_group    = My::Group->fetch_by_name( 'managers', { return_single => 1 } );
-    my $user_list = My::User->fetch_group();
+    my $public_group = My::Group->fetch_by_name( 'public',
+                                                 { return_single => 1 } );
+    my $admin_group  = My::Group->fetch_by_name( 'admin',
+                                                 { return_single => 1 } );
+    my $mgr_group    = My::Group->fetch_by_name( 'managers',
+                                                 { return_single => 1 } );
+    my $user_list = My::User->fetch_group({ skip_security => 1 });
     foreach my $user ( @{ $user_list } ) {
         eval {
             $user->group_add( $public_group->id );

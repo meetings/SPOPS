@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 31_dbi_multifield.t,v 1.3 2001/11/26 16:27:19 lachoy Exp $
+# $Id: 31_dbi_multifield.t,v 1.4 2002/01/23 20:10:51 lachoy Exp $
 
 # Almost exactly the same as 30_dbi.t, but here we're testing whether
 # multiple-field primary keys work ok
@@ -13,6 +13,13 @@ use constant TEST_TABLE_NAME => 'spops_multi_test';
 
 my $SPOPS_CLASS = 'DBIMultiTest';
 
+my ( $db, $do_end );
+
+END {
+    if ( $do_end ) {
+        cleanup( $db, TEST_TABLE_NAME );
+    }
+}
 {
 
     # Grab our DBI routines and be sure we're supposed to run.
@@ -20,6 +27,8 @@ my $SPOPS_CLASS = 'DBIMultiTest';
     do "t/dbi_config.pl";
 
     my $config = test_dbi_run();
+
+    $do_end++;
 
     require Test::More;
     Test::More->import( tests => NUM_TESTS );
@@ -53,7 +62,7 @@ my $SPOPS_CLASS = 'DBIMultiTest';
 
     # Create a database handle and create our testing table
 
-    my $db = get_db_handle( $config );
+    $db = get_db_handle( $config );
     create_table( $db, 'multi', TEST_TABLE_NAME );
 
     my $obj_time = 1004897158;
@@ -161,8 +170,6 @@ my $SPOPS_CLASS = 'DBIMultiTest';
         }
         ok( $count == 3, 'Iterator fetch count' );
     }
-
-    cleanup( $db, TEST_TABLE_NAME );
 
 # Future testing ideas:
 #  - security

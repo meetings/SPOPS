@@ -1,12 +1,15 @@
 package SPOPS::Exception;
 
-# $Id: Exception.pm,v 1.3 2002/01/07 13:02:06 lachoy Exp $
+# $Id: Exception.pm,v 1.5 2002/02/23 04:14:26 lachoy Exp $
 
 use strict;
-use base qw( Class::Accessor );
+use base qw( Class::Accessor Exporter );
 use overload '""' => \&stringify;
 use Devel::StackTrace;
 use SPOPS::Error;
+
+$SPOPS::Exception::VERSION   = substr(q$Revision: 1.5 $, 10);
+@SPOPS::Exception::EXPORT_OK = qw( spops_error );
 
 use constant DEBUG => 0;
 
@@ -15,10 +18,20 @@ my @FIELDS = qw( message package filename line method trace );
 SPOPS::Exception->mk_accessors( @FIELDS );
 
 ########################################
+# SHORTCUT
+
+sub spops_error { return SPOPS::Exception->throw( @_ ) }
+
+
+########################################
 # CLASS METHODS
 
 sub throw {
-    my ( $class, $msg, $params ) = @_;
+    my ( $class, @message ) = @_;
+
+    my $params = ( ref $message[-1] eq 'HASH' )
+                   ? pop( @message ) : {};
+    my $msg    = join( '', @message );
 
     my $self = bless( {}, $class );
 
@@ -113,6 +126,8 @@ SPOPS::Exception - Base class for exceptions in SPOPS
 
  # As a user
 
+ use SPOPS::Exception;
+
  eval { $user->save };
  if ( $@ ) {
     print "Error: $@",
@@ -130,10 +145,18 @@ SPOPS::Exception - Base class for exceptions in SPOPS
 
  # As a developer
 
+ use SPOPS::Exception;
+
  my $rv = eval { $dbh->do( $sql ) };
  if ( $@ ) {
      SPOPS::Exception->throw( $@ );
  }
+
+ # Use the shortcut
+
+ use SPOPS::Exception qw( spops_error );
+ my $rv = eval { $dbh->do( $sql ) };
+ spops_error( $@ ) if ( $@ );
 
  # Throw an exception that subclasses SPOPS::Exception with extra
  # fields
@@ -143,6 +166,13 @@ SPOPS::Exception - Base class for exceptions in SPOPS
      SPOPS::Exception::DBI->throw( $@, { sql    => $sql,
                                          action => 'do' } );
  }
+
+ # Throw an exception with a longer message and parameters
+
+ SPOPS::Exception->throw( "This is a very very very very ",
+                          "very long message, even though it ",
+                          "doesn't say too much.",
+                          { action => 'blah' } );
 
 =head1 DESCRIPTION
 
@@ -166,11 +196,16 @@ L<SUBCLASSING> below.
 
 =head2 Class Methods
 
-B<throw( $message, \%params )>
+B<throw( $message, [ $message...], [ \%params ] )>
 
 This is the main action method and normally the only one you will ever
-use. It creates a new exception object and calls C<die> with the
-object. Before calling C<die> with it it first does the following:
+use. It creates a new exception object with the message consisting of
+all the parameters concatenated together. The exception is if the
+optional last argument is a hashref -- this argument contains extra
+information to put into the exception if supported by the class.
+
+It then calls C<die> with the object. Before calling C<die> it first
+does the following:
 
 =over 4
 

@@ -1,6 +1,6 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 1.29 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Secure.pm,v 1.32 2002/02/23 05:38:58 lachoy Exp $
 
 use strict;
 use vars         qw( $EMPTY );
@@ -8,8 +8,7 @@ use Data::Dumper qw( Dumper );
 require Exporter;
 
 @SPOPS::Secure::ISA      = qw( Exporter );
-$SPOPS::Secure::VERSION  = '1.90';
-$SPOPS::Secure::Revision = substr(q$Revision: 1.29 $, 10);
+$SPOPS::Secure::VERSION  = substr(q$Revision: 1.32 $, 10);
 
 # Stuff for security constants and exporting
 
@@ -54,7 +53,6 @@ $EMPTY = {
     SEC_SCOPE_GROUP() => {}
 };
 
-
 my %LEVEL_VERBOSE = (
     SEC_LEVEL_NONE_VERBOSE()     => SEC_LEVEL_NONE,
     SEC_LEVEL_SUMMARY_VERBOSE()  => SEC_LEVEL_SUMMARY,
@@ -66,6 +64,10 @@ my %LEVEL_CODE = map { $LEVEL_VERBOSE{ $_ } => $_ } keys %LEVEL_VERBOSE;
 
 my $INITIAL_SECURITY_DEFAULT = SEC_LEVEL_NONE;
 
+# This needs to be down here so we don't get into a deadlock (and die)
+# situation
+
+require SPOPS::Exception::Security;
 
 ########################################
 # RETRIEVE SECURITY
@@ -589,13 +591,12 @@ sub set_item_security {
 
     my $sec_obj_class = $p->{security_object_class} ||
                         $item->global_security_object_class;
-    my $obj = $sec_obj_class->fetch_match(
-                                          $class,
-                                          { object_id => $oid,
-                                            scope     => $p->{scope},
-                                            scope_id  => $p->{scope_id} } );
+    my $obj = $sec_obj_class->fetch_match( $class,
+                                           { object_id => $oid,
+                                             scope     => $p->{scope},
+                                             scope_id  => $p->{scope_id} } );
     unless ( $obj ) {
-        DEBUG() && _w( 1, "Current object does not exist. Creating one." );
+        DEBUG() && _w( 1, "Current object does not exist. Creating one [$oid]" );
         $obj = $sec_obj_class->new({ class     => $class,
                                      object_id => $oid,
                                      scope     => $p->{scope},

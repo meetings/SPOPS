@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.16 2002/01/14 02:58:03 lachoy Exp $
+# $Id: Makefile.PL,v 1.21 2002/02/23 06:03:00 lachoy Exp $
 
 use strict;
 use ExtUtils::MakeMaker;
@@ -11,11 +11,13 @@ my ( $EXTRA_INFO );
  # Available SPOPS DBI drivers (when we start testing with more
  # databases, we add them here)
 
-my %SUPPORTED_DBD_DRIVERS = ( mysql  => 1,
-                              Pg     => 1,
-                              ASAny  => 1,
+my %SUPPORTED_DBD_DRIVERS = ( ASAny  => 1,
+                              mysql  => 1,
                               ODBC   => 1,
-                              Sybase => \&_set_sybase_env );
+                              Oracle => \&set_oracle_env,
+                              Pg     => 1,
+                              SQLite => 1,
+                              Sybase => \&set_sybase_env );
 
  # File we write the configuration info to
 
@@ -86,47 +88,16 @@ sub write_makefile {
     'AUTHOR'       => 'Chris Winters <chris@cwinters.com>',
     'ABSTRACT'     => 'Data abstraction layer used for object persistence and security',
     'PREREQ_PM'    => { 'Storable'          => 1.00,
-                        'Class::ISA'        => undef,
-                        'Test::More'        => 0.07,
-                        'Data::Dumper'      => undef,
+                        'Class::ISA'        => 0.32,
+                        'Test::More'        => 0.41,
+                        'Data::Dumper'      => 2.00,
                         'Class::Date'       => 1.00,
-                        'Carp::Assert'      => undef,
-                        'Class::Fields'     => undef,
-                        'Class::Accessor'   => undef,
-                        'Devel::StackTrace' => undef,
+                        'Carp::Assert'      => 0.17,
+                        'Class::Fields'     => 0.14,
+                        'Class::Accessor'   => 0.17,
+                        'Devel::StackTrace' => 0.90,
+                        'Class::Factory'    => 0.03,
                         } );
-}
-
-
-# Generic routine to read a response from the command-line (defaults,
-# etc.) Note that return value has whitespace at the end/beginning of
-# the routine trimmed.
-
-sub get_response {
-    my ( $msg, $default ) = @_;
-    print $msg;
-    $default = join( ', ', @{ $default } ) if ( ref $default eq 'ARRAY' );
-    my $show_default = $default || 'no default';
-    print " <$show_default> ";
-    my $response = <STDIN>;
-    chomp $response;
-    $response = $default if ( $response =~ /^\s*$/ );
-    $response =~ s/^\s+//;
-    $response =~ s/\s+$//;
-    return $response;
-}
-
-
-# Set the sybase environment as necessary
-
-sub set_sybase_env {
-    my $syb_set = lc get_response( "Current value of SYBASE environment variable: $ENV{SYBASE}. " . 
-                                   'Is this correct? (Y/n)', 'Y' );
-    if ( $syb_set eq 'y' ) {
-        my $syb_env = get_response( 'Enter a value for the SYBASE environment variable', '/opt/sybase' );
-        $EXTRA_INFO .= "ENV_SYBASE:     $syb_env\n";
-    }
-    print "\n";
 }
 
 
@@ -169,8 +140,10 @@ sub check_dbi {
     if ( $dbi_driver eq 'ODBC' ) {
         print "You've chosen ODBC as your DBD. However, SPOPS needs to know ",
               "what type of database is working behind the ODBC driver.\n";
-        $odbc_driver = get_response( "Choose a database behind the scenes (MySQL, Pg, Sybase)\n" .
-                                     "(MS SQL users should enter 'Sybase')", 'Sybase' );
+        $odbc_driver = get_response( "Choose a database behind the scenes " .
+                                     "(MySQL, Pg, Sybase, Oracle)\n" .
+                                     "(MS SQL users should enter 'Sybase')",
+                                     'Sybase' );
     }
     print "\n";
 
@@ -237,6 +210,7 @@ sub check_gdbm {
     return 'y';
 }
 
+
 # Find out about UUID test
 
 sub check_uuid {
@@ -248,3 +222,58 @@ sub check_uuid {
     }
     return 'y';
 }
+
+
+# Set the sybase environment as necessary
+
+sub set_sybase_env {
+    my $sybhome = $ENV{SYBASE} || 'undefined';
+    my $syb_set = lc get_response( "Current value of SYBASE environment " .
+                                   "variable: [$sybhome]. Is this " .
+                                   "correct? (Y/n)", 'Y' );
+    if ( $syb_set ne 'y' ) {
+        my $syb_env = get_response( 'Enter a value for the SYBASE ' .
+                                    'environment variable',
+                                    '/opt/sybase' );
+        $EXTRA_INFO .= "ENV_SYBASE:     $syb_env\n";
+    }
+    print "\n";
+}
+
+
+# Set the oracle environment as necessary.
+
+sub set_oracle_env {
+    my $orahome = $ENV{ORACLE_HOME} || 'undefined';
+    my $ora_set = lc get_response( "Current value of ORACLE_HOME environment " .
+                                   "variable: [$orahome]. Is this " .
+                                   "correct? (Y/n)", 'Y' );
+    if ( $ora_set ne 'y' ) {
+        my $ora_env = get_response( 'Enter a value for the ORACLE_HOME ' .
+                                    'environment variable',
+                                    '/home/oracle/OraHome1' );
+        $EXTRA_INFO .= "ENV_ORACLE_HOME:  $ora_env\n";
+    }
+    print "\n";
+}
+
+
+# Generic routine to read a response from the command-line (defaults,
+# etc.) Note that return value has whitespace at the end/beginning of
+# the routine trimmed.
+
+sub get_response {
+    my ( $msg, $default ) = @_;
+    print $msg;
+    $default = join( ', ', @{ $default } ) if ( ref $default eq 'ARRAY' );
+    my $show_default = $default || 'no default';
+    print " <$show_default> ";
+    my $response = <STDIN>;
+    chomp $response;
+    $response = $default if ( $response =~ /^\s*$/ );
+    $response =~ s/^\s+//;
+    $response =~ s/\s+$//;
+    return $response;
+}
+
+
