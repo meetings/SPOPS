@@ -1,20 +1,69 @@
 package SPOPS::Tool::UTFConvert;
 
-# $Id: UTFConvert.pm,v 3.1 2003/01/02 06:00:21 lachoy Exp $
-
-# ***************WARNING***************
-# This currently only works in 5.6.0 and earlier versions of Perl. It
-# will barf with a syntax error on later versions.
+# $Id: UTFConvert.pm,v 3.3 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
-use utf8;
-use SPOPS qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 
-$SPOPS::Tool::UTFConvert::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Tool::UTFConvert::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 sub ruleset_factory {
     my ( $class, $ruleset ) = @_;
-    DEBUG && _w( 1, "Installing UTF8 conversion methods for ($class)" );
+    $log->is_info &&
+        $log->info( "Installing UTF8 conversion methods for ($class)" );
+
+    my ( $routines );
+
+    # Why do we have to do this runtime eval stuff? 5.6.1 and greater
+    # barfs on the regexes used for 5.6.0 and earlier, so we eval them
+    # into existence so everyone is happy.
+
+    if ( $] < 5.006001 ) {
+        require utf8;
+
+        $routines = <<'ROUTINES_56'
+
+sub _from_utf {
+    my ( $self, $field ) = @_;
+    $self->{ $field } =~ tr/\0-\x{FF}//UC;
+}
+
+sub _to_utf {
+    my ( $self, $field ) = @_;
+    $self->{ $field } =~ tr/\0-\x{FF}//CU;
+}
+
+ROUTINES_56
+
+    }
+    else {
+        require Encode;
+        require Unicode::String;
+        Unicode::String->import( qw( latin1 utf8 ) );
+        $routines = <<'ROUTINES_58';
+
+sub _from_utf {
+    my ( $self, $field ) = @_;
+    my $old = $self->{ $field };
+    $old = utf8( $old )->latin1;
+    $self->{ $field } = $old;
+}
+
+sub _to_utf {
+    my ( $self, $field ) = @_;
+    utf8::encode( $self->{ $field } );
+}
+
+ROUTINES_58
+    }
+
+    eval "$routines";
+    if ( $@ ) {
+        die "Failed to initialize tool for UTF conversion: $@";
+    }
     push @{ $ruleset->{post_fetch_action} }, \&from_utf;
     push @{ $ruleset->{pre_save_action} }, \&to_utf;
 }
@@ -26,7 +75,7 @@ sub from_utf {
     return 1 unless ( ref $convert_fields eq 'ARRAY' and
                       scalar @{ $convert_fields } );
     foreach my $field ( @{ $convert_fields } ) {
-        $self->{ $field } =~ tr/\0-\x{FF}//UC;
+        _from_utf( $self, $field );
     }
     return 1;
 }
@@ -37,7 +86,7 @@ sub to_utf {
     return 1 unless ( ref $convert_fields eq 'ARRAY' and
                       scalar @{ $convert_fields } );
     foreach my $field ( @{ $convert_fields } ) {
-        $self->{ $field } =~ tr/\0-\x{FF}//CU;
+        _to_utf( $self, $field );
     }
     return 1;
 }

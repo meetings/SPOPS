@@ -5,6 +5,7 @@ COPYING-DOCS
 MANIFEST
 README
 RELEASE
+log4perl.conf
 SPOPS.pm
 SPOPS/ClassFactory.pm
 SPOPS/ClassFactory/DBI.pm
@@ -99,6 +100,8 @@ eg/fetch_all.pl
 eg/fetch_doodads.pl
 eg/find_defaults_demo.pl
 eg/ldap_multidatasource.pl
+eg/log4perl.conf
+eg/modify_debug_to_l4p.pl
 eg/stock_doodads.pl
 eg/stock_user_group.pl
 eg/users_groups_clear.sql
@@ -119,6 +122,7 @@ eg/My/LDAPConnect.pm
 eg/My/Security.pm
 eg/My/User.pm
 t/00_base.t
+t/00_base_case.t
 t/01_tie.t
 t/02_tie_strict.t
 t/03_uuid_key.t

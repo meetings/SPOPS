@@ -374,7 +374,7 @@ The configuration to make this happen would look like this:
   7:    increment_field => 1,
   8:    no_insert       => [ 'book_id' ],
   9:    no_update       => [ 'book_id' ],
- 10:    links_to        => { 'My::Publisher' => 'publisher_link' },
+ 10:    links_to        => { 'My::Publisher' => 'publisher_book' },
  11: }
 
   1: 'publisher' => {

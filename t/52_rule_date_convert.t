@@ -1,10 +1,12 @@
 # -*-perl-*-
 
-# $Id: 52_rule_date_convert.t,v 1.2 2003/06/10 14:13:44 lachoy Exp $
+# $Id: 52_rule_date_convert.t,v 1.3 2004/02/26 02:02:29 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
 use Test::More tests => 22;
+
+do "t/config.pl";
 
 my $DATE_FORMAT = '%Y-%m-%d %H:%M:%S';
 

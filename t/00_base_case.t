@@ -1,21 +1,21 @@
 # -*-perl-*-
 
-# $Id: 00_base.t,v 3.8 2004/03/12 14:36:39 lachoy Exp $
+# $Id: 00_base_case.t,v 1.1 2004/03/12 14:54:17 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
-use Test::More tests => 64;
+use Test::More tests => 61;
 
 do "t/config.pl";
 
 my $SPOPS_CLASS = 'BaseTest';
-my @FIELDS      = qw( id_name name );
+my @FIELDS      = qw( ID_name FirstName );
 my %FIELD_MAP   = map { $FIELDS[ $_ - 1 ] => $_ } ( 1 .. scalar @FIELDS  );
 my %CREATION    = ( u => 'WRITE', w => 'READ' );
-my $ID_FIELD    = 'id_name';
+my $ID_FIELD    = 'ID_name';
 my $OBJECT_TYPE = 'Testing Loopback Object';
 my $DISPLAY_URL  = { url => '/Foo/show/' };
-my $OBJECT_TITLE_FIELD = 'name';
+my $OBJECT_TITLE_FIELD = 'FirstName';
 
 my $STORABLE_FILE = '_tmp_00_base';
 
@@ -36,6 +36,7 @@ END {
          name        => $OBJECT_TITLE_FIELD,
          object_name => $OBJECT_TYPE,
          display     => $DISPLAY_URL,
+         strict_field => 'yes',
        },
      );
 
@@ -68,7 +69,7 @@ END {
         is( ref $item, $SPOPS_CLASS, 'Object class correct' );
 
         ok( $item->is_changed, 'Change state of new item' );
-        $item->{name}        = 'new';
+        $item->{FirstName}   = 'new';
         $item->{ $ID_FIELD } = 99;
         ok( $item->is_changed, 'Change state after property set' );
         $item->clear_change;
@@ -108,32 +109,21 @@ END {
         ok( ! $item_nf->{foobar}, 'Non-class field not set (good)' );
     }
 
-    # Strict field checking
-    {
-        my $item_strict = $SPOPS_CLASS->new({ strict_field => 1 });
-        ok( $item_strict, 'Object created with strict field checking on' );
-        is( ref( tied( %{ $item_strict } ) ), 'SPOPS::Tie::StrictField',
-            'Correct tied object created' );
-        $item_strict->{foo} = 'bar';
-        is( $item_strict->{foo}, undef,
-            'Strict field assignment did nothing (good)' );
-    }
-
     # Default values
     {
         my $DEFAULT_NAME = 'PerlRox';
-        my $DEFAULT_VARS = { name => $DEFAULT_NAME };
+        my $DEFAULT_VARS = { FirstName => $DEFAULT_NAME };
         my $item_def = $SPOPS_CLASS->new({ default_values => $DEFAULT_VARS });
-        is( $item_def->{name}, $DEFAULT_NAME, 'Default value set in constructor' );
-        my $item_nodef = $SPOPS_CLASS->new({ name => 'foo',
+        is( $item_def->{FirstName}, $DEFAULT_NAME, 'Default value set in constructor' );
+        my $item_nodef = $SPOPS_CLASS->new({ FirstName => 'foo',
                                              default_values => $DEFAULT_VARS });
-        isnt( $item_nodef->{name}, $DEFAULT_NAME,
+        isnt( $item_nodef->{FirstName}, $DEFAULT_NAME,
               'Default value set in constructor but passed value overrides' );
     }
 
     # Object description
     {
-        my $item_d = $SPOPS_CLASS->new({ id => 5, name => 'New Object' });
+        my $item_d = $SPOPS_CLASS->new({ id => 5, FirstName => 'New Object' });
         my $info = $item_d->object_description;
         is( $info->{class}, $SPOPS_CLASS, 'Object Description: class' );
         is( $info->{object_id}, 5, 'Object Description: object_id' );
@@ -149,52 +139,52 @@ END {
 
     # Data only
     {
-        my $item_d = $SPOPS_CLASS->new({ id => 5, name => 'New Object' });
+        my $item_d = $SPOPS_CLASS->new({ id => 5, FirstName => 'New Object' });
         my $data_hashref = $item_d->as_data_only;
         is( ref( $data_hashref ), 'HASH', 'Data only proper structure' );
-        is( $data_hashref->{id_name}, $item_d->{id_name}, "Data only field 1" );
-        is( $data_hashref->{name}, $item_d->{name}, "Data only field 2" );
+        is( $data_hashref->{ID_name}, $item_d->{ID_name}, "Data only field 1" );
+        is( $data_hashref->{FirstName}, $item_d->{FirstName}, "Data only field 2" );
     }
 
     # AUTOLOAD-ed accessors
     {
-        my $item_d = $SPOPS_CLASS->new({ id => 5, name => 'New Object' });
-        is( $item_d->id_name, 5, 'Accessor created for field 1' );
-        is( $item_d->name, 'New Object', 'Accessor created for field 2' );
+        my $item_d = $SPOPS_CLASS->new({ id => 5, FirstName => 'New Object' });
+        is( $item_d->ID_name, 5, 'Accessor created for field 1' );
+        is( $item_d->FirstName, 'New Object', 'Accessor created for field 2' );
     }
 
     # AUTOLOAD-ed mutators
     {
         my $item = $SPOPS_CLASS->new();
-        is( $item->id_name( 55 ), 55, 'Accessor/mutator created for field 1' );
-        is( $item->name( 'foo' ), 'foo', 'Accessor/mutator created for field 2' );
-        is( $item->id_name, 55, 'Value set by mutator for field 1' );
-        is( $item->name, 'foo', 'Value set by mutator for field 2' );
+        is( $item->ID_name( 55 ), 55, 'Accessor/mutator created for field 1' );
+        is( $item->FirstName( 'foo' ), 'foo', 'Accessor/mutator created for field 2' );
+        is( $item->ID_name, 55, 'Value set by mutator for field 1' );
+        is( $item->FirstName, 'foo', 'Value set by mutator for field 2' );
     }
 
     # AUTOLOAD-ed clearers
     {
-        my $item = $SPOPS_CLASS->new({ id => 42, name => 'Frobozz' });
-        $item->{name} = undef;
-        is( $item->name, undef, 'Cleared through hash' );
-        $item->{name} = 'Frobozz';
-        is( $item->name_clear, undef, 'Return of clear method' );
-        is( $item->{name}, undef, 'Clear method actually cleared' );
+        my $item = $SPOPS_CLASS->new({ id => 42, FirstName => 'Frobozz' });
+        $item->{FirstName} = undef;
+        is( $item->FirstName, undef, 'Cleared through hash' );
+        $item->{FirstName} = 'Frobozz';
+        is( $item->FirstName_clear, undef, 'Return of clear method' );
+        is( $item->{FirstName}, undef, 'Clear method actually cleared' );
     }
 
     ########################################
     # CLONE
 
     {
-        my $item = $SPOPS_CLASS->new({ id => 5, name => 'Original object' });
+        my $item = $SPOPS_CLASS->new({ id => 5, FirstName => 'Original object' });
         my $cloned = $item->clone;
         is( ref( $cloned ), ref( $item ),
             'Class of cloned item matches' );
         isnt( $cloned->id, $item->id,
               'id() of cloned item does not match as expected' );
-        isnt( $cloned->id_name, $item->id_name,
+        isnt( $cloned->ID_name, $item->ID_name,
               'Value of ID field does not match as expected' );
-        is( $cloned->name, $item->name,
+        is( $cloned->FirstName, $item->FirstName,
             'Normal property of cloned item matches' );
     }
 
@@ -202,7 +192,7 @@ END {
     # STORABLE
 
     {
-        my $item_d = $SPOPS_CLASS->new({ id => 5, name => 'New Object' });
+        my $item_d = $SPOPS_CLASS->new({ id => 5, FirstName => 'New Object' });
         eval { $item_d->store( $STORABLE_FILE ) };
         ok( ! $@, 'Storable store() executed ok' );
         ok( -f $STORABLE_FILE, 'Storable file created ok' );
@@ -210,13 +200,13 @@ END {
         ok( ! $@, 'Storable retrieve() executed ok' );
         is( ref( $item_e ), $SPOPS_CLASS, 'Storable object retrieved proper object class' );
         is( $item_e->id, $item_d->id, 'Field 1 reserialized' );
-        is( $item_e->{name}, $item_e->{name}, 'Field 2 reserialized' );
+        is( $item_e->{FirstName}, $item_e->{FirstName}, 'Field 2 reserialized' );
         open( FOO, "< $STORABLE_FILE" );
         my $item_f = eval { $SPOPS_CLASS->fd_retrieve( \*FOO ) };
         ok( ! $@, 'Storable fd_retrieve() executed ok' );
         is( ref( $item_f ), $SPOPS_CLASS, 'Storable object fd retrieved proper object class' );
         is( $item_f->id, $item_d->id, 'Field 1 fd reserialized' );
-        is( $item_f->{name}, $item_d->{name}, 'Field 2 fd reserialized' );
+        is( $item_f->{FirstName}, $item_d->{FirstName}, 'Field 2 fd reserialized' );
     }
 
 }

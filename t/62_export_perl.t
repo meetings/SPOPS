@@ -1,10 +1,12 @@
 # -*-perl-*-
 
-# $Id: 62_export_perl.t,v 1.2 2003/11/26 14:13:59 lachoy Exp $
+# $Id: 62_export_perl.t,v 1.3 2004/02/26 02:02:29 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
 use Test::More tests => 10;
+
+do "t/config.pl";
 
 my $ALL =
 q|$VAR1 = [

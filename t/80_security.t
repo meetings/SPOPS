@@ -1,10 +1,12 @@
 # -*-perl-*-
 
-# $Id: 80_security.t,v 1.2 2002/09/16 20:43:11 lachoy Exp $
+# $Id: 80_security.t,v 1.3 2004/02/26 02:02:29 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
 use Test::More tests => 39;
+
+do "t/config.pl";
 
 BEGIN { use_ok( 'SPOPS::Secure', qw( :level :scope ) ) }
 

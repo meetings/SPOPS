@@ -1,10 +1,12 @@
 # -*-perl-*-
 
-# $Id: 63_export_sql.t,v 1.1 2002/09/11 13:06:44 lachoy Exp $
+# $Id: 63_export_sql.t,v 1.2 2004/02/26 02:02:29 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
 use Test::More tests => 15;
+
+do "t/config.pl";
 
 my $ALL =
 q{INSERT INTO foo ( myname )

@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 3.2 2002/10/10 04:01:21 lachoy Exp $
+# $Id: Makefile.PL,v 3.3 2004/01/09 22:43:13 lachoy Exp $
 
 # See 'README' for the environment variables we use in builds without
 # intervention.
@@ -94,16 +94,18 @@ sub write_makefile {
     'VERSION_FROM' => 'SPOPS.pm',
     'AUTHOR'       => 'Chris Winters <chris@cwinters.com>',
     'ABSTRACT'     => 'Data abstraction layer used for object persistence and security',
-    'PREREQ_PM'    => { 'Storable'          => 1.00,
-                        'Class::ISA'        => 0.32,
-                        'Test::More'        => 0.41,
-                        'Data::Dumper'      => 2.00,
+    'PREREQ_PM'    => { 'Carp::Assert'      => 0.17,
                         'Class::Date'       => 1.00,
-                        'Carp::Assert'      => 0.17,
-                        'Class::Fields'     => 0.14,
-                        'Class::Accessor'   => 0.17,
-                        'Devel::StackTrace' => 0.90,
                         'Class::Factory'    => 1.00,
+                        'Class::Fields'     => 0.14,
+                        'Class::ISA'        => 0.32,
+                        'Class::Accessor'   => 0.17,
+                        'Data::Dumper'      => 2.00,
+                        'Log::Dispatch'     => 2.00,
+                        'Log::Log4perl'     => 0.35,
+                        'Devel::StackTrace' => 0.90,
+                        'Storable'          => 1.00,
+                        'Test::More'        => 0.41,
                         'Time::Piece'       => 1.07,
                         #'Class::Observable' => 0.03,
                         } );

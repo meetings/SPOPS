@@ -2,6 +2,9 @@
 
 use strict;
 use DBI;
+use Log::Log4perl;
+Log::Log4perl::init( 'log4perl.conf' );
+
 use SPOPS::Initialize;
 
 my $DBI_DSN  = 'DBI:Pg:dbname=test';

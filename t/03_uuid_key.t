@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 03_uuid_key.t,v 3.1 2002/10/10 12:07:43 lachoy Exp $
+# $Id: 03_uuid_key.t,v 3.2 2004/02/26 02:02:30 lachoy Exp $
 
 use strict;
 
@@ -14,6 +14,8 @@ use strict;
     }
 
     Test::More->import( tests => 6 );
+
+    do "t/config.pl";
 
     my %config = (
       test => {

@@ -1,11 +1,14 @@
 package SPOPS::Key::UUID;
 
-# $Id: UUID.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
+# $Id: UUID.pm,v 3.3 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
-use SPOPS      qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 
-$SPOPS::Key::UUID::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Key::UUID::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 BEGIN { eval { require Data::UUID } }
 

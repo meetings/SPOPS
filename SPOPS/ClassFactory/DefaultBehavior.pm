@@ -1,12 +1,15 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 3.6 2003/11/28 17:20:42 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 3.9 2004/03/12 14:40:26 lachoy Exp $
 
 use strict;
-use SPOPS               qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
-$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.9 $ =~ /(\d+)\.(\d+)/);
 
 # Overlap here with DBI...
 my @PARSE_INTO_HASH  = qw( field no_insert no_update skip_undef multivalue );
@@ -22,7 +25,8 @@ my @PARSE_INTO_ARRAY = qw( sql_defaults fetch_by ldap_object_class );
 sub conf_modify_config {
     my ( $class ) = @_;
 
-    DEBUG() && _w( 1, "Trying to modify configuration for class [$class]" );
+    $log->is_info &&
+        $log->info( "Trying to modify configuration for class [$class]" );
     my $CONFIG = $class->CONFIG;
 
     if ( ref $CONFIG->{field} eq 'ARRAY' ) {
@@ -33,6 +37,12 @@ sub conf_modify_config {
     }
     else {
         $CONFIG->{field_list} = [];
+    }
+
+    # Store the raw fieldnames before we do anything else to them
+
+    unless ( $CONFIG->{field_raw} ) {
+        $CONFIG->{field_raw} = [ @{ $CONFIG->{field_list} } ];
     }
 
     # When we change a listref to a hashref, keep the order
@@ -48,7 +58,8 @@ HASHITEM:
         if ( ref $CONFIG->{ $item } ne 'ARRAY' ) {
             $CONFIG->{ $item } = [ $CONFIG->{ $item } ];
         }
-        DEBUG() && _w( 1, "Parsing key ($item) into a hash" );
+        $log->is_info &&
+            $log->info( "Parsing key ($item) into a hash" );
         my $count = 1;
         my %new = ();
         foreach my $subitem ( @{ $CONFIG->{ $item } } ) {
@@ -81,9 +92,9 @@ my $ID_TEMPLATE = <<'IDTMPL';
           my ( $self, $new_id ) = @_;
           my $id_field = $self->id_field ||
                          SPOPS::Exception->throw(
-                             "Cannot find ID for object since no ID ",
-                             "field specified for class [",
-                             "ref( $self ) . ']' " );
+                             "Cannot find ID for object since no ID " .
+                             "field specified for class [" .
+                             ref( $self ) . ']' );
           return $self->{ $id_field } unless ( $new_id );
           return $self->{ $id_field } = $new_id;
        }
@@ -96,7 +107,8 @@ sub conf_id_method {
     my ( $class ) = @_;
     my $id_method = $ID_TEMPLATE;
     $id_method =~ s/%%GEN_CLASS%%/$class/g;
-    DEBUG() && _w( 5, "ID method being created\n$id_method" );
+    $log->is_debug &&
+        $log->debug( "ID method being created\n$id_method" );
     {
         local $SIG{__WARN__} = sub { return undef };
         eval $id_method;
@@ -126,7 +138,8 @@ sub conf_read_code {
     my @files_used = ();
     $code_class = [ $code_class ] unless ( ref $code_class eq 'ARRAY' );
     foreach my $read_code_class ( @{ $code_class } ) {
-        DEBUG() && _w( 2, "Trying to read code from [$read_code_class]",
+        $log->is_debug &&
+            $log->debug( "Trying to read code from [$read_code_class]",
                           "into [$class]" );
         my $filename = $read_code_class;
         $filename =~ s|::|/|g;
@@ -135,7 +148,8 @@ sub conf_read_code {
 PREFIX:
         foreach my $prefix ( @INC ) {
             my $full_filename = "$prefix/$filename.pm";
-            DEBUG() && _w( 3, "Try file: [$full_filename]" );
+            $log->is_debug &&
+                $log->debug( "Try file: [$full_filename]" );
             if ( -f $full_filename ) {
                 $final_filename = $full_filename;
                 last PREFIX;
@@ -148,7 +162,8 @@ PREFIX:
                             "for class [$class] was not found in \@INC" );
         }
 
-        DEBUG() && _w( 2, "File [$final_filename] will be used for ",
+        $log->is_debug &&
+            $log->debug( "File [$final_filename] will be used for ",
                           "[$read_code_class]" );
 
         eval { open( PKG, $final_filename ) || die $! };
@@ -164,7 +179,8 @@ CODEPKG:
         while ( <PKG> ) {
             if ( s/^\s*package $read_code_class\s*;\s*$/package $class;/ ) {
                 $code_pkg .= $_;
-                DEBUG() && _w( 1, "Package [$read_code_class] will be ",
+                $log->is_info &&
+                    $log->info( "Package [$read_code_class] will be ",
                                   "read in as [$class]" );
                 last CODEPKG;
             }
@@ -181,7 +197,8 @@ CODEPKG:
             $code_pkg .= <PKG>;
         }
         close( PKG );
-        DEBUG() && _w( 5, "Going to eval code:\n\n$code_pkg" );
+        $log->is_debug &&
+            $log->debug( "Going to eval code:\n\n$code_pkg" );
         {
             local $SIG{__WARN__} = sub { return undef };
             eval $code_pkg;
@@ -230,11 +247,12 @@ sub conf_relate_hasa {
         my $require_error = $@;
         my $hasa_config = eval { $hasa_class->CONFIG };
         if ( $@ ) {
-            return ( ERROR, "Failed to retrieve configuration from ",
+            return ( ERROR, "Failed to retrieve configuration from " .
                             "'$hasa_class': $@. (Require error: $require_error)" );
         }
 
-        DEBUG() && _w( 1, "Try to alias [$class] hasa [$hasa_class]" );
+        $log->is_info &&
+            $log->info( "Try to alias [$class] hasa [$hasa_class]" );
         my $hasa_id_field = $hasa_config->{id_field};
         my $hasa_sub = $GENERIC_HASA;
         $hasa_sub =~ s/%%GEN_CLASS%%/$class/g;
@@ -288,9 +306,11 @@ sub conf_relate_hasa {
             my $this_hasa_sub = $hasa_sub;
             $this_hasa_sub =~ s/%%HASA_ALIAS%%/$hasa_alias/g;
             $this_hasa_sub =~ s/%%HASA_ID_FIELD%%/$usea_id_field/g;
-            DEBUG() && _w( 2, "Aliasing [$hasa_class] with field [$usea_id_field] ",
+            $log->is_debug &&
+                $log->debug( "Aliasing [$hasa_class] with field [$usea_id_field] ",
                               "using alias [$hasa_alias] within [$class]" );
-            DEBUG() && _w( 5, "Now going to eval the routine:\n$this_hasa_sub" );
+            $log->is_debug &&
+                $log->debug( "Now going to eval the routine:\n$this_hasa_sub" );
             {
                 local $SIG{__WARN__} = sub { return undef };
                 eval $this_hasa_sub;
@@ -336,8 +356,10 @@ sub conf_relate_fetchby {
         my $fetch_by_sub = $GENERIC_FETCH_BY;
         $fetch_by_sub    =~ s/%%GEN_CLASS%%/$class/g;
         $fetch_by_sub    =~ s/%%FETCH_BY_FIELD%%/$fetch_by_field/g;
-        DEBUG() && _w( 2, "Creating fetch_by for field ($fetch_by_field)" );
-        DEBUG() && _w( 5, "Now going to eval the routine:\n$fetch_by_sub" );
+        $log->is_debug &&
+            $log->debug( "Creating fetch_by for field ($fetch_by_field)" );
+        $log->is_debug &&
+            $log->debug( "Now going to eval the routine:\n$fetch_by_sub" );
         {
             local $SIG{__WARN__} = sub { return undef };
             eval $fetch_by_sub;
@@ -365,7 +387,8 @@ RULESET
 sub conf_add_rules {
     my ( $class ) = @_;
     my $CONFIG = $class->CONFIG;
-    DEBUG() && _w( 1, "Adding rules to ($class)" );
+    $log->is_info &&
+        $log->info( "Adding rules to ($class)" );
 
     # Install the variable/subroutine RULESET into the class
 
@@ -386,7 +409,8 @@ sub conf_add_rules {
     my $rule_classes = $CONFIG->{rules_from} || [];
     my $subs = SPOPS::ClassFactory->find_parent_methods( $class, $rule_classes, RULESET_METHOD, 'ruleset_add' );
     foreach my $sub_info ( @{ $subs } ) {
-        DEBUG() && _w( 2, "Calling ruleset generation for [$class] ",
+        $log->is_debug &&
+            $log->debug( "Calling ruleset generation for [$class] ",
                           "from [$sub_info->[0]]" );
         $sub_info->[1]->( $class, $class->RULESET );
     }

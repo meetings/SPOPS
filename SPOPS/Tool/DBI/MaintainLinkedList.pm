@@ -1,15 +1,18 @@
 package SPOPS::Tool::DBI::MaintainLinkedList;
 
-# $Id: MaintainLinkedList.pm,v 1.3 2003/01/02 06:00:21 lachoy Exp $
+# $Id: MaintainLinkedList.pm,v 1.4 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
+use Log::Log4perl qw( get_logger );
 use Data::Dumper qw( Dumper );
-use SPOPS        qw( DEBUG _w );
+use SPOPS;
 use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
 use constant HEAD_DEFAULT => 'null';
 
-$SPOPS::Tool::DBI::MaintainLinkedList::VERSION = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Tool::DBI::MaintainLinkedList::VERSION = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 
 ########################################
 # CODE GENERATION BEHAVIOR
@@ -71,7 +74,8 @@ sub ruleset_factory {
     my ( $class, $rs_table ) = @_;
     push @{ $rs_table->{post_save_action} },   \&update_links;
     push @{ $rs_table->{post_remove_action} }, \&remove_links;
-    DEBUG && _w( 2, "Adding rules to [$class] from [", __PACKAGE__, "]" );
+    $log->is_debug &&
+        $log->debug( "Adding rules to [$class] from [", __PACKAGE__, "]" );
     return __PACKAGE__;
 }
 
@@ -107,7 +111,7 @@ sub update_links {
 
 
     if ( scalar @bad_params ) {
-        _w( 0, "Cannot automatically maintain linked list because field\n",
+        $log->warn( "Cannot automatically maintain linked list because field\n",
                "configuration variables are not available:\n",
                join( "\n", @bad_params ) );
         return 1;
@@ -132,7 +136,8 @@ sub update_links {
     return 1 unless ( $previous );
     my $previous_id = $previous->id;
 
-    DEBUG && _w( 2, "Creating linked list entries for [", ref( $self ), "]",
+    $log->is_debug &&
+        $log->debug( "Creating linked list entries for [", ref( $self ), "]",
                     "with ID [$this_id] to previous [$previous_id]" );
 
     $previous->{ $field_next } = $this_id;
@@ -142,10 +147,11 @@ sub update_links {
         $self->save( \%temp_params );
     };
     if ( $@ ) {
-        _w( 0, "Error maintaining linked list: $@" );
+        $log->warn( "Error maintaining linked list: $@" );
         return undef;
     }
-    DEBUG && _w( 2, "Created links ok" );
+    $log->is_debug &&
+        $log->debug( "Created links ok" );
     return 1;
 }
 
@@ -185,7 +191,7 @@ sub remove_links {
     my $field_prev = $self->CONFIG->{linklist_previous};
     my $field_next = $self->CONFIG->{linklist_next};
     unless ( $field_prev and $field_next ) {
-        _w( 0, "Cannot automatically maintain linked list because certain\n",
+        $log->warn( "Cannot automatically maintain linked list because certain\n",
                "configuration variables are not available:\n",
                "[linklist_previous: $field_prev]\n",
                "[linklist_next: $field_next]" );
@@ -197,24 +203,28 @@ sub remove_links {
     if ( $previous and $next ) {
         $previous->{ $field_next } = $next->id;
         $next->{ $field_prev }     = $previous->id;
-        DEBUG && _w( 2, "Linking [", ref( $self ), "] ",
+        $log->is_debug &&
+            $log->debug( "Linking [", ref( $self ), "] ",
                         "[previous: ", $previous->id, "] ",
                         "[next: ", $next->id, "]" );
     }
     elsif ( $previous ) {
         $previous->{ $field_next } = undef;
-        DEBUG && _w( 2, "Linking [", ref( $self ), "] ",
+        $log->is_debug &&
+            $log->debug( "Linking [", ref( $self ), "] ",
                         "[previous: ", $previous->id, "] ",
                         "[next: n/a]" );
     }
     elsif ( $next ) {
         $next->{ $field_prev }     = undef;
-        DEBUG && _w( 2, "Linking [", ref( $self ), "] ",
+        $log->is_debug &&
+            $log->debug( "Linking [", ref( $self ), "] ",
                         "[previous: n/a] ",
                         "[next: ", $next->id, "]" );
     }
     else {
-        DEBUG && _w( 2, "Linking [", ref( $self ), "] ",
+        $log->is_debug &&
+            $log->debug( "Linking [", ref( $self ), "] ",
                         "[previous: n/a] ",
                         "[next: n/a]" );
     }

@@ -1,11 +1,14 @@
 package SPOPS::Key::DBI::HandleField;
 
-# $Id: HandleField.pm,v 3.3 2003/08/13 19:18:17 lachoy Exp $
+# $Id: HandleField.pm,v 3.4 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
-use SPOPS  qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 
-$SPOPS::Key::DBI::HandleField::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Key::DBI::HandleField::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 # Ensure only POST_fetch_id used
 
@@ -22,7 +25,8 @@ sub post_fetch_id {
     my ( $id );
     $id   = eval { $p->{db}->{ $field } };
     $id ||= eval { $p->{statement}->{ $field } };
-    DEBUG() && _w( 1, "Found inserted ID ($id)" );
+    $log->is_info &&
+        $log->info( "Found inserted ID ($id)" );
     unless ( $id ) {
         SPOPS::Exception->throw( "Cannot find ID value in $field" );
     }

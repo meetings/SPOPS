@@ -1,11 +1,12 @@
 # -*-perl-*-
 
-# $Id: 51_rule_read_only.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: 51_rule_read_only.t,v 3.1 2004/02/26 02:02:29 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
 use Test::More tests => 6;
 
+do "t/config.pl";
 {
     my %config = (
       test => {

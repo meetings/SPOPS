@@ -204,8 +204,8 @@ Here is an example, directly from from C<SPOPS>:
 
  sub behavior_factory {
      my ( $class ) = @_;
-     require SPOPS::ClassFactory::DefaultBehavior;
-     DEBUG() && _w( 1, "Installing SPOPS default behaviors for ($class)" );
+     $log->is_info &&
+         $log->info( "Installing SPOPS default behaviors for ($class)" );
      return { manipulate_configuration =>
                     \&SPOPS::ClassFactory::DefaultBehavior::conf_modify_config,
              read_code                =>

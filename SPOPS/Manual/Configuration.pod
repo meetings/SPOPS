@@ -10,6 +10,10 @@ This document aims to answer the questions:
 
 =item *
 
+How do I setup logging?
+
+=item *
+
 What configuration options are available for SPOPS objects?
 
 =item *
@@ -26,6 +30,74 @@ operational?
 How can I add new configuration items?
 
 =back
+
+=head1 LOGGING
+
+=head2 Using Log4perl
+
+As of version 0.81 SPOPS now uses L<Log::Log4perl> to issue logging
+messages. This is a far, far better system than the fragile and just
+plain busted system used previously.
+
+The log4perl documentation is excellent and if you're really
+interested I strongly recommend you read it. However...
+
+=head2 Quick Guide
+
+SPOPS comes with a sample configuration file for log4perl. It's found
+in the root of the source distribution and looks like this:
+
+ ########################################
+ # ROOT CATEGORY
+ 
+ # Log to a file 'spops.log' (controlled below)
+ #log4perl.logger = DEBUG, FileAppender
+ 
+ # Log to STDERR -- this is the default to replicate earlier behavior
+ log4perl.logger = DEBUG, ScreenAppender
+ 
+ ########################################
+ # CATEGORIES
+ 
+ log4perl.logger.SPOPS              = INFO
+ log4perl.logger.SPOPS.DBI          = INFO
+ log4perl.logger.SPOPS.SQLInterface = WARN
+ log4perl.logger.SPOPS.ClassFactory = WARN
+ 
+ ########################################
+ # APPENDERS
+ 
+ # Normal file log - to use this just specify 'FileAppender' as the root category
+ 
+ log4perl.appender.FileAppender          = Log::Log4perl::Appender::File
+ log4perl.appender.FileAppender.filename = spops.log
+ log4perl.appender.FileAppender.layout   = Log::Log4perl::Layout::PatternLayout
+ log4perl.appender.FileAppender.layout.ConversionPattern = %d{HH:mm:ss} %p %c %C (%L) %m %n
+ 
+ # Normal STDERR log
+ 
+ log4perl.appender.ScreenAppender          = Log::Log4perl::Appender::Screen
+ log4perl.appender.ScreenAppender.stderr   = 1
+ log4perl.appender.ScreenAppender.layout   = Log::Log4perl::Layout::PatternLayout
+ log4perl.appender.ScreenAppender.layout.ConversionPattern = %d{HH:mm:ss} %p %c %C (%L) %m %n
+ 
+
+To initialize log4perl just add the following to your script, or put
+it in a common place and call it at your script startup:
+
+ use Log::Log4perl;
+ 
+ # 'log4perl.conf' is the name of your configuration file
+ 
+ Log::Log4perl::init( 'log4perl.conf' );
+
+
+Easy! The default configuration file issues statements to STDERR, just
+like the old debugging statements from SPOPS. But you can also issue
+them to a file, log them to a database, send them to C<syslog> or
+whatever you like. You can even log the messages from important
+modules (e.g., 'SPOPS::DBI' and 'SPOPS::SQLInterface') to separate
+files to make it easier to separate the wheat from the chaff.
 
 =head1 DESCRIPTION
 
@@ -62,7 +134,12 @@ behaviors to the SPOPS-generated class.
 
 B<field> (\@) (optional if setting dynamically)
 
-An arrayref of fieldnames used in this object.
+An arrayref of fieldnames used in this object; the case of these may
+be modified to be all lowercase.
+
+B<field_raw> (\@) (optional)
+
+An arrayref of fieldnames used in this object in their original cases.
 
 B<strict_field> (bool) (optional)
 

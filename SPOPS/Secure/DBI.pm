@@ -1,14 +1,17 @@
 package SPOPS::Secure::DBI;
 
-# $Id: DBI.pm,v 1.6 2003/05/10 19:24:11 lachoy Exp $
+# $Id: DBI.pm,v 1.8 2004/02/18 02:54:55 lachoy Exp $
 
 use strict;
+use Log::Log4perl qw( get_logger );
 use Data::Dumper  qw( Dumper );
-use SPOPS         qw( DEBUG _w _wm );
+use SPOPS;
 use SPOPS::Secure qw( :level :scope );
 use SPOPS::Secure::Util;
 
-$SPOPS::Secure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Secure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
 
 # Pass in:
 #  $class->fetch_by_object( $obj, [ { user  => $user_obj,
@@ -44,7 +47,8 @@ sub fetch_by_object {
     if ( scalar @{ $user_value } )  { push @value, @{ $user_value } }
 
     $where .= ')';
-    DEBUG && _w( 3, "Security searching clause: $where\nwith values ",
+    $log->is_debug &&
+        $log->debug( "Security searching clause: $where\nwith values ",
                     join( '//', @value ) );
 
     # Fetch the objects
@@ -66,7 +70,8 @@ sub _build_group_sql {
     my $num_groups = ( ref $p->{group} eq 'ARRAY' )
                        ? scalar @{ $p->{group} } : 0;
     unless ( $num_groups or $p->{group} eq 'all' ) {
-        DEBUG && _w( 2, "No groups passed in, returning empty info for group SQL" );
+        $log->is_debug &&
+            $log->debug( "No groups passed in, returning empty info for group SQL" );
         return ( undef, [] );
     }
 
@@ -83,7 +88,8 @@ sub _build_group_sql {
         my $group_list = ( ref $p->{group} eq 'ARRAY' )
                            ? $p->{group} : [ $p->{group} ];
         if ( scalar @{ $group_list } ) {
-            DEBUG && _w( 2, scalar @{ $group_list }, " groups found passed in" );
+            $log->is_debug &&
+                $log->debug( scalar @{ $group_list }, " groups found passed in" );
             $where .= ' AND ( ';
             foreach my $group ( @{ $group_list } ) {
                 next unless ( $group );
@@ -96,7 +102,8 @@ sub _build_group_sql {
         }
     }
     $where .= ' ) '  if ( $where );
-    DEBUG && _w( 3, "Group WHERE clause: { $where }" );
+    $log->is_debug &&
+        $log->debug( "Group WHERE clause: { $where }" );
     return ( $where, \@value );
 }
 
@@ -117,7 +124,8 @@ sub _build_user_sql {
     $where = ' ( scope = ? AND scope_id = ? )';
     push @value, SEC_SCOPE_USER, $uid;
 
-    DEBUG && _w( 3, "User WHERE clause: { $where }" );
+    $log->is_debug &&
+        $log->debug( "User WHERE clause: { $where }" );
     return ( $where, \@value );
 }
 
@@ -137,7 +145,9 @@ sub fetch_match {
 
     my ( $find_class, $find_id ) =
                SPOPS::Secure::Util->find_class_and_oid( $item, $p );
-    DEBUG && _w( 1, "Try to find match for [$find_class] [$find_id] ",
+    $p->{scope_id} ||= '';
+    $log->is_info &&
+        $log->info( "Try to find match for [$find_class] [$find_id] ",
                     "scope [$p->{scope}] [$p->{scope_id}]" );
 
     my $where  = " class = ? AND object_id = ? AND scope = ? ";

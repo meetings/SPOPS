@@ -1,17 +1,20 @@
 package SPOPS::Key::DBI::Sequence;
 
-# $Id: Sequence.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
+# $Id: Sequence.pm,v 3.3 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
-use SPOPS  qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 
-$SPOPS::Key::DBI::Sequence::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Key::DBI::Sequence::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 # Default SELECT statement to use to retrieve the sequence -- you can
 # override this in your config or in the parameters passed to
 # 'retrieve_sequence()'
 
 use constant DEFAULT_SEQUENCE_CALL => q/SELECT NEXTVAL( '%s' )/;
+
+my $log = get_logger();
 
 # Retrieve the sequence value
 
@@ -28,7 +31,7 @@ sub retrieve_sequence {
     my $sequence_name = $p->{sequence_name} || $item->CONFIG->{sequence_name};
     unless ( $sequence_name ) {
         my $class_name = ( ref $item ) ? ref $item : $item;
-        _w( 0, "Cannot retrieve sequence without a sequence name!",
+        $log->warn( "Cannot retrieve sequence without a sequence name!",
                "No sequence name found in parameter or in object",
                "configuration. (Object: $class_name)" );
         return undef;
@@ -37,12 +40,14 @@ sub retrieve_sequence {
     $p->{db} ||= $item->global_datasource_handle();
     return undef unless ( ref $p->{db} );
 
-    DEBUG() && _w( 2, "Trying to get value from sequence ($sequence_name)" );
+    $log->is_debug &&
+        $log->debug( "Trying to get value from sequence ($sequence_name)" );
     my $sequence_call  = $p->{sequence_call} ||
                          $item->CONFIG->{sequence_call} ||
                          DEFAULT_SEQUENCE_CALL;
     my $sql = sprintf( $sequence_call, $sequence_name );
-    DEBUG() && _w( 2, "SQL used to retrieve sequence:\n$sql" );
+    $log->is_debug &&
+        $log->debug( "SQL used to retrieve sequence:\n$sql" );
     my ( $sth );
     eval {
         $sth = $p->{db}->prepare( $sql );

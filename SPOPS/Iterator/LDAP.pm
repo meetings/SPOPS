@@ -1,15 +1,18 @@
 package SPOPS::Iterator::LDAP;
 
-# $Id: LDAP.pm,v 3.1 2003/01/02 06:00:22 lachoy Exp $
+# $Id: LDAP.pm,v 3.2 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Iterator );
+use Log::Log4perl qw( get_logger );
 
-use SPOPS           qw( _w DEBUG );
+use SPOPS;
 use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 use SPOPS::Secure   qw( :level );
 
-$SPOPS::Iterator::LDAP::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Iterator::LDAP::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 # Keys with _LDAP at the beginning are specific to this implementation;
 # keys without _LDAP at the begining are used in all iterators.
@@ -42,7 +45,8 @@ sub fetch_object {
     my $object_class = $self->{_CLASS};
     if ( $self->{_LDAP_ID_LIST} ) {
         my $id = $self->{_LDAP_ID_LIST}->[ $self->{_LDAP_RAW_COUNT} ];
-        DEBUG() && _w( 1, "Trying to retrieve idx ($self->{_LDAP_RAW_COUNT}) with ",
+        $log->is_info &&
+            $log->info( "Trying to retrieve idx ($self->{_LDAP_RAW_COUNT}) with ",
                           "ID ($id) from class ($self->{_CLASS}" );
         $object = eval { $object_class->fetch( $id,
                                             { skip_security => $self->{_SKIP_SECURITY} } ) };
@@ -52,20 +56,23 @@ sub fetch_object {
         # position!) and try again.
 
         if ( $@ and $@->isa( 'SPOPS::Exception::Security' ) ) {
-            DEBUG && _w( 1, "Skip to next item, caught security exception: $@" );
+            $log->is_info &&
+                $log->info( "Skip to next item, caught security exception: $@" );
             $self->{_LDAP_RAW_COUNT}++;
             return $self->fetch_object;
         }
 
         unless( $object ) {
-            DEBUG && _w( 1, "Iterator is depleted (no object fetched), notify parent" );
+            $log->is_info &&
+                $log->info( "Iterator is depleted (no object fetched), notify parent" );
             return ITER_IS_DONE;
         }
     }
     else {
         my $entry = $self->{_LDAP_MSG}->shift_entry;
         unless ( $entry ) {
-            DEBUG && _w( 1, "Iterator is depleted (no entry returned), notify parent" );
+            $log->is_info &&
+                $log->info( "Iterator is depleted (no entry returned), notify parent" );
             return ITER_IS_DONE;
         }
 
@@ -84,7 +91,8 @@ sub fetch_object {
                     eval { $object->check_action_security({
                                         required => SEC_LEVEL_READ }) };
             if ( $@ ) {
-                DEBUG() && _w( 1, "Security check for ($self->{_CLASS}) failed: $@" );
+                $log->is_info &&
+                    $log->info( "Security check for ($self->{_CLASS}) failed: $@" );
                 $self->{_LDAP_RAW_COUNT}++;
                 return $self->fetch_object;
             }
@@ -95,7 +103,8 @@ sub fetch_object {
         my $post_ok = $object->_fetch_post_process(
                                    {}, $object->{tmp_security_level} );
         unless ( $post_ok ) {
-            DEBUG && _w( 1, "Post process for object failed; get next" );
+            $log->is_info &&
+                $log->info( "Post process for object failed; get next" );
             $self->{_LDAP_RAW_COUNT}++;
             return $self->fetch_object;
         }
@@ -113,7 +122,8 @@ sub fetch_object {
 
     if ( $self->{_LDAP_OFFSET} and 
          ( $self->{_LDAP_COUNT} < $self->{_LDAP_OFFSET} ) ) {
-        DEBUG && _w( 1, "Not reached the offset yet, get next object" );
+        $log->is_info &&
+            $log->info( "Not reached the offset yet, get next object" );
         $self->{_LDAP_COUNT}++;
         $self->{_LDAP_RAW_COUNT}++;
         return $self->fetch_object;
@@ -123,7 +133,8 @@ sub fetch_object {
 
     if ( $self->{_LDAP_MAX} and
          ( $self->{_LDAP_COUNT} > $self->{_LDAP_MAX} ) ) {
-        DEBUG && _w( 1, "Fetched past the MAX number of objects, done" );
+        $log->is_info &&
+            $log->info( "Fetched past the MAX number of objects, done" );
         return ITER_IS_DONE;
     }
 

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: stock_user_group.pl,v 3.1 2002/09/13 16:09:12 lachoy Exp $
+# $Id: stock_user_group.pl,v 3.2 2004/01/10 02:49:58 lachoy Exp $
 
 # stock_user_group.pl
 #
@@ -9,11 +9,11 @@
 
 use strict;
 use Data::Dumper qw( Dumper );
+use Log::Log4perl;
+Log::Log4perl::init( 'log4perl.conf' );
 
 require My::Security;
 require My::User;
-
-# SPOPS->set_global_debug(1);
 
 my @USER_FIELD  = qw( email last_name first_name password login_name );
 my @USER_DATA   = (

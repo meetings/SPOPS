@@ -1,8 +1,11 @@
 #!/usr/bin/perl
 
-# $Id: datasource_configure.pl,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: datasource_configure.pl,v 3.1 2004/01/10 02:49:58 lachoy Exp $
 
 use strict;
+use Log::Log4perl;
+Log::Log4perl::init( 'log4perl.conf' );
+
 use SPOPS::Initialize;
 
 # Assumes the tables in users_groups* are created. See README for

@@ -1,11 +1,13 @@
 # -*-perl-*-
 
-# $Id: 01_tie.t,v 3.1 2003/02/21 05:41:07 lachoy Exp $
+# $Id: 01_tie.t,v 3.2 2004/02/26 02:02:30 lachoy Exp $
 
 use strict;
 use Test::More  tests => 21;
 
 # Test the SPOPS::Tie interface and the various pieces of it
+
+do "t/config.pl";
 
 # Simple require
 

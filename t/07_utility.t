@@ -1,10 +1,12 @@
 # -*-perl-*-
 
-# $Id: 07_utility.t,v 3.3 2002/08/28 16:25:31 lachoy Exp $
+# $Id: 07_utility.t,v 3.4 2004/02/26 02:02:29 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
 use Test::More tests => 17;
+
+do "t/config.pl";
 
 require_ok( 'SPOPS::Utility' );
 

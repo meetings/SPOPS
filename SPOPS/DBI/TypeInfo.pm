@@ -1,16 +1,18 @@
 package SPOPS::DBI::TypeInfo;
 
-# $Id: TypeInfo.pm,v 1.5 2003/08/12 03:40:17 lachoy Exp $
+# $Id: TypeInfo.pm,v 1.6 2004/02/26 01:03:23 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor );
 use DBI                   qw( :sql_types );
+use Log::Log4perl         qw( get_logger );
 use SPOPS::Exception      qw( spops_error );
 use SPOPS::Exception::DBI qw( spops_dbi_error );
 
 my @FIELDS = qw( table database );
 __PACKAGE__->mk_accessors( @FIELDS );
 
+my ( $log );
 
 my %FAKE_TYPES = (
    int   => SQL_INTEGER,
@@ -68,12 +70,13 @@ sub new {
 
 sub add_type {
     my ( $self, $field, $type ) = @_;
+    $log ||= get_logger();
 
     # If it's already defined, issue a warning but don't change it
 
     if ( my $existing_type = $self->get_type( $field ) ) {
-        warn "Field [$field] was already defined with type ",
-             "[$existing_type]. No action taken.\n";
+        $log->warn( "Field [$field] was already defined with type ",
+                    "[$existing_type]. No action taken." );
         return $existing_type;
     }
 

@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: config.pl,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: config.pl,v 3.1 2004/02/26 02:02:29 lachoy Exp $
 
 # Simple script used by the various tests to read the config
 # file. Usually we just use as:
@@ -32,5 +32,9 @@ sub _cleanup_config_file {
         unlink( $CONFIG_FILE );
     }
 }
+
+use Log::Log4perl qw( :easy );
+Log::Log4perl->easy_init({ level => $WARN,
+                           file  => "> spops_tests.log" });
 
 1;

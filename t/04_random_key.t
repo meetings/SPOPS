@@ -1,9 +1,11 @@
 # -*-perl-*-
 
-# $Id: 04_random_key.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: 04_random_key.t,v 3.1 2004/02/26 02:02:30 lachoy Exp $
 
 use strict;
 use Test::More tests => 6;
+
+do "t/config.pl";
 
 {
     my %config = (

@@ -1,11 +1,14 @@
 package SPOPS::Key::DBI::Pool;
 
-# $Id: Pool.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
+# $Id: Pool.pm,v 3.3 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
-use SPOPS qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 
-$SPOPS::Key::DBI::Pool::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Key::DBI::Pool::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 
 # Ensure only PRE_fetch_id works.
@@ -20,7 +23,8 @@ sub pre_fetch_id  {
         SPOPS::Exception->throw( "Cannot retrieve pool value; no SQL specified " .
                                  "in key 'pool_sql'" );
     }
-    DEBUG() && _w( 1, "Getting ID with SQL:\n$pool_sql" );
+    $log->is_info &&
+        $log->info( "Getting ID with SQL:\n$pool_sql" );
 
     my $params = { sql => $pool_sql, db => $p->{db} };
     my $values = eval { $class->CONFIG->{pool_value} };
@@ -44,7 +48,8 @@ sub pre_fetch_id  {
 
     $params->{return} = 'single';
     my $row = SPOPS::SQLInterface->db_select( $params );
-    DEBUG() && _w( 1, "Returned <<$row->[0]>> for ID" );
+    $log->is_info &&
+        $log->info( "Returned <<$row->[0]>> for ID" );
     return $row->[0];
 }
 

@@ -1,13 +1,16 @@
 package SPOPS::Loopback;
 
-# $Id: Loopback.pm,v 3.6 2003/01/02 06:00:24 lachoy Exp $
+# $Id: Loopback.pm,v 3.10 2004/03/12 14:52:28 lachoy Exp $
 
 use strict;
 use base qw( SPOPS );
-use Data::Dumper qw( Dumper );
+use Data::Dumper  qw( Dumper );
+use Log::Log4perl qw( get_logger );
 use SPOPS::Secure qw( :level );
 
-$SPOPS::Loopback::VERSION  = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Loopback::VERSION  = sprintf("%d.%02d", q$Revision: 3.10 $ =~ /(\d+)\.(\d+)/);
+
+my $log = get_logger();
 
 # Save objects here, indexed by ID.
 
@@ -15,20 +18,38 @@ my %BY_ID = ();
 
 sub fetch {
     my ( $class, $id, $p ) = @_;
+    $log->is_info &&
+        $log->info( "Trying to fetch '$class' with ID '$id'" );
     return undef unless ( $class->pre_fetch_action( $id ) );
+    $log->is_info &&
+        $log->info( "The 'pre_fetch_action' check ran ok" );
     my $level = SEC_LEVEL_WRITE;
     if ( ! $p->{skip_security} and $class->isa( 'SPOPS::Secure' ) ) {
         $level = $class->check_action_security({ id       => $id,
-                                                 DEBUG    => $p->{DEBUG},
                                                  required => SEC_LEVEL_READ });
     }
-    my $object = ( exists $BY_ID{ $class }->{ $id } )
-                 ? $class->new( $BY_ID{ $class }->{ $id } )
-                 : $_[0]->new({ id => $id });
+    $log->is_info &&
+        $log->info( "The security check ran ok" );
+
+    my ( $object );
+    if ( exists $BY_ID{ $class }->{ $id } ) {
+        $log->is_info &&
+            $log->info( "Object exists, creating from data" );
+        $object = $class->new( $BY_ID{ $class }->{ $id } )
+    }
+    else {
+        $log->is_info &&
+            $log->info( "Object doesn't exist, creating an empty one" );
+        $object = $class->new({ id => $id });
+    }
     $object->{tmp_security_level} = $level;
     return undef unless ( $object->post_fetch_action );
+    $log->is_info &&
+        $log->info( "The 'post_fetch_action' check ran ok" );
     $object->has_save;
     $object->clear_change;
+    $log->is_info &&
+        $log->info( "Set object saved and changed flags ok" );
     return $object;
 }
 
@@ -38,11 +59,19 @@ sub fetch_group {
     $params ||= {};
     my @id_list = ();
     if ( scalar keys %{ $BY_ID{ $class } } == 0 ) {
-        @id_list = ( 1 .. 15 );
+        @id_list = ( 1 .. 15 ); # make up some stuff...
     }
     elsif ( $params->{where} ) {
+        $log->is_info &&
+            $log->info( "Fetching objects with [$params->{where}]" );
+        my @values = ( ref $params->{value} ) ? @{ $params->{value} } : ();
         my ( $field, $value ) = split /\s*=\s*/, $params->{where};
-        $value =~ s/[\'\"]//g;
+        if ( $value eq '?' ) {
+            $value = shift @values;
+        }
+        else {
+            $value =~ s/[\'\"]//g;
+        }
         my $id_field = $class->id_field;
         foreach my $id ( sort keys %{ $BY_ID{ $class } } ) {
             my $data = $BY_ID{ $class }->{ $id };
@@ -54,6 +83,8 @@ sub fetch_group {
     else {
         @id_list = sort keys %{ $BY_ID{ $class } }
     }
+    $log->is_info &&
+        $log->info( "Trying to fetch objects: ", join( ', ', @id_list ) );
     return [ map { $class->fetch( $_ ) } @id_list ];
 }
 
@@ -68,32 +99,51 @@ sub fetch_iterator {
 
 sub save {
     my ( $self, $p ) = @_;
+    $log->is_info &&
+        $log->info( "Trying to save object '", $self->id, "'" );
     $p ||= {};
     unless ( $self->pre_save_action({ is_add => $self->is_saved }) ) {
+        $log->error( "Failed the 'pre_save_action'" );
         return undef;
     }
     if ( $self->is_saved ) {
         if ( ! $p->{skip_security} and $self->isa( 'SPOPS::Secure' ) ) {
-            $self->check_action_security({ DEBUG    => $p->{DEBUG},
-                                           required => SEC_LEVEL_WRITE });
+            $self->check_action_security({ required => SEC_LEVEL_WRITE });
         }
+        $log->is_info &&
+            $log->info( "Passed security check ok" );
+
     }
     else {
-        $self->id( $self->pre_fetch_id );
+        $self->id( $self->pre_fetch_id )  unless ( $self->id );
         $self->id( $self->post_fetch_id ) unless ( $self->id );
+        $log->is_info &&
+            $log->info( "Assigned ID '", $self->id, "'" );
     }
-    $BY_ID{ ref( $self ) }->{ $self->id } = $self->as_data_only;
-    #warn "Saved new object: ", Dumper( $self ), "\n";
+
+    my %data = %{ $self->as_data_only };
+    $BY_ID{ ref( $self ) }->{ $self->id } = \%data;
+    $log->is_debug &&
+        $log->debug( "Saved new object: ", Dumper( \%data ) );
     unless ( $self->is_saved or $p->{skip_security} ) {
         #warn "Calling create_initial_security()\n";
         $self->create_initial_security;
     }
-    return undef unless ( $self->post_save_action );
+    unless ( $self->post_save_action ) {
+        $log->is_info &&
+            $log->info( "Failed the 'post_save_action'" );
+        return undef;
+    }
     $self->has_save;
     $self->clear_change;
     return $self;
 }
 
+# Other items in ISA will override, otherwise we want to prevent a
+# warning when doing strict field checking
+
+sub pre_fetch_id  { return undef }
+sub post_fetch_id { return undef }
 
 sub remove {
     my ( $self ) = @_;
@@ -130,7 +180,7 @@ SPOPS::Loopback - Simple SPOPS class used for testing rules and other goodies
          id_field => 'id_field',
       },
     );
-    SPOPS::Initialize->process({ config => $config });
+    SPOPS::Initialize->process({ config => \%config });
     my $object = LoopbackTest->new;
     $object->save;
     $object->remove;
@@ -149,13 +199,17 @@ B<fetch( $id )>
 Returns a new object initialized with the ID C<$id>, calling the
 C<pre/post_fetch_action()> methods first. If the object has been
 previously saved we pull it from the in-memory storage, otherwise we
-return a new object initialized with C<$ID>.
+return a new object initialized with C<$id>.
 
-B<fetch_group()>
+B<fetch_group( \%params )>
 
 Returns an arrayref of previously saved objects. If no objects have
 been saved, it returns an arrayref of new objects initialized with
 numeric IDs.
+
+We grab the 'where' clause out of C<\%params> but do only some
+rudimentary parsing to return previously stored objects. (Patches
+welcome.)
 
 B<save()>
 
@@ -179,14 +233,6 @@ B<peek( $id, $field )>
 
 Peeks into the in-memory store for the value of C<$field> for object
 C<$id>. Must be called as class method.
-
-=head1 BUGS
-
-None known.
-
-=head1 TO DO
-
-Nothing known.
 
 =head1 SEE ALSO
 

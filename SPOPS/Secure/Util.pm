@@ -1,13 +1,13 @@
 package SPOPS::Secure::Util;
 
-# $Id: Util.pm,v 1.3 2003/01/02 06:00:21 lachoy Exp $
+# $Id: Util.pm,v 1.5 2004/02/18 02:54:55 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
+use Log::Log4perl qw( get_logger );
 use SPOPS::Secure qw( :level :scope );
 
-*_w    = *SPOPS::_w;
-*DEBUG = *SPOPS::DEBUG;
+my $log = get_logger();
 
 # Setup a hashref where w/u => security_level and g points to a
 # hashref where the key is the group_id value is the security level.
@@ -27,15 +27,18 @@ ITEM:
     foreach my $sec ( @{ $security_objects } ) {
         if ( $sec->{scope} eq SEC_SCOPE_WORLD || $sec->{scope} eq SEC_SCOPE_USER ) {
             $items{ $sec->{scope} } = $sec->{security_level};
-            DEBUG() && _w( 2,  "Assign [$sec->{security_level}] to [$sec->{scope}]" );
+            $log->is_debug &&
+                $log->debug( "Assign [$sec->{security_level}] to [$sec->{scope}]" );
         }
         elsif ( $sec->{scope} eq SEC_SCOPE_GROUP ) {
             $items{ $sec->{scope} }->{ $sec->{scope_id} } = $sec->{security_level};
-            DEBUG() && _w( 2, "Assign [$sec->{security_level}] to ",
+            $log->is_debug &&
+                $log->debug( "Assign [$sec->{security_level}] to ",
                             "[$sec->{scope}][$sec->{scope_id}]" );
         }
     }
-    DEBUG() && _w( 1, "All security parsed: ", Dumper( \%items ) );;
+    $log->is_info &&
+        $log->info( "All security parsed: ", Dumper( \%items ) );;
     return \%items;
 }
 
@@ -50,7 +53,7 @@ sub find_class_and_oid {
     # If this is an object, modify lines accordingly
 
     if ( ref $item and UNIVERSAL::can( $item, 'id' ) ) {
-        $oid        = eval { $item->id };
+        $oid        = eval { $item->id } || '0';
         $obj_class  = ref $item;
     }
     return ( $obj_class, $oid );

@@ -1,15 +1,18 @@
 package SPOPS::Iterator::DBI;
 
-# $Id: DBI.pm,v 3.1 2003/01/02 06:00:22 lachoy Exp $
+# $Id: DBI.pm,v 3.3 2004/02/26 01:02:17 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Iterator );
+use Log::Log4perl qw( get_logger );
 
-use SPOPS           qw( _w DEBUG );
+use SPOPS;
 use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 use SPOPS::Secure   qw( :level );
 
-$SPOPS::Iterator::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Iterator::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 # Keys with _DBI at the beginning are specific to this implementation;
 # keys without _DBI at the begining are used in all iterators.
@@ -42,7 +45,13 @@ sub fetch_object {
     my $object_class = $self->{_CLASS};
     if ( $self->{_DBI_ID_LIST} ) {
         my $id = $self->{_DBI_ID_LIST}->[ $self->{_DBI_RAW_COUNT} ];
-        DEBUG() && _w( 1, "Trying to retrieve idx ($self->{_DBI_RAW_COUNT}) with ",
+        unless ( defined $id ) {
+            $log->error( "Got undefined ID value from iterator ID list; ",
+                         "returning undef as a result" );
+            return undef;
+        }
+        $log->is_info &&
+            $log->info( "Trying to retrieve idx ($self->{_DBI_RAW_COUNT}) with ",
                           "ID ($id) from class ($self->{_CLASS}" );
         $object = eval { $object_class->fetch( $id,
                                                { skip_security => $self->{_SKIP_SECURITY},
@@ -53,23 +62,27 @@ sub fetch_object {
         # position!) and try again.
 
         if ( $@ and $@->isa( 'SPOPS::Exception::Security' ) ) {
-            DEBUG && _w( 1, "Skip to next item, caught security exception: $@" );
+            $log->is_info &&
+                $log->info( "Skip to next item, caught security exception: $@" );
             $self->{_DBI_RAW_COUNT}++;
             return $self->fetch_object;
         }
         elsif ( $@ ) {
-            DEBUG && _w( 1, "Caught other type of exception: $@" );
+            $log->is_info &&
+                $log->info( "Caught other type of exception: $@" );
         }
 
         unless( $object ) {
-            DEBUG && _w( 1, "Iterator is depleted (no object fetched), notify parent" );
+            $log->is_info &&
+                $log->info( "Iterator is depleted (no object fetched), notify parent" );
             return ITER_IS_DONE;
         }
     }
     else {
         my $row = $self->{_DBI_STH}->fetchrow_arrayref;
         unless ( $row ) {
-            DEBUG && _w( 1, "Iterator is depleted (no row returned), notify parent" );
+            $log->is_info &&
+                $log->info( "Iterator is depleted (no row returned), notify parent" );
             return ITER_IS_DONE;
         }
 
@@ -88,7 +101,8 @@ sub fetch_object {
                          eval { $object->check_action_security({
                                              required => SEC_LEVEL_READ }) };
             if ( $@ ) {
-                DEBUG() && _w( 1, "Security check for ($self->{_CLASS}) failed: $@" );
+                $log->is_info &&
+                    $log->info( "Security check for ($self->{_CLASS}) failed: $@" );
                 $self->{_DBI_RAW_COUNT}++;
                 return $self->fetch_object;
             }
@@ -99,7 +113,8 @@ sub fetch_object {
         my $post_ok = $object->_fetch_post_process(
                                    {}, $object->{tmp_security_level} );
         unless ( $post_ok ) {
-            DEBUG && _w( 1, "Post process for object failed; get next" );
+            $log->is_info &&
+                $log->info( "Post process for object failed; get next" );
             $self->{_DBI_RAW_COUNT}++;
             return $self->fetch_object;
         }
@@ -117,7 +132,8 @@ sub fetch_object {
 
     if ( $self->{_DBI_OFFSET} and 
          ( $self->{_DBI_COUNT} < $self->{_DBI_OFFSET} ) ) {
-        DEBUG && _w( 1, "Not reached the offset yet, get next object" );
+        $log->is_info &&
+            $log->info( "Not reached the offset yet, get next object" );
         $self->{_DBI_COUNT}++;
         $self->{_DBI_RAW_COUNT}++;
         return $self->fetch_object;
@@ -127,7 +143,8 @@ sub fetch_object {
 
     if ( $self->{_DBI_MAX} and
          ( $self->{_DBI_COUNT} > $self->{_DBI_MAX} ) ) {
-        DEBUG && _w( 1, "Fetched past the MAX number of objects, done" );
+        $log->is_info &&
+            $log->info( "Fetched past the MAX number of objects, done" );
         return ITER_IS_DONE;
     }
 

@@ -1,19 +1,22 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
+# $Id: Hierarchy.pm,v 3.3 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
 use base  qw( Exporter SPOPS::Secure );
+use Log::Log4perl qw( get_logger );
 use vars  qw( $ROOT_OBJECT_NAME );
 
 use Data::Dumper  qw( Dumper );
-use SPOPS         qw( _w DEBUG );
+use SPOPS;
 use SPOPS::Exception::Security;
 use SPOPS::Secure qw( :scope :level $EMPTY );
 use SPOPS::Secure::Util;
 
+my $log = get_logger();
+
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
-$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 
@@ -29,14 +32,16 @@ sub get_security {
     # fetch_by_object method later
 
     my ( $class, $oid ) = SPOPS::Secure::Util->find_class_and_oid( $item, $p );
-    DEBUG() && _w( 1, "Checking security for $class [$oid]" );
+    $log->is_info &&
+        $log->info( "Checking security for $class [$oid]" );
 
     # Punt the request back to our parent if we're getting security
     # explicitly for the ROOT_OBJECT, which generally only happens when
     # we're editing its security
 
     if ( $oid eq $ROOT_OBJECT_NAME ) {
-        DEBUG() && _w( 1, "Object ID == ROOT_OBJECT_NAME: punting to parent" );
+        $log->is_info &&
+            $log->info( "Object ID == ROOT_OBJECT_NAME: punting to parent" );
         return SUPER->get_security({ %{ $p },
                                      class     => $class,
                                      object_id => $oid });
@@ -49,12 +54,14 @@ sub get_security {
     # superuser (record with user_id 1) can do anything
 
     if ( my $security_info = $item->_check_superuser( $p->{user}, $p->{group} ) ) {
-        DEBUG() && _w( 1, "Superuser is logged in" );
+        $log->is_info &&
+            $log->info( "Superuser is logged in" );
         return $security_info;
     }
 
     my ( $all_levels, $first_level ) = $item->get_hierarchy_levels( $p );
-    DEBUG() && _w( 1, "First level with security ($first_level)" );
+    $log->is_info &&
+        $log->info( "First level with security ($first_level)" );
 
     # Dereference $EMPTY so there's no chance of anyone putting
     # information into the ref and screwing up the package variable...
@@ -75,12 +82,12 @@ sub get_hierarchy_levels {
     # Ensure we have necessary info
 
     unless ( $h_info->{hierarchy_value} ) {
-        _w( 0, "No value available to split into hierarchy! Returning ",
+        $log->warn( "No value available to split into hierarchy! Returning ",
                "empty security." );
         return ();
     }
     unless ( ref $h_info->{hierarchy_manip} eq 'CODE' ) {
-        _w( 0, "Cannot split hierarchy into pieces without either a ",
+        $log->warn( "Cannot split hierarchy into pieces without either a ",
                "separator or processing code. Returning empty security." );
         return ();
     }
@@ -134,25 +141,29 @@ sub _fetch_hierarchy_levels {
         my $object_id = $p->{oid} || $p->{object_id};
         ( $p->{class}, $p->{oid} ) = SPOPS::Secure::Util->find_class_and_oid(
                                                                       $item, $p );
-        DEBUG() && _w( 1, "Checking security for [$p->{class}] [$p->{oid}]" );
+        $log->is_info &&
+            $log->info( "Checking security for [$p->{class}] [$p->{oid}]" );
     }
 
     # Yes, I know, grep in a void context...
 
     unless ( grep /^$ROOT_OBJECT_NAME$/, @{ $p->{check_list} } ) {
         push @{ $p->{check_list} }, $ROOT_OBJECT_NAME;
-        DEBUG() && _w( 1, "$ROOT_OBJECT_NAME not found in checklist; added manually" );
+        $log->is_info &&
+            $log->info( "$ROOT_OBJECT_NAME not found in checklist; added manually" );
     }
 
 SECVALUE:
     foreach my $security_check ( @{ $p->{check_list} } ) {
-        DEBUG() && _w( 1, "Find value for $p->{class} ($security_check)" );
+        $log->is_info &&
+            $log->info( "Find value for $p->{class} ($security_check)" );
         push @ordered, $security_check  if ( $p->{ordered} );
         my $sec_listing = $so_class->fetch_by_object( $p->{class},
                                                       { object_id => $security_check,
                                                         user      => $p->{user},
                                                         group     => $p->{group} });
-        DEBUG() && _w( 1, "Security found for ($security_check):\n",
+        $log->is_info &&
+            $log->info( "Security found for ($security_check):\n",
                           Dumper( $sec_listing ) );
 
         $first_found ||= $security_check if ( $sec_listing );
@@ -163,7 +174,8 @@ SECVALUE:
     # create security for this class's root object.
 
     unless ( $first_found ) {
-        DEBUG() && _w( 1, "Cannot find ANY security for [$p->{class}] [$p->{oid}] -- ",
+        $log->is_info &&
+            $log->info( "Cannot find ANY security for [$p->{class}] [$p->{oid}] -- ",
                           "creating extremely stringent root object security" );
         $item->create_root_object_security({ class  => $p->{class},
                                              scope  => SEC_SCOPE_WORLD,
@@ -208,11 +220,13 @@ sub _get_hierarchy_parameters {
 
     $h_info->{hierarchy_value} = $p->{hierarchy_value};
     if ( ref $item ) {
-        DEBUG() && _w( 1, "Getting value from object" );
+        $log->is_info &&
+            $log->info( "Getting value from object" );
         $h_info->{hierarchy_value} ||= $item->{ $h_info->{hierarchy_field} };
     }
 
-    DEBUG() && _w( 1, "Found parameters:\n", Dumper( $h_info ) );
+    $log->is_info &&
+        $log->info( "Found parameters:\n", Dumper( $h_info ) );
     return $h_info;
 }
 

@@ -1,12 +1,15 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 3.8 2003/11/28 17:20:43 lachoy Exp $
+# $Id: DBI.pm,v 3.10 2004/02/23 05:28:29 lachoy Exp $
 
 use strict;
-use SPOPS qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-$SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.8 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.10 $ =~ /(\d+)\.(\d+)/);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 
@@ -48,7 +51,8 @@ sub conf_multi_field_key_id {
     my $id_sub = $generic_multifield_id;
     $id_sub =~ s/%%GEN_CLASS%%/$class/g;
     $id_sub =~ s/%%ID_FIELD_OBJECT_LIST%%/$id_object_reference/g;
-    DEBUG() && _w( 5, "Evaluation method 'id' for class [$class]\n$id_sub" );
+    $log->is_debug &&
+        $log->debug( "Evaluation method 'id' for class [$class]\n$id_sub" );
     {
         local $SIG{__WARN__} = sub { return undef };
         eval $id_sub;
@@ -78,7 +82,8 @@ my $generic_multifield_etc = <<'MFETC';
     sub %%GEN_CLASS%%::clone {
         my ( $self, $p ) = @_;
         my $class = $p->{_class} || ref $self;
-        DEBUG() && _w( 1, "Cloning new object of class ($class) from old ",
+        $log->is_info &&
+            $log->info( "Cloning new object of class ($class) from old ",
                           "object of class (", ref $self, ")" );
         my %initial_data = ();
 
@@ -184,7 +189,8 @@ sub conf_multi_field_key_other {
     $other_sub =~ s/%%ID_FIELD_VARIABLE_LIST%%/$id_variable_reference/g;
     $other_sub =~ s/%%ID_FIELD_BOOLEAN_LIST%%/$id_boolean_reference/g;
     $other_sub =~ s/%%ID_FIELD_NAME_LIST%%/$id_field_reference/g;
-    DEBUG() && _w( 5, "Evaluating other multifield key methods:\n$other_sub" );
+    $log->is_debug &&
+        $log->debug( "Evaluating other multifield key methods:\n$other_sub" );
     {
         local $SIG{__WARN__} = sub { return undef };
         eval $other_sub;
@@ -214,6 +220,7 @@ my $generic_linksto = <<'LINKSTO';
 
     sub %%GEN_CLASS%%::%%LINKSTO_ALIAS%% {
         my ( $self, $p ) = @_;
+        my $log = Log::Log4perl::get_logger();
         $p ||= {};
         $p->{select} = [ '%%LINKSTO_ID_FIELD%%' ];
         $p->{from}   = [ '%%LINKSTO_TABLE%%' ];
@@ -227,8 +234,8 @@ my $generic_linksto = <<'LINKSTO';
         foreach my $info ( @{ $rows } ) {
             my $item = eval { %%LINKSTO_CLASS%%->fetch( $info->[0], $p ) };
             if ( $@ ) {
-                SPOPS::_w( 0, " Cannot fetch linked object %%LINKSTO_CLASS%% [$info->[0]] ",
-                              "from %%GEN_CLASS%%: $@\nContinuing with others..." );
+                $log->error( " Cannot fetch linked object %%LINKSTO_CLASS%% [$info->[0]] ",
+                             "from %%GEN_CLASS%%: $@\nContinuing with others..." );
                 next;
             }
             push @obj, $item if ( $item );
@@ -239,6 +246,7 @@ my $generic_linksto = <<'LINKSTO';
     sub %%GEN_CLASS%%::%%LINKSTO_ALIAS%%_add {
         my ( $self, $link_id_list, $p ) = @_;
         return 0 unless ( defined $link_id_list );
+        my $log = Log::Log4perl::get_logger();
 
         $p ||= {};
 
@@ -251,7 +259,8 @@ my $generic_linksto = <<'LINKSTO';
         $p->{db} ||= %%LINKSTO_CLASS%%->global_datasource_handle;
         foreach my $link_item ( @{ $link_id_list } ) {
             my $link_id = ( ref $link_item ) ? $link_item->id : $link_item;
-            SPOPS::_wm( 1, $p->{DEBUG}, "Trying to add link to ID [$link_id]" );
+            $log->is_info &&
+                $log->info( "Trying to add link to ID [$link_id]" );
             %%LINKSTO_CLASS%%->db_insert({ table => '%%LINKSTO_TABLE%%',
                                            field => [ '%%ID_FIELD%%', '%%LINKSTO_ID_FIELD%%' ],
                                            value => [ $self->{%%ID_FIELD%%}, $link_id ],
@@ -265,6 +274,7 @@ my $generic_linksto = <<'LINKSTO';
     sub %%GEN_CLASS%%::%%LINKSTO_ALIAS%%_remove {
         my ( $self, $link_id_list, $p ) = @_;
         $p ||= {};
+        my $log = Log::Log4perl::get_logger();
 
         # Allow user to pass only one ID to remove (scalar) or an
         # arrayref (ref)
@@ -275,7 +285,8 @@ my $generic_linksto = <<'LINKSTO';
         $p->{db} ||= %%LINKSTO_CLASS%%->global_datasource_handle;
         foreach my $link_item ( @{ $link_id_list } ) {
             my $link_id = ( ref $link_item ) ? $link_item->id : $link_item;
-            SPOPS::_wm( 1, $p->{DEBUG}, "Trying to remove link to ID ($link_id)" );
+            $log->is_info &&
+                $log->info( "Trying to remove link to ID ($link_id)" );
             my $from_id_clause = $self->id_clause( undef, 'noqualify', $p  );
             my $to_id_clause   = %%LINKSTO_CLASS%%->id_clause( $link_id, 'noqualify', $p );
             %%LINKSTO_CLASS%%->db_delete({ table => '%%LINKSTO_TABLE%%',
@@ -297,7 +308,8 @@ LINKSTO
 sub conf_relate_links_to {
     my ( $class ) = @_;
     my $config = $class->CONFIG;
-    DEBUG() && _w( 1, "Adding DBI relationships for: ($class)" );
+    $log->is_info &&
+        $log->info( "Adding DBI relationships for: ($class)" );
 
     # Grab the information for the class we're modifying
 
@@ -316,7 +328,7 @@ sub conf_relate_links_to {
             my $require_error = $@;
             my $to_config = eval { $to_class->CONFIG };
             if ( $@ ) {
-                return ( ERROR, "Failed to retrieve configuration from ",
+                return ( ERROR, "Failed to retrieve configuration from " .
                                 "'$to_class': $@. (Require error: $require_error)" );
             }
 
@@ -352,24 +364,27 @@ sub conf_relate_links_to {
             $link_subs =~ s/%%LINKSTO_ALIAS%%/$to_alias/g;
             $link_subs =~ s/%%LINKSTO_ID_FIELD%%/$to_id_field/g;
             $link_subs =~ s/%%LINKSTO_TABLE%%/$link_table/g;
-            DEBUG() && _w( 2, "Trying to create links_to routines from ",
+            $log->is_debug &&
+                $log->debug( "Trying to create links_to routines from ",
                               "[$class: $from_id_field] to ",
                               "[$to_class: $to_id_field] using ",
                               "table [$link_table]" );
-            DEBUG() && _w( 5, "Now going to eval the routine:\n$link_subs" );
+            $log->is_debug &&
+                $log->debug( "Now going to eval the routine:\n$link_subs" );
             {
                 local $SIG{__WARN__} = sub { return undef };
                 eval $link_subs;
                 if ( $@ ) {
                     return ( ERROR, "Cannot create 'links_to' methods for " .
-                                    "class [$class] linking to class ",
+                                    "class [$class] linking to class " .
                                     "[$to_class] via table [$link_table]. " .
                                     "Error: $@" );
                 }
             }
         }
     }
-    DEBUG() && _w( 1, "Finished adding DBI relationships for ($class)" );
+    $log->is_info &&
+        $log->info( "Finished adding DBI relationships for ($class)" );
     return ( OK, undef );
 }
 

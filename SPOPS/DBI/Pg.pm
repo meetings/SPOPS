@@ -1,23 +1,17 @@
 package SPOPS::DBI::Pg;
 
-# $Id: Pg.pm,v 3.2 2003/01/02 06:00:23 lachoy Exp $
+# $Id: Pg.pm,v 3.4 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
-use SPOPS qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 
-$SPOPS::DBI::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 use constant PG_SEQUENCE_NEXT    => "NEXTVAL( '%s' )";
 use constant PG_SEQUENCE_CURRENT => "SELECT CURRVAL( '%s' )";
 
-sub sql_quote {
-    my ( $class, $value, $type, $db ) = @_;
-    $db ||= $class->global_datasource_handle;
-    unless ( ref $db ) {
-        SPOPS::Exception->throw( "No database handle could be found!" );
-    }
-    return $db->quote( $value, $type );
-}
+my $log = get_logger();
 
 sub sql_current_date     { return 'CURRENT_TIMESTAMP()' }
 sub sql_case_insensitive { return '~*' }

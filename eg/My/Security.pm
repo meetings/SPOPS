@@ -1,14 +1,14 @@
 package My::Security;
 
-# $Id: Security.pm,v 3.2 2003/07/15 12:19:47 lachoy Exp $
+# $Id: Security.pm,v 3.4 2004/01/10 02:49:58 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
-use SPOPS         qw( DEBUG );
+use SPOPS;
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::Security::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$My::Security::VERSION = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 sub _base_config {
     my $config = {

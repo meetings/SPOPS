@@ -1,15 +1,18 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 3.2 2003/05/10 19:27:32 lachoy Exp $
+# $Id: GDBM.pm,v 3.3 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS );
+use Log::Log4perl qw( get_logger );
 use Data::Dumper  qw( Dumper );
 use GDBM_File;
-use SPOPS            qw( _w DEBUG );
+use SPOPS;
 use SPOPS::Exception qw( spops_error );
 
-$SPOPS::GDBM::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::GDBM::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 # Make this the default for everyone -- they can override it
 # themselves...
@@ -60,7 +63,8 @@ sub initialize {
     foreach my $field ( @{ $self->field_list } ) {
         next unless ( $p->{ $field } );
         $self->{ $field } = $p->{ $field };
-        DEBUG && _w( 2, "Initialized [$field] to [$self->{ $field }]" );
+        $log->is_debug &&
+            $log->debug( "Initialized [$field] to [$self->{ $field }]" );
     }
     return $self;
 }
@@ -82,28 +86,33 @@ sub global_datasource_handle {
             $gdbm_filename   = $item->{tmp_gdbm_filename};
         }
         if ( $item->CONFIG->{gdbm_info}{file_fragment} and $p->{directory} ) {
-            DEBUG && _w( 1, "Found file fragent and directory" );
+            $log->is_info &&
+                $log->info( "Found file fragent and directory" );
             $gdbm_filename ||= join( '/', $p->{directory},
                                           $item->CONFIG->{gdbm_info}{file_fragment} );
         }
         $gdbm_filename ||= $item->CONFIG->{gdbm_info}{filename};
         $gdbm_filename ||= $item->global_config->{gdbm_info}{filename};
     }
-    DEBUG && _w( 1, "Trying file ($gdbm_filename) to connect" );
+    $log->is_info &&
+        $log->info( "Trying file ($gdbm_filename) to connect" );
     unless ( $gdbm_filename ) {
         spops_error "Insufficient/incorrect information to tie to ",
                     "GDBM file [$gdbm_filename]";
     }
 
-    DEBUG && _w( 2, "Beginning perm: ", defined( $p->{perm} ) ? $p->{perm} : '' );
+    $log->is_debug &&
+        $log->debug( "Beginning perm: ", defined( $p->{perm} ) ? $p->{perm} : '' );
     $p->{perm}   = 'create' unless ( -e $gdbm_filename );
     $p->{perm} ||= 'read';
-    DEBUG && _w( 2, "Final perm: $p->{perm}" );
+    $log->is_debug &&
+        $log->debug( "Final perm: $p->{perm}" );
 
     my $perm = GDBM_File::GDBM_READER;
     $perm    = GDBM_File::GDBM_WRITER  if ( $p->{perm} eq 'write' );
     $perm    = GDBM_File::GDBM_WRCREAT if ( $p->{perm} eq 'create' );
-    DEBUG && _w( 1, "Trying to use perm ($perm) to connect" );
+    $log->is_info &&
+        $log->info( "Trying to use perm ($perm) to connect" );
     my %db = ();
     tie( %db, 'GDBM_File', $gdbm_filename, $perm, 0666 );
     if ( $p->{perm} eq 'create' && ! -w $gdbm_filename ) {
@@ -158,7 +167,8 @@ sub _return_structure_for_key {
 
 sub fetch {
     my ( $class, $id, $p ) = @_;
-    DEBUG && _w( 2, "Trying to fetch ID ($id)" );
+    $log->is_debug &&
+        $log->debug( "Trying to fetch ID ($id)" );
     my $data = $p->{data} || {};
     unless ( scalar keys %{ $data } ) {
         return undef unless ( $id and $id !~ /^tmp/ );
@@ -166,7 +176,8 @@ sub fetch {
         $data = $class->_return_structure_for_key( $class->object_key( $id ),
                                                    { filename  => $p->{filename},
                                                      directory => $p->{directory} } );
-        DEBUG && _w( 2, "Returned data from GDBM: ", Dumper( $data ) );
+        $log->is_debug &&
+            $log->debug( "Returned data from GDBM: ", Dumper( $data ) );
     }
     my $obj = $class->new({ %{ $data }, skip_default_values => 1 });
     $obj->clear_change;
@@ -180,9 +191,11 @@ sub fetch_group {
     my ( $item, $p ) = @_;
     my $db = $item->global_datasource_handle( $p );
     my $class = ref $item || $item;
-    DEBUG && _w( 1, "Trying to find keys beginning with ($class)" );
+    $log->is_info &&
+        $log->info( "Trying to find keys beginning with ($class)" );
     my @object_keys = grep /^$class/, keys %{ $db };
-    DEBUG && _w( 2, "Keys found in DB: ", join( ", ", @object_keys ) );
+    $log->is_debug &&
+        $log->debug( "Keys found in DB: ", join( ", ", @object_keys ) );
     my @objects = ();
     foreach my $key ( @object_keys ) {
         my $data = eval { $class->_return_structure_for_key( $key, { db => $db } ) };
@@ -197,11 +210,13 @@ sub fetch_group {
 sub save {
     my ( $self, $p ) = @_;
     $p->{perm} ||= 'write';
-    DEBUG && _w( 1, "Trying to save a <<", ref $self, ">>" );
+    $log->is_info &&
+        $log->info( "Trying to save a <<", ref $self, ">>" );
     my $id = $self->id;
     my $is_add = ( $p->{is_add} or ! $id or $id =~ /^tmp/ );
     unless ( $is_add or $self->changed ) {
-        DEBUG && _w( 1, "This object exists and has not changed. Exiting." );
+        $log->is_info &&
+            $log->info( "This object exists and has not changed. Exiting." );
         return $id;
     }
     return undef unless ( $self->pre_save_action( { is_add => $is_add } ) );

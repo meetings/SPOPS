@@ -1,11 +1,13 @@
 # -*-perl-*-
 
-# $Id: 81_security_hierarchical.t,v 1.1 2002/09/16 20:43:31 lachoy Exp $
+# $Id: 81_security_hierarchical.t,v 1.2 2004/02/26 02:02:29 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
 use Test::More tests => 26;
 use Data::Dumper qw( Dumper );
+
+do "t/config.pl";
 
 BEGIN {
     use_ok( 'SPOPS::Secure', qw( :level :scope ) );

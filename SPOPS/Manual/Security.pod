@@ -392,9 +392,11 @@ something like:
 
  sub get_security {
      my ( $self, $p ) = @_;
+     my $log = get_logger();
      my ( $user, $group_list ) = $self->get_security_scopes( $p );
      if ( my $security_info = $self->_check_superuser( $user, $group_list ) ) {
-         DEBUG() && _w( 1, "Superuser is logged in, can do anything" );
+         $log->is_info &&
+             $log->info( "Superuser is logged in, can do anything" );
          return $security_info;
      }
      if ( $self->{state} eq $user->{state} ) {

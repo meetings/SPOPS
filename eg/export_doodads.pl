@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: export_doodads.pl,v 3.1 2003/07/15 12:18:28 lachoy Exp $
+# $Id: export_doodads.pl,v 3.2 2004/01/10 02:49:58 lachoy Exp $
 
 # To use this, first edit My/Common.pm with your database information
 # and then run (mysql example)
@@ -14,6 +14,9 @@
 # $ perl export_doodads.pl xml
 
 use strict;
+use Log::Log4perl;
+Log::Log4perl::init( 'log4perl.conf' );
+
 use SPOPS::Export;
 
 require My::Security;

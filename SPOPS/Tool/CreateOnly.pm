@@ -1,22 +1,27 @@
 package SPOPS::Tool::CreateOnly;
 
-# $Id: CreateOnly.pm,v 3.1 2003/01/02 06:00:21 lachoy Exp $
+# $Id: CreateOnly.pm,v 3.2 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
-use SPOPS               qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 use SPOPS::ClassFactory qw( OK );
 
-$SPOPS::Tool::CreateOnly::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Tool::CreateOnly::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
-    DEBUG && _w( 1, "Installing create-only persistence methods for [$class]" );
+    $log->is_info &&
+        $log->info( "Installing create-only persistence methods for [$class]" );
     return { read_code => \&generate_persistence_methods };
 }
 
 sub generate_persistence_methods {
     my ( $class ) = @_;
-    DEBUG && _w( 1, "Generating create-only save() [$class]" );
+    $log->is_info &&
+        $log->info( "Generating create-only save() [$class]" );
     my $first_isa = $class->CONFIG->{isa}->[0];
     no strict 'refs';
     *{ "${class}::save" }   =

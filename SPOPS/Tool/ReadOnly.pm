@@ -1,22 +1,27 @@
 package SPOPS::Tool::ReadOnly;
 
-# $Id: ReadOnly.pm,v 3.1 2003/01/02 06:00:21 lachoy Exp $
+# $Id: ReadOnly.pm,v 3.2 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
-use SPOPS               qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 use SPOPS::ClassFactory qw( OK );
 
-$SPOPS::Tool::ReadOnly::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Tool::ReadOnly::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
-    DEBUG && _w( 1, "Installing read-only persistence methods for ($class)" );
+    $log->is_info &&
+        $log->info( "Installing read-only persistence methods for ($class)" );
     return { read_code => \&generate_persistence_methods };
 }
 
 sub generate_persistence_methods {
     my ( $class ) = @_;
-    DEBUG && _w( 1, "Generating read-only save() and remove() for ($class)" );
+    $log->is_info &&
+        $log->info( "Generating read-only save() and remove() for ($class)" );
     no strict 'refs';
     *{ "${class}::save" }   =
         sub {

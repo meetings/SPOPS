@@ -1,25 +1,19 @@
 package SPOPS::DBI::InterBase;
 
-# $Id: InterBase.pm,v 3.2 2003/01/02 06:00:24 lachoy Exp $
+# $Id: InterBase.pm,v 3.4 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
-use SPOPS qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 
-$SPOPS::DBI::InterBase::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::InterBase::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 # Values are:
 #   %s - Generator name (config item 'sequence_name'
 #   %d - Increment value ('sequence_increment', or 1)
 use constant IB_GENERATOR_NEXT    => 'SELECT GEN_ID( %s, %d ) FROM RDB$DATABASE';
 
-sub sql_quote {
-    my ( $class, $value, $type, $db ) = @_;
-    $db ||= $class->global_datasource_handle;
-    unless ( ref $db ) {
-        SPOPS::Exception->throw( "No database handle could be found!" );
-    }
-    return $db->quote( $value, $type );
-}
+my $log = get_logger();
 
 # NOT SURE ABOUT THESE
 

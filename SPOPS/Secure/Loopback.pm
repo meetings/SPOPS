@@ -1,13 +1,16 @@
 package SPOPS::Secure::Loopback;
 
-# $Id: Loopback.pm,v 1.3 2003/01/02 06:00:22 lachoy Exp $
+# $Id: Loopback.pm,v 1.4 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
-use SPOPS         qw( DEBUG _w _wm );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 use SPOPS::Secure qw( :level :scope );
 use SPOPS::Secure::Util;
 
-$SPOPS::Secure::Loopback::VERSION = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Secure::Loopback::VERSION = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
 
 sub fetch_by_object {
     my ( $class, $object, $p ) = @_;

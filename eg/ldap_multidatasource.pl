@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: ldap_multidatasource.pl,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: ldap_multidatasource.pl,v 3.1 2004/01/10 02:49:58 lachoy Exp $
 
 # ldap_multidatasource.pl
 #   This is an example of how you can setup multiple datasources. You
@@ -8,6 +8,8 @@
 #   located in eg/My/LDAPConnect.pm
 
 use strict;
+use Log::Log4perl;
+Log::Log4perl::init( 'log4perl.conf' );
 use SPOPS::Initialize;
 
 {

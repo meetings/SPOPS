@@ -1,12 +1,15 @@
 package SPOPS::ClassFactory::LDAP;
 
-# $Id: LDAP.pm,v 3.1 2003/01/02 06:00:24 lachoy Exp $
+# $Id: LDAP.pm,v 3.2 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
-use SPOPS qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-$SPOPS::ClassFactory::LDAP::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::ClassFactory::LDAP::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 
 ########################################
@@ -17,13 +20,15 @@ my $generic_common_relate = <<'COMMONRELATE';
 
     sub %%CLASS%%::_ldap_get_linked_objects {
         my ( $self, $item_list, $item_class, $p ) = @_;
+        my $log = Log::Log4perl::get_logger();
         $item_list  = ( ref $item_list ) ? $item_list : [ $item_list ];
         my ( @object_list, @error_list );
 LINK_ITEM:
         foreach my $item ( @{ $item_list } ) {
             if ( ref $item ) {
                 push @object_list, $item;
-                SPOPS::_wm( 2, $p->{DEBUG}, "Found linked object", "(", $item->id, ")" );
+                $log->is_debug &&
+                    $log->debug( "Found linked object", "(", $item->id, ")" );
                 next LINK_ITEM;
             }
 
@@ -34,11 +39,12 @@ LINK_ITEM:
             if ( $@ or ! $item_obj ) {
                 my $err = ( $@ ) ? $SPOPS::Error::system_msg : 'Object not found';
                 my $msg = "Cannot fetch linked object with ID ($item)\nError: $err";
-                SPOPS::_wm( 1, $p->{DEBUG}, $msg );
+                $log->warn( $msg );
                 push @error_list, $msg;
                 next LINK_ITEM;
             }
-            SPOPS::_wm( 2, $p->{DEBUG}, "Found linked object to ID (", $item_obj->id, ")" );
+            $log->is_info &&
+                $log->info( "Found linked object to ID (", $item_obj->id, ")" );
             push @object_list, $item_obj;
         }
         return ( \@object_list, \@error_list );
@@ -58,7 +64,8 @@ sub conf_read_code {
     if ( $@ ) {
         return ( ERROR, "Cannot create common relationship routine ($class): $@" );
     }
-    DEBUG() && _w( 1, "Finished adding LDAP read_code sub for ($class)" );
+    $log->is_info &&
+        $log->info( "Finished adding LDAP read_code sub for ($class)" );
     return ( OK, undef );
 }
 
@@ -71,22 +78,26 @@ my $generic_hasa = <<'HASA';
     sub %%CLASS%%::%%HASA_ALIAS%% {
         my ( $self, $p ) = @_;
         unless ( $self->dn ) { SPOPS::Exception->throw( "Cannot call from unsaved object or class!" ) }
+        my $log = Log::Log4perl::get_logger();
+
         my @object_list = ();
         my $conf_other = %%HASA_CLASS%%->CONFIG;
         my $hasa_value = $self->{%%HASA_FIELD%%};
         $hasa_value = ( ref $hasa_value eq 'ARRAY' )
                         ? $hasa_value : [ $hasa_value ];
         foreach my $other_dn ( @{ $hasa_value } ) {
-            SPOPS::_wm( 2, $p->{DEBUG}, "Trying to retrieve linked %%HASA_ALIAS%%",
-                                        "with DN ($other_dn)" );
+            $log->is_info &&
+                $log->info( "Trying to retrieve linked %%HASA_ALIAS%%",
+                            "with DN ($other_dn)" );
             my $object = eval { %%HASA_CLASS%%->fetch_by_dn( $other_dn, $p ) };
             if ( $@ ) {
-                SPOPS::_w( 1, "Could not retrieve linked %%HASA_ALIAS%% with DN ($other_dn): $@" );
+                $log->error( "Could not retrieve linked %%HASA_ALIAS%% with DN ($other_dn): $@" );
                 next;
             }
-            SPOPS::_wm( 2, $p->{DEBUG}, "Fetched: ", ( ref $object )
-                                                       ? "object with ID (" . $object->id . ")"
-                                                       : "nothing" );
+            $log->is_info &&
+                $log->info( "Fetched: ", ( ref $object )
+                                           ? "object with ID (" . $object->id . ")"
+                                           : "nothing" );
             push @object_list, $object if ( $object );
         }
         return \@object_list;
@@ -95,6 +106,7 @@ my $generic_hasa = <<'HASA';
 
     sub %%CLASS%%::%%HASA_ALIAS%%_add {
         my ( $self, $link_item_list, $p ) = @_;
+        my $log = Log::Log4perl::get_logger();
         my ( $has_a_objects, $error_list ) =
                          $self->_ldap_get_linked_objects( $link_item_list,
                                                           '%%HASA_CLASS%%', $p );
@@ -104,7 +116,8 @@ my $generic_hasa = <<'HASA';
         foreach my $has_a ( @{ $has_a_objects } ) {
             $self->{%%HASA_FIELD%%} = $has_a->dn;
             $added++;
-            SPOPS::_wm( 2, $p->{DEBUG}, "Will add has_a object:", $has_a->dn );
+            $log->is_info &&
+                $log->info( "Will add has_a object:", $has_a->dn );
         }
         $self->save( $p );
         return $added;
@@ -113,6 +126,7 @@ my $generic_hasa = <<'HASA';
 
     sub %%CLASS%%::%%HASA_ALIAS%%_remove {
         my ( $self, $link_item_list, $p ) = @_;
+        my $log = Log::Log4perl::get_logger();
         my ( $has_a_objects, $error_list ) =
                          $self->_ldap_get_linked_objects( $link_item_list,
                                                           '%%HASA_CLASS%%', $p );
@@ -125,7 +139,8 @@ my $generic_hasa = <<'HASA';
             $self->{%%HASA_FIELD%%} = ( ref $self->{%%HASA_FIELD%%} )
                                         ? { remove => $has_a->dn } : undef;
             $removed++;
-            SPOPS::_wm( 2, $p->{DEBUG}, "Will remove has_a object:", $has_a->dn );
+            $log->is_info &&
+                $log->info( "Will remove has_a object:", $has_a->dn );
 
         }
         $self->save( $p );
@@ -156,9 +171,11 @@ sub conf_relate_has_a {
             $hasa_sub =~ s/%%HASA_CLASS%%/$hasa_class/g;
             $hasa_sub =~ s/%%HASA_ALIAS%%/$hasa_alias/g;
             $hasa_sub =~ s/%%HASA_FIELD%%/$hasa_field/g;
-            DEBUG() && _w( 2, "Trying to create has_a routines with ($class) has_a",
+            $log->is_debug &&
+                $log->debug( "Trying to create has_a routines with ($class) has_a",
                               "($hasa_class) using field ($hasa_field)" );
-            DEBUG() && _w( 5, "Now going to eval the routine:\n$hasa_sub" );
+            $log->is_debug &&
+                $log->debug( "Now going to eval the routine:\n$hasa_sub" );
 #            warn "Trying\n$hasa_sub";
             {
                 local $SIG{__WARN__} = sub { return undef };
@@ -169,7 +186,8 @@ sub conf_relate_has_a {
             }
         }
     }
-    DEBUG() && _w( 1, "Finished adding LDAP has_a relationships for ($class)" );
+    $log->is_info &&
+        $log->info( "Finished adding LDAP has_a relationships for ($class)" );
     return ( DONE, undef );
 }
 
@@ -255,9 +273,11 @@ sub conf_relate_links_to {
             $linksto_sub =~ s/%%LINKSTO_CLASS%%/$linksto_class/g;
             $linksto_sub =~ s/%%LINKSTO_ALIAS%%/$linksto_alias/g;
             $linksto_sub =~ s/%%LINKSTO_FIELD%%/$linksto_field/g;
-            DEBUG() && _w( 2, "Trying to create links_to routines with ($class) links_to",
+            $log->is_debug &&
+                $log->debug( "Trying to create links_to routines with ($class) links_to",
                               "($linksto_class) using field ($linksto_field)" );
-            DEBUG() && _w( 5, "Now going to eval the routine:\n$linksto_sub" );
+            $log->is_debug &&
+                $log->debug( "Now going to eval the routine:\n$linksto_sub" );
             {
                 local $SIG{__WARN__} = sub { return undef };
                 eval $linksto_sub;
@@ -268,7 +288,8 @@ sub conf_relate_links_to {
 
         }
     }
-    DEBUG() && _w( 1, "Finished adding LDAP links_to relationships for ($class)" );
+    $log->is_info &&
+        $log->info( "Finished adding LDAP links_to relationships for ($class)" );
     return ( DONE, undef );
 }
 

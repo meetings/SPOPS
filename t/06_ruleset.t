@@ -1,10 +1,12 @@
 # -*-perl-*-
 
-# $Id: 06_ruleset.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: 06_ruleset.t,v 3.1 2004/02/26 02:02:30 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
 use Test::More tests => 7;
+
+do "t/config.pl";
 
 {
     my %config = (

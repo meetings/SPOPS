@@ -1,11 +1,14 @@
 package SPOPS::Key::DBI::Identity;
 
-# $Id: Identity.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
+# $Id: Identity.pm,v 3.3 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
-use SPOPS  qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 
-$SPOPS::Key::DBI::Identity::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Key::DBI::Identity::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 # Ensure only POST_fetch_id used
 
@@ -28,7 +31,8 @@ sub post_fetch_id {
                                       { sql => $sql, action => 'post_fetch_id' } );
     }
     my $row = $sth->fetchrow_arrayref;
-    DEBUG() && _w( 1, "Found inserted ID ($row->[0])" );
+    $log->is_info &&
+        $log->info( "Found inserted ID ($row->[0])" );
     return $row->[0];
 }
 

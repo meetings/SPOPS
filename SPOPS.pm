@@ -1,25 +1,26 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.22 2003/11/26 14:18:07 lachoy Exp $
+# $Id: SPOPS.pm,v 3.30 2004/03/12 14:53:16 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
-
 use Data::Dumper    qw( Dumper );
+use Log::Log4perl   qw( get_logger );
+use SPOPS::ClassFactory::DefaultBehavior;
 use SPOPS::Exception;
 use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
+my $log = get_logger();
+
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.80';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.22 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.81';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.30 $ =~ /(\d+)\.(\d+)/);
 
-# Note that switching on DEBUG will generate LOTS of messages, since
-# many SPOPS classes import this constant
+# DEPRECATED
 
-my $DEBUG = 0;
-sub DEBUG                { return $DEBUG }
-sub set_global_debug     { $DEBUG = $_[1] }
+sub DEBUG                { return 1 }
+sub set_global_debug     { warn "Global debugging not supported -- use log4perl instead!\n" }
 
 my ( $USE_CACHE );
 sub USE_CACHE            { return $USE_CACHE }
@@ -40,9 +41,8 @@ require SPOPS::Utility;
 sub behavior_factory {
     my ( $class ) = @_;
 
-    # use 'require' so we don't get in a import loop with DEBUG/_w
-    require SPOPS::ClassFactory::DefaultBehavior;
-    DEBUG() && _w( 1, "Installing SPOPS default behaviors for ($class)" );
+    $log->is_info &&
+        $log->info( "Installing SPOPS default behaviors for ($class)" );
     return { manipulate_configuration =>
                     \&SPOPS::ClassFactory::DefaultBehavior::conf_modify_config,
              read_code                =>
@@ -124,13 +124,18 @@ sub new {
         }
     }
 
-    DEBUG() && _w( 1, "Creating new object of class ($class) with tie class ",
-                      "($tie_class); lazy loading ($params->{is_lazy_load});",
-                      "field mapping ($params->{is_field_map})" );
+    $params->{is_lazy_load} ||= 0;
+    $params->{is_field_map} ||= 0;
+
+    $log->is_info &&
+        $log->info( "Creating new object of class ($class) with tie class ",
+                    "($tie_class); lazy loading ($params->{is_lazy_load});",
+                    "field mapping ($params->{is_field_map})" );
 
     my ( %data );
     my $internal = tie %data, $tie_class, $class, $params;
-    DEBUG() && _w( 4, "Internal tie structure of new object: ", Dumper( $internal ) );
+    $log->is_debug &&
+        $log->debug( "Internal tie structure of new object: ", Dumper( $internal ) );
     my $self = bless( \%data, $class );
 
     # Set defaults if set, unless NOT specified
@@ -142,13 +147,13 @@ sub new {
                 my $default_class  = $defaults->{ $field }{class};
                 my $default_method = $defaults->{ $field }{method};
                 unless ( $default_class and $default_method ) {
-                    _w( 0, "Cannot set default for ($field) without a class ",
-                           "AND method being defined." );
+                    $log->warn( "Cannot set default for ($field) without a class ",
+                                "AND method being defined." );
                     next;
                 }
                 $self->{ $field } = eval { $default_class->$default_method( $field ) };
                 if ( $@ ) {
-                    _w( 0, "Cannot set default for ($field) in ($class) using",
+                    $log->warn( "Cannot set default for ($field) in ($class) using",
                            "($default_class) ($default_method): $@" );
                 }
             }
@@ -164,14 +169,16 @@ sub new {
     $self->initialize( $p );
     $self->has_change;
     $self->clear_save;
+    $self->initialize_custom( $p );
     return $self;
 }
 
 
 sub DESTROY {
     my ( $self ) = @_;
-    DEBUG() && _w( 2, "Destroying SPOPS object (". ref( $self ) . ") ID: " .
-                      "(" . $self->id . ") at time: ", scalar localtime );
+    $log->is_debug &&
+        $log->debug( "Destroying SPOPS object '", ref( $self ), "' ID: " .
+                      "'", $self->id, "' at time: ", scalar localtime );
 }
 
 
@@ -181,8 +188,9 @@ sub DESTROY {
 sub clone {
     my ( $self, $p ) = @_;
     my $class = $p->{_class} || ref $self;
-    DEBUG() && _w( 1, "Cloning new object of class ($class) from old ",
-                      "object of class (", ref $self, ")" );
+    $log->is_info &&
+        $log->info( "Cloning new object of class '$class' from old ",
+                    "object of class '", ref( $self ), "'" );
     my %initial_data = ();
 
     my $id_field = $class->id_field;
@@ -190,10 +198,11 @@ sub clone {
         $initial_data{ $id_field } = $p->{ $id_field } || $p->{id};
     }
 
-    while ( my ( $k, $v ) = each %{ $self } ) {
-        next unless ( $k );
-        next if ( $id_field and $k eq $id_field );
-        $initial_data{ $k } = exists $p->{ $k } ? $p->{ $k } : $v;
+    my $fields = $self->_get_definitive_fields;
+    foreach my $field ( @{ $fields } ) {
+        next if ( $id_field and $field eq $id_field );
+        $initial_data{ $field } =
+            exists $p->{ $field } ? $p->{ $field } : $self->{ $field };
     }
 
     return $class->new({ %initial_data, skip_default_values => 1 });
@@ -228,6 +237,8 @@ sub initialize {
     }
 }
 
+# subclasses can override...
+sub initialize_custom { return }
 
 ########################################
 # CONFIGURATION
@@ -246,10 +257,24 @@ sub CONFIG {
 
 sub field               { return $_[0]->CONFIG->{field} || {}              }
 sub field_list          { return $_[0]->CONFIG->{field_list} || []         }
+sub field_raw           { return $_[0]->CONFIG->{field_raw} || []          }
+sub field_all_map {
+    return { map { $_ => 1 } ( @{ $_[0]->field_list }, @{ $_[0]->field_raw } ) }
+}
 sub id_field            { return $_[0]->CONFIG->{id_field}                 }
 sub creation_security   { return $_[0]->CONFIG->{creation_security} || {}  }
 sub no_security         { return $_[0]->CONFIG->{no_security}              }
 
+# if 'field_raw' defined use that, otherwise just return 'field_list'
+
+sub _get_definitive_fields {
+    my ( $self ) = @_;
+    my $fields = $self->field_raw;
+    unless ( ref $fields eq 'ARRAY' and scalar @{ $fields } > 0 ) {
+        $fields = $self->field_list;
+    }
+    return $fields;
+}
 
 ########################################
 # STORABLE SERIALIZATION
@@ -322,7 +347,8 @@ sub ruleset_process_action {
     my $class = ref $item || $item;
 
     $action = lc $action;
-    DEBUG() && _w( 1, "Trying to process $action for a '$class' object" );
+    $log->is_info &&
+        $log->info( "Trying to process $action for a '$class' object" );
 
     # Grab the ruleset table for this class and immediately
     # return if the list of rules to apply for this action is empty
@@ -330,10 +356,12 @@ sub ruleset_process_action {
     my $rs_table = $item->RULESET;
     unless ( ref $rs_table->{ $action } eq 'ARRAY'
                  and scalar @{ $rs_table->{ $action } } > 0 ) {
-        DEBUG() && _w( 2, "No rules to process for [$action]" );
+        $log->is_debug &&
+            $log->debug( "No rules to process for [$action]" );
         return 1;
     }
-    DEBUG() && _w( 1, "Ruleset exists in class." );
+    $log->is_info &&
+        $log->info( "Ruleset exists in class." );
 
     # Cycle through the rules -- the only return value can be true or false,
     # and false short-circuits the entire operation
@@ -342,11 +370,12 @@ sub ruleset_process_action {
     foreach my $rule_sub ( @{ $rs_table->{ $action } } ) {
         $count_rules++;
         unless ( $rule_sub->( $item, $p ) ) {
-            DEBUG() && _w( 0, "Rule $count_rules of '$action' for class '$class' failed" );
+            $log->warn( "Rule $count_rules of '$action' for class '$class' failed" );
             return undef;
         }
     }
-    DEBUG() && _w( 1, "$action processed ($count_rules rules successful) without error" );
+    $log->is_info &&
+        $log->info( "$action processed ($count_rules rules successful) without error" );
     return 1;
 }
 
@@ -390,14 +419,16 @@ sub set_loaded        { return tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }{ lc $_[
 
 sub set_all_loaded {
     my ( $self ) = @_;
-    DEBUG() && _w( 1, "Setting all fields to loaded for object class", ref $self );
+    $log->is_info &&
+        $log->info( "Setting all fields to loaded for object class", ref $self );
     $self->set_loaded( $_ ) for ( @{ $self->field_list } );
 }
 
 sub clear_loaded { tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }{ lc $_[1] } = undef }
 
 sub clear_all_loaded {
-    DEBUG() && _w( 1, "Clearing all fields to unloaded for object class", ref $_[0] );
+    $log->is_info &&
+        $log->info( "Clearing all fields to unloaded for object class", ref $_[0] );
     tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() } = {};
 }
 
@@ -561,10 +592,12 @@ sub get_cached_object {
     my $item_data = $class->global_cache->get({ class     => $class,
                                                 object_id => $p->{id} });
     if ( $item_data ) {
-        DEBUG() && _w( 1, "Retrieving from cache..." );
+        $log->is_info &&
+            $log->info( "Retrieving from cache..." );
         return $class->new( $item_data );
     }
-    DEBUG() && _w( 1, "Cached data not found." );
+    $log->is_info &&
+        $log->info( "Cached data not found." );
     return undef;
 }
 
@@ -606,7 +639,8 @@ sub set { return $_[0]->{ $_[1] } = $_[2] }
 
 sub as_data_only {
     my ( $self ) = @_;
-    return { map { $_ => $self->{ $_ } } grep ! /^(tmp|_)/, keys %{ $self } };
+    my $fields = $self->_get_definitive_fields;
+    return { map { $_ => $self->{ $_ } } grep ! /^(tmp|_)/, @{ $fields } };
 }
 
 # Backward compatible...
@@ -618,52 +652,68 @@ sub AUTOLOAD {
     my $request = $SPOPS::AUTOLOAD;
     $request =~ s/.*://;
 
-  # First, give a nice warning and return undef if $item is just a
-  # class rather than an object
+    # First, give a nice warning and return undef if $item is just a
+    # class rather than an object
 
     my $class = ref $item;
     unless ( $class ) {
-        _w( 0, "Cannot fill class method '$request' from class '$item'" );
+        $log->warn( "Cannot fill class method '$request' from class '$item'" );
         return undef;
     }
 
-    DEBUG() && _w( 1, "Trying to fill $request from $class (ISA: ",
-                      join( " // ", @{ $class . '::ISA' } ), ")" );
+    $log->is_info &&
+        $log->info( "AUTOLOAD caught '$request' from '$class'" );
+
     if ( ref $item and $item->is_checking_fields ) {
-        my $fields = $item->field || {};
+        my $fields = $item->field_all_map || {};
         my ( $field_name ) = $request =~ /^(\w+)_clear/;
         if ( exists $fields->{ $request } ) {
-            DEBUG() && _w( 2, "$class to fill param '$request'; returning data." );
+            $log->is_debug &&
+                $log->debug( "$class to fill param '$request'; returning data." );
             # TODO: make these internal methods inheritable?
             $item->_internal_create_field_methods( $class, $request );
             return $item->$request( @params );
         }
         elsif ( $field_name and exists $fields->{ $field_name } ) {
-            DEBUG() && _w( 2, "$class to fill param clear '$request'; ",
+            $log->is_debug &&
+                $log->debug( "$class to fill param clear '$request'; ",
                               "creating '$field_name' methods" );
             $item->_internal_create_field_methods( $class, $field_name );
             return $item->$request( @params );
         }
         elsif ( my $value = $item->{ $request } ) {
-            DEBUG() && _w( 2, " $request must be a temp or something, returning value." );
+            $log->is_debug &&
+                $log->debug( " $request must be a temp or something, returning value." );
             return $value;
         }
         elsif ( $request =~ /^tmp_/ ) {
-            DEBUG() && _w( 2, "$request is a temp var, but no value saved. Returning undef." );
+            $log->is_debug &&
+                $log->debug( "$request is a temp var, but no value saved. Returning undef." );
             return undef;
         }
         elsif ( $request =~ /^_internal/ ) {
-            DEBUG() && _w( 2, "$request is an internal request, but no value",
+            $log->is_debug &&
+                $log->debug( "$request is an internal request, but no value",
                               "saved. Returning undef." );
             return undef;
         }
-        _w( 0, "AUTOLOAD Error: Cannot access the method $request via <<$class>>",
+        $log->warn( "AUTOLOAD Error: Cannot access the method $request via <<$class>>",
                "with the parameters ", join( ' ', @_ ) );
         return undef;
     }
-    DEBUG() && _w( 2, "$class is not checking fields, so create sub and return",
-                      "data for '$request'" );
-    $item->_internal_create_field_methods( $class, $request );
+    my ( $field_name ) = $request =~ /^(\w+)_clear/;
+    if ( $field_name ) {
+        $log->is_debug &&
+            $log->debug( "$class is not checking fields, so create sub and return ",
+                         "data for '$field_name'" );
+        $item->_internal_create_field_methods( $class, $field_name );
+    }
+    else {
+        $log->is_debug &&
+            $log->debug( "$class is not checking fields, so create sub and return ",
+                         "data for '$request'" );
+        $item->_internal_create_field_methods( $class, $request );
+    }
     return $item->$request( @params );
 }
 
@@ -694,24 +744,28 @@ sub _internal_create_field_methods {
 
 ########################################
 # DEBUGGING
-########################################
+
+# DEPRECATED! Use log4perl instead!
 
 sub _w {
     my $lev   = shift || 0;
-    return unless ( DEBUG >= $lev );
-    my ( $pkg, $file, $line ) = caller;
-    my @ci = caller(1);
-    warn "$ci[3] ($line) >> ", join( ' ', @_ ), "\n";
+    if ( $lev == 0 ) {
+        $log->warn( @_ );
+    }
+    elsif ( $lev == 1 ) {
+        $log->is_info &&
+            $log->info( @_ );
+    }
+    else {
+        $log->is_debug &&
+            $log->debug( @_ );
+    }
 }
 
 
 sub _wm {
-    my $lev   = shift || 0;
-    my $check = shift || 0;
-    return unless ( $check >= $lev );
-    my ( $pkg, $file, $line ) = caller;
-    my @ci = caller(1);
-    warn "$ci[3] ($line) >> ", join( ' ', @_ ), "\n";
+    my ( $lev, $check, @msg ) = @_;
+    return _w( $lev, @msg );
 }
 
 1;
@@ -859,9 +913,11 @@ B<new( [ \%initialize_data ] )>
 
 Implemented by base class.
 
-This method creates a new SPOPS object. If you pass it key/value
-pairs the object will initialize itself with the data (see
-C<initialize()> for notes on this).
+This method creates a new SPOPS object. If you pass it key/value pairs
+the object will initialize itself with the data (see C<initialize()>
+for notes on this). You can also implement C<initialize_custom()> to
+perform your own custom processing at object initialization (see
+below).
 
 Note that you can use the key 'id' to substitute for the actual
 parameter name specifying an object ID. For instance:
@@ -955,6 +1011,13 @@ shipped with SPOPS.
 
 =back
 
+As the very last step before the object is returned we call
+C<initialize_custom( \%initialize_data )>. You can override this
+method and perform any processing you wish. The parameters from
+C<\%initialize_data> will already be set in the object, and the
+'changed' flag will be cleared for all parameters and the 'saved' flag
+cleared.
+
 Returns on success: a tied hashref object with any passed data already
 assigned. The 'changed' flag is set and the and 'saved' flags is
 cleared on the returned object.
@@ -973,10 +1036,14 @@ Examples:
 B<clone( \%params )>
 
 Returns a new object from the data of the first. You can override the
-original data with that in the \%params passed in. You can also clone
+original data with that in the C<\%params> passed in. You can also clone
 an object into a new class by passing the new class name as the
 '_class' parameter -- of course, the interface must either be the same
 or there must be a 'field_map' to account for the differences.
+
+Note that the ID of the original object will B<not> be copied; you can
+set it explicitly by setting 'id' or the name of the ID field in
+C<\%params>.
 
 Examples:
 
@@ -1005,16 +1072,17 @@ Examples:
      $ldap_user->save;
  }
 
-B<initialize()>
+B<initialize( \%initialize_data )>
 
-Implemented by base class, although it is often overridden.
+Implemented by base class; do your own customization using
+C<initialize_custom()>.
 
-Cycle through the parameters and set any data necessary. This allows
-you to construct the object with existing data. Note that the tied
-hash implementation optionally ensures (with the 'strict_field'
-configuration key set to true) that you cannot set infomration as a
-parameter unless it is in the field list for your class. For instance,
-passing the information:
+Cycle through the parameters inn C<\%initialize_data> and set any
+fields necessary in the object. This allows you to construct the
+object with existing data. Note that the tied hash implementation
+optionally ensures (with the 'strict_field' configuration key set to
+true) that you cannot set infomration as a parameter unless it is in
+the field list for your class. For instance, passing the information:
 
  firt_name => 'Chris'
 
@@ -1027,6 +1095,13 @@ if you override this method you need to simply call:
  $self->set_all_loaded();
 
 somewhere in the overridden method.
+
+C<initialize_custom( \%initialize_data )>
+
+Called as the last step of C<new()> so you can perform customization
+as necessary. The default does nothing.
+
+Returns: nothing
 
 =head2 Accessors/Mutators
 
@@ -1566,47 +1641,13 @@ These have gone away (you were warned!)
 
 =head2 Debugging
 
-The main SPOPS class holds a debugging value which is exported so all
-other SPOPS classes refer to it. To set the value, call
-C<set_global_debug()> as a class method:
+The previous (fragile, awkward) debugging system in SPOPS has been
+replaced with L<Log::Log4perl> instead. Old calls to C<DEBUG>, C<_w>,
+and C<_wm> will still work (for now) but they just use log4perl under
+the covers.
 
- SPOPS->set_global_debug(1);
-
-Debugging values go from 0 (no debugging) to 4 (maximum verbosity),
-but currently there is not much organization as to what gets a 1, 2 or
-whatever.
-
-B<DEBUG()>
-
-Reports current debugging level. This is exported by C<SPOPS>, so you
-can do:
-
- DEBUG && _w( 2, "This is a debugging message" );
-
-And have the C<_w( ... )> not even evaluated if debugging is turned
-off.
-
-B<set_global_debug( $new_level )>
-
-Set the global debugging level to C<$new_level>.
-
-B<_w( $level, @msg )>
-
-Issues a C<warn> if C<$level> is less than or equal to the current
-debugging level as set by C<set_global_debug()>. The warning is
-formatted:
-
- package::sub (line) >> message
-
-This is exported by SPOPS on demand.
-
-B<_wm( $level, $check_level, @msg )>
-
-Issues a C<warn> if C<$level> is less than or equal to
-C<$check_level>. The warning is formatted the same as the one issued
-by C<_w()>
-
-This is exported by SPOPS on demand.
+Please see L<SPOPS::Manual::Configuration> under L<LOGGING> for
+information on how to configure it.
 
 =head1 NOTES
 

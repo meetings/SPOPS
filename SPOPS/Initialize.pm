@@ -1,13 +1,16 @@
 package SPOPS::Initialize;
 
-# $Id: Initialize.pm,v 3.2 2003/05/10 19:25:53 lachoy Exp $
+# $Id: Initialize.pm,v 3.3 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
-use SPOPS            qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 use SPOPS::ClassFactory;
 use SPOPS::Exception qw( spops_error );
 
-$SPOPS::Initialize::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Initialize::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 # Main interface -- take the information read in from 'read_config()'
 # and create SPOPS classes, then initialize them
@@ -39,7 +42,7 @@ sub process {
 
     my $class_created_ok = SPOPS::ClassFactory->create( $config, $p ) || [];
     unless ( scalar @{ $class_created_ok } ) {
-        _w( 0, "No classes were created by 'SPOPS::ClassFactory->create()'" );
+        $log->warn( "No classes were created by 'SPOPS::ClassFactory->create()'" );
         return undef;
     }
 
@@ -80,7 +83,8 @@ sub read_config {
 
     elsif ( $p->{directory} and -d $p->{directory} ) {
         my $dir = $p->{directory};
-        DEBUG() && _w( 1, "Reading configuration files from ($dir) with pattern ($p->{pattern})" );
+        $log->is_info &&
+            $log->info( "Reading configuration files from ($dir) with pattern ($p->{pattern})" );
         opendir( CONF, $dir )
                || spops_error "Cannot read configuration files from directory [$dir]: $!";
         my @directory_files = readdir( CONF );
@@ -100,7 +104,8 @@ sub read_config {
 
     my %spops_config = ();
     foreach my $file ( @config_files ) {
-        DEBUG() && _w( 1, "Reading configuration from file: ($file)" );
+        $log->is_info &&
+            $log->info( "Reading configuration from file: ($file)" );
         my $data = $class->read_perl_file( $file );
         if ( ref $data eq 'HASH' ) {
             foreach my $spops_key ( keys %{ $data } ) {

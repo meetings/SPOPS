@@ -1,9 +1,12 @@
 package SPOPS::Tool::DateConvert;
 
-# $Id: DateConvert.pm,v 1.8 2003/07/08 12:10:16 lachoy Exp $
+# $Id: DateConvert.pm,v 1.10 2004/02/26 01:01:37 lachoy Exp $
 
 use strict;
-use SPOPS qw( _w );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
+
+my $log = get_logger();
 
 my $DEFAULT_DATE_CLASS  = 'DateTime';
 my $DEFAULT_DATE_FORMAT = '%Y-%m-%d %H:%M:%S';
@@ -15,7 +18,8 @@ sub ruleset_factory {
     push @{ $ruleset->{post_fetch_action} }, \&convert_to_object;
     push @{ $ruleset->{pre_save_action} }, \&convert_to_string;
     push @{ $ruleset->{post_save_action} }, \&convert_to_object;
-    _w( 1, "DateConvert added post_fetch, pre/post_save rules to [$class]" );
+    $log->is_info &&
+        $log->info( "DateConvert added post_fetch, pre/post_save rules to [$class]" );
     return __PACKAGE__;
 }
 
@@ -23,7 +27,7 @@ sub convert_to_object {
     my ( $self ) = @_;
     my ( $date_fields, $date_class ) = _init( $self );
     unless ( ref $date_fields eq 'ARRAY' and scalar @{ $date_fields } ) {
-        _w( 0, "Using date conversion for ", ref( $self ), " but there ",
+        $log->warn( "Using date conversion for ", ref( $self ), " but there ",
             "are no date fields in 'convert_date_field'" );
         return 1;
     }
@@ -63,7 +67,7 @@ sub convert_to_string {
     my ( $self ) = @_;
     my ( $date_fields, $date_class ) = _init( $self );
     unless ( ref $date_fields eq 'ARRAY' and scalar @{ $date_fields } ) {
-        _w( 0, "Using date conversion for ", ref( $self ), " but there ",
+        $log->warn( "Using date conversion for ", ref( $self ), " but there ",
             "are no date fields in 'convert_date_field'" );
         return 1;
     }
@@ -82,11 +86,21 @@ sub _create_date_string {
         return undef;
     }
 
+    # Strings are semi-ok...
+
+    unless ( ref( $date_object ) ) {
+        $log->info( "Expected date object of type '$date_class' but item ",
+                    "is not a reference, which probably means it's a ",
+                    "string representation of a date ($date_object). ",
+                    "Hope it's in the right format, it's going in as is." );
+        return $date_object
+    }
+
     # ... but getting something that's not an object when we expect
     # something is a different matter and deserves a warning
 
     unless ( ref( $date_object ) eq $date_class ) {
-        _w( 0, "Expected date object of type '$date_class' but ",
+        $log->warn( "Expected date object of type '$date_class' but ",
                "got '", ref( $date_object ), "'; not converting." );
         return undef;
     }

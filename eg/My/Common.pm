@@ -1,6 +1,6 @@
 package My::Common;
 
-# $Id: Common.pm,v 3.1 2003/07/15 12:19:47 lachoy Exp $
+# $Id: Common.pm,v 3.2 2004/01/10 02:49:58 lachoy Exp $
 
 use strict;
 use SPOPS::DBI;
@@ -20,13 +20,13 @@ my $SPOPS_DB = 'SPOPS::DBI::SQLite';
 eval "require $SPOPS_DB";
 
 @My::Common::ISA = ( $SPOPS_DB, 'SPOPS::DBI' );
-$My::Common::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$My::Common::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 # CHANGE
 #
 # Modify database connection info as needed
 
-use constant DBI_DSN      => 'DBI:SQLite:dbname=sqlite_test';
+use constant DBI_DSN      => 'DBI:SQLite:dbname=sqlite_test.db';
 use constant DBI_USER     => '';
 use constant DBI_PASSWORD => '';
 

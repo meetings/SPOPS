@@ -1,18 +1,16 @@
 package SPOPS::Tie::StrictField;
 
-# $Id: StrictField.pm,v 3.1 2003/01/02 06:00:21 lachoy Exp $
+# $Id: StrictField.pm,v 3.3 2004/03/12 14:39:32 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Tie );
+use Log::Log4perl qw( get_logger );
+use SPOPS::Tie    qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP
+                      IDX_CHECK_FIELDS $PREFIX_TEMP $PREFIX_INTERNAL );
 
-use Carp       qw( carp );
-use SPOPS::Tie qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP  
-                   IDX_CHECK_FIELDS $PREFIX_TEMP $PREFIX_INTERNAL );
+$SPOPS::Tie::StrictField::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
-$SPOPS::Tie::StrictField::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
-
-*_w    = *SPOPS::_w;
-*DEBUG = *SPOPS::DEBUG;
+my $log = get_logger();
 
 # Use this for setting up field lists to check
 
@@ -42,7 +40,9 @@ sub _can_fetch {
     my ( $self, $key ) = @_;
     return 1 unless ( $self->{ IDX_CHECK_FIELDS() } );
     return 1 if ( $FIELDS{ $self->{class} }->{ lc $key } );
-    carp "ERROR: Cannot retrieve field ($key): it is not a valid field";
+    my ( $call_package, $call_line ) = (caller(1))[0,2];
+    $log->error( "[$call_package @ $call_line]: Field '$key' is ",
+                 "not valid, cannot retrieve value" );
     return undef;
 }
 
@@ -53,7 +53,9 @@ sub _can_store {
     my ( $self, $key, $value ) = @_;
     return 1 unless ( $self->{ IDX_CHECK_FIELDS() } );
     return 1 if ( $FIELDS{ $self->{class} }->{ lc $key } );
-    carp "ERROR: Cannot set value for field ($key): it is not a valid field";
+    my ( $call_package, $call_line ) = (caller(1))[0,2];
+    $log->error( "[$call_package @ $call_line]: Field '$key' is ",
+                 "not valid, cannot set value" );
     return undef;
 
 }
@@ -64,30 +66,39 @@ sub _can_store {
 sub EXISTS {
     my ( $self, $key ) = @_;
     return $self->SUPER::EXISTS( $key ) unless ( $self->{ IDX_CHECK_FIELDS() } );
-    DEBUG() && _w( 3, " tie: Checking for existence of ($key)\n" );
+    $log->is_debug &&
+        $log->debug( " tie: Checking for existence of ($key)\n" );
     if ( $FIELDS{ $self->{class} }->{ lc $key } ) {
         return exists $self->{ IDX_DATA() }->{ lc $key };
     }
-    carp "Cannot check existence for field ($key): it is not a valid field";
+    else {
+        my ( $call_package, $call_line ) = (caller(1))[0,2];
+        $log->error( "[$call_package @ $call_line]: Field '$key' is ",
+                     "not valid, cannot check existence" );
+        return undef;
+    }
 }
 
 
 sub DELETE {
     my ( $self, $key ) = @_;
     return $self->SUPER::DELETE( $key ) unless ( $self->{ IDX_CHECK_FIELDS() } );
-    DEBUG() && _w( 3, " tie: Clearing value for ($key)\n" );
-    if ( $FIELDS{ $self->{class} }->{ lc $key } ) { 
+    $log->is_debug &&
+        $log->debug( " tie: Clearing value for ($key)\n" );
+    if ( $FIELDS{ $self->{class} }->{ lc $key } ) {
         $self->{ IDX_DATA() }->{ lc $key } = undef;
         $self->{ IDX_CHANGE() }++;
     }
-    carp "Cannot remove data for field ($key): it is not a valid field";
+    else {
+        my ( $call_package, $call_line ) = (caller(1))[0,2];
+        $log->error( "[$call_package @ $call_line]: Field '$key' is ",
+                     "not valid, cannot remove data" );
+    }
 }
 
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -153,5 +164,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  E<lt>chris@cwinters.comE<gt>
-
-=cut

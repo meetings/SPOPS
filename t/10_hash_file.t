@@ -1,9 +1,11 @@
 # -*-perl-*-
 
-# $Id: 10_hash_file.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: 10_hash_file.t,v 3.1 2004/02/26 02:02:29 lachoy Exp $
 
 use File::Copy;
 use Test::More tests => 10;
+
+do "t/config.pl";
 
 sub clean_config { unlink( 't/test.perl' ); File::Copy::cp( 't/hash_file_test.perl', 't/test.perl' ); }
 sub cleanup      { unlink( 't/test.perl' ); unlink( 't/test-new.perl' );  }

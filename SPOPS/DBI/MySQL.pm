@@ -1,25 +1,18 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 3.2 2003/01/02 06:00:24 lachoy Exp $
+# $Id: MySQL.pm,v 3.4 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
-use SPOPS  qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 use SPOPS::ClassFactory qw( OK NOTIFY );
 use SPOPS::Key::DBI::HandleField;
 
-$SPOPS::DBI::MySQL::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::DBI::MySQL::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return 'NOW()' }
-
-sub sql_quote {
-    my ( $class, $value, $type, $db ) = @_;
-    $db ||= $class->global_datasource_handle;
-    unless ( ref $db ) {
-        SPOPS::Exception->throw( "No database handle could be found!" );
-    }
-    return $db->quote( $value, $type );
-}
-
 
 # Backward compatibility (basically) -- you just have to set a true
 # value in the config if you have an auto-increment field in the
@@ -30,7 +23,8 @@ sub post_fetch_id {
     my ( $item, @args ) = @_;
     return undef unless ( $item->CONFIG->{increment_field} );
     $item->CONFIG->{handle_field} ||= 'mysql_insertid';
-    DEBUG() && _w( 1, "Setting to handle field: $item->CONFIG->{handle_field}" );
+    $log->is_info &&
+        $log->info( "Setting to handle field: $item->CONFIG->{handle_field}" );
     return SPOPS::Key::DBI::HandleField::post_fetch_id( $item, @args );
 }
 
@@ -39,7 +33,8 @@ sub post_fetch_id {
 
 sub behavior_factory {
     my ( $class ) = @_;
-    DEBUG() && _w( 1, "Installing MySQL default discovery for ($class)" );
+    $log->is_info &&
+        $log->info( "Installing MySQL default discovery for ($class)" );
     return { manipulate_configuration => \&find_mysql_defaults };
 }
 

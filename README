@@ -248,6 +248,10 @@ Ray Zimmerman <rz10@cornell.edu>
 
 =item *
 
+Vsevolod (Simon) Ilyushchenko <simonf@cshl.edu>
+
+=item *
+
 Christian Lemburg <lemburg@aixonix.de>
 
 =item *
@@ -280,7 +284,8 @@ David Boone <dave@bis.bc.ca>
 COPYRIGHT AND DISCLAIMER
 ========================
 
-SPOPS is Copyright (c) 2001-2002 by intes.net, inc. All rights reserved.
+SPOPS is Copyright (c) 2001-2002 by intes.net, inc and 2003-2004 Chris
+Winters. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the Perl Artistic License or the GNU General
@@ -289,4 +294,4 @@ version 2 of the License (see 'COPYING'), or (at your option) any
 later version.
 
 =========================
-$Id: README,v 3.2 2003/01/02 05:56:37 lachoy Exp $
+$Id: README,v 3.3 2004/02/26 01:07:32 lachoy Exp $

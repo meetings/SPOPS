@@ -1,28 +1,23 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.13 2003/10/30 03:53:12 lachoy Exp $
+# $Id: DBI.pm,v 3.19 2004/02/26 01:42:46 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
-
 use Data::Dumper     qw( Dumper );
 use DBI;
-use SPOPS            qw( _wm _w DEBUG );
+use Log::Log4perl    qw( get_logger );
 use SPOPS::Exception qw( spops_error );
 use SPOPS::Exception::DBI;
 use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.13 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.19 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
-
-my ( $DEBUG_FETCH, $DEBUG_SAVE );
-sub DEBUG_FETCH     { return $DEBUG_FETCH; }
-sub DEBUG_SAVE      { return $DEBUG_SAVE }
-sub SET_DEBUG_FETCH { $DEBUG_FETCH = $_[1] }
-sub SET_DEBUG_SAVE  { $DEBUG_SAVE = $_[1] }
 
 
 ########################################
@@ -51,7 +46,8 @@ sub no_save_sync  { return $_[0]->CONFIG->{no_save_sync}       }
 sub behavior_factory {
     my ( $class ) = @_;
     require SPOPS::ClassFactory::DBI;
-    DEBUG() && _w( 1, "Installing SPOPS::DBI behaviors for ($class)" );
+    $log->is_info &&
+        $log->info( "Installing SPOPS::DBI behaviors for ($class)" );
     return { links_to  => \&SPOPS::ClassFactory::DBI::conf_relate_links_to,
              id_method => \&SPOPS::ClassFactory::DBI::conf_multi_field_key_id,
              read_code => \&SPOPS::ClassFactory::DBI::conf_multi_field_key_other };
@@ -122,7 +118,6 @@ sub _class_initialize { return 1 }
 
 sub id_clause {
     my ( $item, $id, $opt, $p ) = @_;
-    $p->{DEBUG} ||= DEBUG_FETCH;
 
     $opt ||= '';
     $p   ||= {};
@@ -131,7 +126,7 @@ sub id_clause {
     # object, there's a problem
 
     unless ( $id or ref( $item ) ) {
-        _w( 0, "No ID passed in and called as a class method rather than",
+        $log->warn( "No ID passed in and called as a class method rather than",
                "an object method." );
         return undef;
     }
@@ -147,8 +142,7 @@ sub id_clause {
     my $type_info = eval { $item->db_discover_types(
                                    $item->base_table,
                                    { dbi_type_info => $p->{dbi_type_info},
-                                     db            => $db,
-                                     DEBUG         => $p->{DEBUG} } ) };
+                                     db            => $db } ) };
 
     # If we cannot get the type via our own system, just guess that the
     # ID field is a number
@@ -156,8 +150,9 @@ sub id_clause {
     if ( $@ ) {
         $type_info = SPOPS::DBI::TypeInfo->new({ table => $item->base_table });
         $type_info->add_type( $id_field, $SPOPS::DBI::GUESS_ID_FIELD_TYPE );
-        _w( 0, "Likely was not passed sufficient information to ",
-               "get infromation requested. Making a 'best guess'" );
+        $log->warn( "Trying to build ID clause but cannot discover type information about ",
+               "table ", $item->base_table, ". Making a best guess using field ",
+               "type '$SPOPS::DBI::GUESS_ID_FIELD_TYPE'" );
     }
     my $use_id_field = ( $opt eq 'noqualify' )
                          ? $id_field
@@ -238,11 +233,12 @@ sub format_select {
 
 sub fetch {
     my ( $class, $id, $p ) = @_;
-    $p->{DEBUG} ||= DEBUG_FETCH;
-    $p->{DEBUG} && _wm( 2, $p->{DEBUG}, "Trying to fetch an item of $class with ID $id and params ",
-                           join " // ",
-                                map { $_ . ' -> ' . ( defined( $p->{$_} ) ? $p->{$_} : '' ) }
-                                    keys %{ $p } );
+    $p ||= {};
+
+    $log->is_debug &&
+        $log->debug( "Trying to fetch an item of $class with ID $id and params ",
+                     join( " // ", map { sprintf( "%s -> %s", $_, defined $p->{$_} ? $p->{$_} : '' )  }
+                                        grep { defined $_ } keys %{ $p } ) );
 
     # No ID, no object
 
@@ -253,7 +249,6 @@ sub fetch {
     my $level = $p->{security_level};
     unless ( $p->{skip_security} ) {
         $level ||= $class->check_action_security({ id       => $id,
-                                                   DEBUG    => $p->{DEBUG},
                                                    required => SEC_LEVEL_READ });
     }
 
@@ -277,17 +272,19 @@ sub fetch {
 
     unless ( ref $obj eq $class ) {
         my ( $raw_fields, $select_fields ) = $class->_fetch_select_fields( $p );
-        $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "SELECTing: ", join( "//", @{ $select_fields } ) );
+        $log->is_info &&
+            $log->info( "SELECTing: ", join( "//", @{ $select_fields } ) );
 
         # Put all the arguments into a hash (so we can reuse them simply
         # later) and grab the record
 
-        my %args = ( from   => [ $class->table_name ],
-                     select => $select_fields,
-                     where  => $class->id_clause( $id, undef, $p ),
-                     db     => $p->{db},
-                     return => 'single',
-                     DEBUG  => $p->{DEBUG} );
+        my %args = (
+            from   => [ $class->table_name ],
+            select => $select_fields,
+            where  => $class->id_clause( $id, undef, $p ),
+            db     => $p->{db},
+            return => 'single',
+        );
         my $row = eval { $class->db_select( \%args ) };
         if ( $@ ) {
             $class->fail_fetch( \%args );
@@ -315,8 +312,8 @@ sub fetch {
 
 sub fetch_iterator {
     my ( $class, $p ) = @_;
-    $p->{DEBUG} ||= DEBUG_FETCH;
-    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Trying to create an Iterator with: ", Dumper( $p ) );
+    $log->is_info &&
+        $log->info( "Trying to create an Iterator with: ", Dumper( $p ) );
     ( $p->{fields}, $p->{select} ) = $class->_construct_group_select( $p );
     $p->{class}                    = $class;
     ( $p->{offset}, $p->{max} )    = SPOPS::Utility->determine_limit( $p->{limit} );
@@ -331,7 +328,6 @@ sub fetch_iterator {
 
 sub fetch_group {
     my ( $class, $p ) = @_;
-    $p->{DEBUG} ||= DEBUG_FETCH;
     ( $p->{raw_fields}, $p->{select} ) = $class->_construct_group_select( $p );
     my $sth              = $class->_execute_multiple_record_query( $p );
     my ( $offset, $max ) = SPOPS::Utility->determine_limit( $p->{limit} );
@@ -353,7 +349,8 @@ ROW:
             $sec_level = eval { $obj->check_action_security({
                                           required => SEC_LEVEL_READ }) };
             if ( $@ ) {
-                $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Security check for object in ",
+                $log->is_info &&
+                    $log->info( "Security check for object in ",
                                           "fetch_group() failed, skipping." );
                 next ROW;
             }
@@ -424,7 +421,7 @@ sub fetch_count {
         };
         $row_count = $row_count_rec->[0];
         if ( $@ ) {
-            _w( 0, "Caught error running SELECT COUNT(*): $@" );
+            $log->warn( "Caught error running SELECT COUNT(*): $@" );
         }
     }
     else {
@@ -446,9 +443,13 @@ sub fetch_count {
 sub _execute_multiple_record_query {
     my ( $class, $p ) = @_;
     $p->{from}   ||= [ $class->table_name ];
+    my %from = map { lc $_ => 1 } @{ $p->{from} };
+    unless ( $from{ $class->table_name } ) {
+        $from{ $class->table_name }++;
+    }
+    $p->{from}     = [ keys %from ];
     $p->{select} ||= $class->_fetch_select_fields( $p );
     $p->{return}   = 'sth';
-    $p->{DEBUG}  ||= DEBUG_FETCH;
     $p->{db}     ||= $class->global_datasource_handle( $p->{connect_key} );
 
     # We return a DBI statement handle here so we can scroll through the
@@ -470,7 +471,8 @@ sub _fetch_select_fields {
     # filled with all the fields below.
 
     if ( ! $field_list and $p->{column_group} ) {
-        DEBUG() && _w( 1, "Trying to retrieve fields for column group ($p->{column_group})" );
+        $log->is_info &&
+            $log->info( "Trying to retrieve fields for column group ($p->{column_group})" );
         if ( $p->{column_group} eq '_id_field' ) {
             $field_list = [ scalar $class->id_field ];
         }
@@ -482,7 +484,8 @@ sub _fetch_select_fields {
                 $field_list = [ keys %field_hash ];
             }
         }
-        DEBUG() && _w( 2, "Found field list from column group: ", Dumper( $field_list ) );
+        $log->is_debug &&
+            $log->debug( "Found field list from column group: ", Dumper( $field_list ) );
     }
 
     # If the fields weren't passed in and we're not using a column
@@ -510,11 +513,14 @@ sub _fetch_select_fields {
 
 sub _fetch_assign_row {
     my ( $self, $fields, $row, $p ) = @_;
-    $p->{DEBUG} ||= DEBUG_FETCH;
-    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Setting data from row into", ref $self );
+    $log->is_info &&
+        $log->info( "Setting data from row into", ref $self );
     $self->clear_all_loaded();
     foreach my $i ( 0 .. ( scalar @{ $row } - 1 ) ) {
-        $p->{DEBUG} && _wm( 1, $p->{DEBUG}, sprintf( " %-20s --> %s", $fields->[ $i ], substr( $row->[ $i ], 0, 10 ) ) );
+        $log->is_info &&
+            $log->info( sprintf( " %-20s --> %s",
+                                 $fields->[ $i ],
+                                 ( defined $row->[ $i ] ) ? substr( $row->[ $i ], 0, 10 ) : '' ) );
         $self->{ $fields->[ $i ] } = $row->[ $i ];
         $self->set_loaded( $fields->[ $i ] );
     }
@@ -548,7 +554,8 @@ sub _fetch_post_process {
     # we retrieve a cached copy or not
 
     $self->{tmp_security_level} = $level;
-    $p->{DEBUG} && _wm( 1, $p->{DEBUG},
+    $log->is_info &&
+        $log->info( 
                     ref $self, "(", $self->id, ") : cache set (if available),",
                     "post_fetch_action() done, change flag cleared and save ",
                     "flag set. Security: $level" );
@@ -579,10 +586,12 @@ sub perform_lazy_load {
     }
     my $use_field = $class->filter_fields( [ $field ] );
     if ( scalar @{ $use_field } == 0 || ! $use_field->[0] ) {
-        DEBUG && _w( 0, "Cannot lazy load field [$field] -- it begins ",
+        $log->warn( "Cannot lazy load field [$field] -- it begins ",
                         "with a '_' character and is therefore private" );
+        return undef;
     }
-    DEBUG() && _w( 3, "Performing lazy load for $class -> $use_field->[0]" );
+    $log->is_debug &&
+        $log->debug( "Performing lazy load for $class -> $use_field->[0]" );
 
     my $id_field = $class->id_field;
     my $id = $data->{ $id_field } || $data->{ lc $id_field };
@@ -601,8 +610,7 @@ sub perform_lazy_load {
     my %args = ( from   => [ $class->table_name ],
                  select => [ $use_field->[0] ],
                  where  => $class->id_clause( $id ),
-                 return => 'single',
-                 DEBUG  => DEBUG );
+                 return => 'single' );
     my $row = $class->db_select( \%args );
     return $row->[0];
 }
@@ -621,7 +629,6 @@ sub refetch {
 	$p->{select}	= $actual_fields;
 	$p->{where}		= $self->id_clause( undef, undef, $p );
 	$p->{return}	= 'single';
-	$p->{DEBUG}		||= DEBUG_FETCH;
 	$p->{db}		||= $self->global_datasource_handle( $p->{connect_key} );
 
 	my $row = $self->db_select( $p );
@@ -639,8 +646,8 @@ sub refetch {
 
 sub save {
     my ( $self, $p ) = @_;
-    $p->{DEBUG} ||= DEBUG_SAVE;
-    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Trying to save a (", ref $self, ")" );
+    $log->is_info &&
+        $log->info( "Trying to save a (", ref $self, ")" );
 
     # We can force save() to be an INSERT by passing in a true value
     # for the is_add parameter; otherwise, we rely on the flag within
@@ -652,7 +659,8 @@ sub save {
     # anything.
 
     unless ( $is_add or $self->changed ) {
-        $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "This object exists and has not changed. Exiting." );
+        $log->is_info &&
+            $log->info( "This object exists and has not changed. Exiting." );
         return $self;
     }
 
@@ -664,7 +672,8 @@ sub save {
         $level = $self->check_action_security({ required => SEC_LEVEL_WRITE,
                                                 is_add   => $is_add });
     }
-    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Security check passed ok. Continuing." );
+    $log->is_info &&
+        $log->info( "Security check passed ok. Continuing." );
 
     # Callback for objects to do something before they're saved
 
@@ -756,23 +765,26 @@ sub post_fetch_id { return undef }
 sub _save_insert {
     my ( $self, $p, $not_inserted ) = @_;
     $p ||= {};
-    $p->{DEBUG} ||= DEBUG_SAVE;
-    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Treating the save as an INSERT ",
+    $log->is_info &&
+        $log->info( "Treating the save as an INSERT ",
                         "with fields [", join( ', ', @{ $p->{field} } ), "]" );
 
     my $db = $p->{db} || $self->global_datasource_handle( $p->{connect_key} );
 
-    # Ability to get the ID you want before the insert statement
-    # is executed. If something is returned, push the value
-    # plus the ID field onto the appropriate stack.
+    # Ability to get the ID you want before the insert statement is
+    # executed. If something is returned, push the value plus the ID
+    # field onto the appropriate stack; if ID is already defined in
+    # the object use that in preference to the fetched value
 
     my ( $pre_id, $do_quote ) = $self->pre_fetch_id( { %{ $p }, db => $db } );
     if ( $pre_id ) {
-        $self->id( $pre_id );
+        my $use_id = $self->id || $pre_id;
+        $self->id( $use_id );
         push @{ $p->{field} }, $self->id_field;
         push @{ $p->{value} }, $self->id;
         $p->{no_quote}{ $self->id_field } = 1 unless ( $do_quote );
-        $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Retrieved ID before insert: $pre_id" );
+        $log->is_info &&
+            $log->info( "Retrieved ID before insert: $pre_id, using object ID $use_id" );
     }
 
     $self->apply_insert_alter( $p );
@@ -791,7 +803,7 @@ sub _save_insert {
                  %{ $p } );
     my $sth = $self->db_insert( \%args );
     if ( $@ ) {
-        _w( 0, "Insert failed! Args: ", Dumper( \%args ), $@ );
+        $log->warn( "Insert failed! Args: ", Dumper( \%args ), $@ );
         $self->fail_save( \%args );
         die $@;
     }
@@ -800,11 +812,15 @@ sub _save_insert {
     # via an overridden subclass method; if something is
     # returned, set the ID in the object.
 
-    my $post_id = $self->post_fetch_id( { %{ $p }, db => $db,
-                                          statement => $sth } );
-    if ( $post_id ) {	
-        $self->id( $post_id );
-        $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "ID fetched after insert: $post_id" );
+    unless ( $self->id ) {
+        my $post_id = $self->post_fetch_id( { %{ $p },
+                                              db => $db,
+                                              statement => $sth } );
+        if ( $post_id ) {	
+            $self->id( $post_id );
+            $log->is_info &&
+                $log->info( "ID fetched after insert: $post_id" );
+        }
     }
 
     # Here we actually re-fetch any new information from the database
@@ -828,24 +844,26 @@ sub _save_insert {
 
         my @fill_in_fields = grep { $_ } sort keys %fill_in_uniq;
         if ( scalar @fill_in_fields ) {
-            $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Fetching defaults for fields ",
+            $log->is_info &&
+                $log->info( "Fetching defaults for fields ",
                               join( ' // ', @fill_in_fields ), " after insert." );
             my $row = eval { $self->db_select({
                                  from   => [ $self->table_name ],
                                  select => \@fill_in_fields,
                                  where  => $self->id_clause( undef, undef, $p ),
                                  db     => $p->{db},
-                                 return => 'single',
-                                 DEBUG  => $p->{DEBUG} }) };
+                                 return => 'single' }) };
             # Even though there was an error, we probably want to continue
             # processing... I'm ambivalent about this.
 
             if ( $@ ) {
-                _w( 0, "Cannot refetch row: $@" );
+                $log->warn( "Cannot refetch row: $@" );
             }
             else {
                 for ( my $i = 0; $i < scalar @fill_in_fields; $i++ ) {
-                    $p->{DEBUG} && _wm( 2, $p->{DEBUG}, "Setting $fill_in_fields[$i] to $row->[$i]" );
+                    $log->is_debug &&
+                        $log->debug( "Setting $fill_in_fields[$i] to ",
+                                     ( defined $row->[$i] ) ? $row->[$i] : '' );
                     $self->{ $fill_in_fields[ $i ] } = $row->[ $i ];
                 }
             }
@@ -883,7 +901,8 @@ sub apply_insert_alter {
     for ( my $i = 0; $i < $num_fields; $i++ ) {
         my $field_name = $p->{field}[ $i ];
         next unless ( $insert_alter->{ lc $field_name } );
-        $p->{DEBUG} && _wm( 1, $p->{DEBUG},
+        $log->is_info &&
+            $log->info( 
                                "Setting 'insert_alter' for [$field_name]",
                                "defined as [", $insert_alter->{ lc $field_name }, "]",
                                "with value [$p->{value}[ $i ]]" );
@@ -896,7 +915,6 @@ sub apply_insert_alter {
 
 sub _save_update {
     my ( $self, $p ) = @_;
-    $p->{DEBUG} ||= DEBUG_SAVE;
 
     # If the ID of the object is changing, we still need to be able to
     # refer to the row with its old ID; allow the user to pass in the old
@@ -905,7 +923,8 @@ sub _save_update {
     my $id_clause = ( $p->{use_id} )
                       ? $self->id_clause( $p->{use_id}, undef, $p )
                       : $self->id_clause( undef, undef, $p );
-    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Processing save as UPDATE with ",
+    $log->is_info &&
+        $log->info( "Processing save as UPDATE with ",
                         "clause [$id_clause] and fields [",
                         join( ', ', @{ $p->{field} } ), "]" );
 
@@ -917,7 +936,7 @@ sub _save_update {
                  %{ $p } );
     my $rv =  eval { $self->db_update( \%args ); };
     if ( $@ ) {
-        _w( 0, "Update failed! Args: ", Dumper( \%args ), $@ );
+        $log->warn( "Update failed! Args: ", Dumper( \%args ), $@ );
         $self->fail_save( \%args );
         die $@;
     }
@@ -1003,7 +1022,6 @@ sub field_update {
         push @{ $p->{value} }, $new->{ $_ };
     }
 	$p->{table}		= $item->table_name;
-	$p->{DEBUG}		||= DEBUG_SAVE;
 	$p->{db}		||= $item->global_datasource_handle( $p->{connect_key} );
 
 	my $rv = ( $item->db_update( $p ) != 0 );
@@ -1030,14 +1048,14 @@ sub remove {
     # Don't remove it unless it's been saved already
 
     return undef   unless ( $self->is_saved );
-    $p->{DEBUG} ||= DEBUG;
 
     my $level = SEC_LEVEL_WRITE;
     unless ( $p->{skip_security} ) {
         $level = $self->check_action_security({ required => SEC_LEVEL_WRITE });
     }
 
-    $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Security check passed ok. Continuing." );
+    $log->is_info &&
+        $log->info( "Security check passed ok. Continuing." );
 
     # Allow members to perform an action before getting removed
 
@@ -1051,8 +1069,7 @@ sub remove {
                             table => $self->table_name,
                             where => $where,
                             value => $p->{value},
-                            db    => $p->{db},
-                            DEBUG => $p->{DEBUG} }) };
+                            db    => $p->{db} }) };
 
     if ( $@ ) {
         $self->fail_remove;
@@ -1239,30 +1256,6 @@ B<field_update()>
 
 This method is documented below in L<OBJECT METHODS>, but it has a
 class method aspect to it in addition to the object method.
-
-=head2 Debugging Methods
-
-Note: we may scrap these in the future and simply use the global
-C<DEBUG> value exported from L<SPOPS|SPOPS>.
-
-Debugging levels go from 0 to 5, with 5 being the most verbose. The
-reasons for the different levels are unclear.
-
-B<SET_DEBUG_SAVE( $level )>
-
-Sets the debugging value for saving objects.
-
-B<DEBUG_SAVE>
-
-Returns the current debugging value for saving objects.
-
-B<SET_DEBUG_FETCH( $level )>
-
-Sets the debugging value for fetching objects.
-
-B<DEBUG_FETCH>
-
-Returns the current debugging value for fetching objects.
 
 =head1 DATA ACCESS METHODS
 

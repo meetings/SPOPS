@@ -71,90 +71,81 @@ How to use these:
 
  $ mysql--user=test --password=dingdong test < users_groups_clear.sql
 
- SQLite users can just delete the file 'sqlite_test'.
+ SQLite users can just delete the file 'sqlite_test.db'.
+
+
+Logging:
+
+ Your actions are logged! Since SPOPS now uses Log::Log4perl you can
+ play with this a bit. Modify the file 'log4perl.conf' in this
+ directory and watch 'spops_eg.log' (also in this directory) to see
+ what happens. There's no harm in deleting the log.
 
 
 Schema files:
 
  users_groups_(mysql|pgsql|tsql|oracle).sql
-
      - SQL to create the user, group and linking tables. Three
      separate files for MySQL (mysql), PostgreSQL (pgsql), Oracle
      (oracle), and Transact-SQL-based databases like Sybase ASE,
      Sybase ASA or Microsoft SQL Server (tsql).
 
  users_groups_sqlite.pl
-
      - Script to create the various tables.
 
  users_groups_clear.sql
-
      - SQL to clear out the tables (mysql and tsql)
 
  users_groups_clear_pgsql.sql
-
      - Extra SQL to clear out sequences and tables from PostgreSQL.
 
  users_groups_clear_oracle.sql
-
      - Extra SQL to clear out sequences and tables from Oracle.
 
 Scripts to manipulate the objects:
 
  stock_user_group.pl
-
      - add some sample user/group data
 
  stock_doodads.pl
-
      - add sample objects
 
  fetch_all.pl
-
      - dump a summary of everything
 
  fetch_doodads.pl
-
      - fetch sample objects as two different users, displaying
      different security settings for each
 
  export_doodads.pl
-
      - export the doodads in the database to STDOUT
 
  import_doodads.pl
-
      - import some more doodads
 
 
 Object classes:
 
  My/Common.pm
-
      - common parents for the My::* hierarchy. You'll need to set a
      few values here so the objects know what database they are
      connecting to and how they'll connect.
 
  My/CommonResources.pm
-
      - holds the shared database connection, current user/group. You
      don't need to edit anything here.
 
  My/Doodad.pm
-
      - sample dummy object
 
  My/Group.pm
-
      - sample group object
 
  My/Security.pm
-
      - sample security object
 
  My/User.pm
-
      - sample user object
 
 ========================================
-$Id: README,v 3.1 2003/07/15 12:18:17 lachoy Exp $
+$Id: README,v 3.2 2004/01/10 02:49:58 lachoy Exp $

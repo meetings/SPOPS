@@ -1,11 +1,14 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 3.3 2003/01/02 06:00:24 lachoy Exp $
+# $Id: Utility.pm,v 3.4 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
-use SPOPS qw( DEBUG _w );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 
-$SPOPS::Utility::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Utility::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 
 # initialize limit tracking vars -- the limit passed in can be:
@@ -18,11 +21,13 @@ sub determine_limit {
     if ( $limit =~ /,/ ) {
         my ( $offset, $max ) = split /\s*,\s*/, $limit;
         $max += $offset;
-        DEBUG() && _w( 1, "Limit set: Start $offset to $max" );
+        $log->is_info &&
+            $log->info( "Limit set: Start $offset to $max" );
         return ( $offset, $max );
     }
     else {
-        DEBUG() && _w( 1, "Limit set: Start 0 to $limit" );
+        $log->is_info &&
+            $log->info( "Limit set: Start 0 to $limit" );
         return ( 0, $limit );
     }
 }

@@ -1,12 +1,13 @@
 package SPOPS::Iterator;
 
-# $Id: Iterator.pm,v 3.1 2003/01/02 06:00:25 lachoy Exp $
+# $Id: Iterator.pm,v 3.3 2004/02/26 01:05:43 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
-use SPOPS qw( DEBUG _w );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 
-$SPOPS::Iterator::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Iterator::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Iterator::EXPORT_OK = qw( ITER_IS_DONE ITER_FINISHED );
 
 use constant ITER_POSITION      => '_position';
@@ -14,6 +15,8 @@ use constant ITER_NEXT_POSITION => '_count';
 use constant ITER_NEXT_VALUE    => '_current';
 use constant ITER_IS_DONE       => 'DONE';
 use constant ITER_FINISHED      => 'FINISHED';
+
+my $log = get_logger();
 
 sub has_next { return defined $_[0]->{ ITER_NEXT_VALUE() }; }
 
@@ -28,11 +31,13 @@ sub is_done  { return ! defined $_[0]->{ ITER_NEXT_VALUE() }; }
 
 sub get_next {
     my ( $self ) = @_;
-    DEBUG() && _w( 1, "Calling", ref $self, "get_next()" );
+    $log->is_info &&
+        $log->info( "Calling", ref $self, "get_next()" );
     my $obj = $self->{ ITER_NEXT_VALUE() };
     $self->{ ITER_POSITION() } = $self->{ ITER_NEXT_POSITION() };
     if ( defined $obj ) {
-        DEBUG && _w( 1, "Object retrieved from holding. Trying to load_next()" );
+        $log->is_info &&
+            $log->info( "Object retrieved from holding. Trying to load_next()" );
         $self->load_next;
     }
     return $obj;
@@ -41,7 +46,8 @@ sub get_next {
 
 sub get_all {
     my ( $self ) = @_;
-    DEBUG() && _w( 1, "Retrieving remainder of objects with get_all()" );
+    $log->is_info &&
+        $log->info( "Retrieving remainder of objects with get_all()" );
     my @object_list = ();
     while ( my $object = $self->get_next ) {
         push @object_list, $object;
@@ -52,7 +58,8 @@ sub get_all {
 
 sub discard {
     my ( $self ) = @_;
-    DEBUG() && _w( 1, "Discarding remainder of values at $self->{ ITER_POSITION() }" );
+    $log->is_info &&
+        $log->info( "Discarding remainder of values at $self->{ ITER_POSITION() }" );
     $self->{ ITER_NEXT_VALUE() }    = undef;
     $self->{ ITER_NEXT_POSITION() } = undef;
     $self->finish;
@@ -62,7 +69,8 @@ sub discard {
 sub new {
     my ( $pkg, $params ) = @_;
     my $class = ref $pkg || $pkg;
-    DEBUG() && _w( 1, "Trying to create a new iterator of class ($class)" );
+    $log->is_info &&
+        $log->info( "Trying to create a new iterator of class ($class)" );
     my $self = bless( { ITER_POSITION()       => 0,
                         ITER_NEXT_POSITION()  => 0,
                         ITER_NEXT_VALUE()     => undef }, $class );
@@ -80,7 +88,8 @@ sub new {
 
 sub initialize   { 
     my ( $self ) = @_;
-    DEBUG() && _w( 1, "Calling initialize() in parent class, which is likely a bad thing. ",
+    $log->is_info &&
+        $log->info( "Calling initialize() in parent class, which is likely a bad thing. ",
                       "Implementation (", ref $self, ") should override" );
     return 1;
 }
@@ -88,7 +97,8 @@ sub initialize   {
 
 sub fetch_object { 
     my ( $self ) = @_;
-    DEBUG() && _w( 1, "Calling fetch_object() in parent class, which is a bad thing. ",
+    $log->is_info &&
+        $log->info( "Calling fetch_object() in parent class, which is a bad thing. ",
                       "Implementation (", ref $self, ") should override" );
     return undef;
 }
@@ -97,14 +107,16 @@ sub fetch_object {
 sub load_next {
     my ( $self ) = @_;
     my @next_info = $self->fetch_object;
-    if ( $next_info[0] eq ITER_IS_DONE ) {
-        DEBUG() && _w( 1, "load_next() got ITER_IS_DONE; cleaning up" );
+    if ( ! defined $next_info[0] || $next_info[0] eq ITER_IS_DONE ) {
+        $log->is_info &&
+            $log->info( "load_next() got ITER_IS_DONE; cleaning up" );
         $self->finish;
         $self->{ ITER_NEXT_VALUE() }    = undef;
         $self->{ ITER_NEXT_POSITION() } = undef;
     }
     else {
-        DEBUG() && _w( 1, "load_next() retrieved a new object and put into holding." );
+        $log->is_info &&
+            $log->info( "load_next() retrieved a new object and put into holding." );
         $self->{ ITER_NEXT_VALUE() }    = $next_info[0];
         $self->{ ITER_NEXT_POSITION() } = $next_info[1];
     }
@@ -113,7 +125,8 @@ sub load_next {
 
 sub finish { 
     my ( $self ) = @_;
-    DEBUG() && _w( 1, "Calling finish() in parent class. This is ok." );
+    $log->is_info &&
+        $log->info( "Calling finish() in parent class. This is ok." );
     return $self->{ ITER_FINISHED() } = 1;
 }
 

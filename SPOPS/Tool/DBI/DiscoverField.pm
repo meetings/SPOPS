@@ -1,16 +1,20 @@
 package SPOPS::Tool::DBI::DiscoverField;
 
-# $Id: DiscoverField.pm,v 3.3 2003/05/10 19:23:07 lachoy Exp $
+# $Id: DiscoverField.pm,v 3.5 2004/03/12 14:38:23 lachoy Exp $
 
 use strict;
-use SPOPS               qw( DEBUG _w );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
 
-$SPOPS::Tool::DBI::DiscoverField::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Tool::DBI::DiscoverField::VERSION = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
-    DEBUG() && _w( 1, "Installing field discovery for ($class)" );
+    $log->is_info &&
+        $log->info( "Installing field discovery for ($class)" );
     return { manipulate_configuration => \&discover_fields };
 }
 
@@ -35,8 +39,10 @@ sub discover_fields {
         $CONFIG->{field} = undef;
         return ( NOTIFY, "Cannot discover fields: $@" );
     }
-    $CONFIG->{field} = [ map { lc $_ } @{ $sth->{NAME} } ];
-    DEBUG() && _w( 1, "Table: ($CONFIG->{base_table}); ",
+    $CONFIG->{field}     = [ map { lc $_ } @{ $sth->{NAME} } ];
+    $CONFIG->{field_raw} = [ @{ $sth->{NAME} } ];
+    $log->is_info &&
+        $log->info( "Table: ($CONFIG->{base_table}); ",
 			          "Fields: (", join( ', ', @{ $CONFIG->{field} } ), ")" );
     return ( OK, undef );
 }

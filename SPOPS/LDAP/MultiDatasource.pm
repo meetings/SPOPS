@@ -1,16 +1,19 @@
 package SPOPS::LDAP::MultiDatasource;
 
-# $Id: MultiDatasource.pm,v 3.1 2003/01/02 06:00:22 lachoy Exp $
+# $Id: MultiDatasource.pm,v 3.2 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::LDAP );
+use Log::Log4perl qw( get_logger );
 
-use SPOPS qw( DEBUG _w );
+use SPOPS;
 use SPOPS::Exception::LDAP;
 
-$SPOPS::LDAP::MultiDatasource::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::LDAP::MultiDatasource::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEFAULT_CONNECT_KEY => 'main';
+
+my $log = get_logger();
 
 sub base_dn  {
     my ( $class, $connect_key ) = @_;
@@ -56,7 +59,8 @@ sub fetch {
     # in turn
 
     foreach my $ds ( @ds_list ) {
-        DEBUG && _w( 1, "(fetch) Trying to use datasource ($ds) for class ($class)" );
+        $log->is_info &&
+            $log->info( "(fetch) Trying to use datasource ($ds) for class ($class)" );
         $p->{connect_key} = $ds;
         my $object = eval { $class->SUPER::fetch( $id, $p ) };
         if ( $object ) {
@@ -79,7 +83,8 @@ sub fetch_by_dn {
     # in turn
 
     foreach my $ds ( @ds_list ) {
-        DEBUG && _w( 1, "(fetch_by_dn) Trying to use datasource ($ds) for class ($class)" );
+        $log->is_info &&
+            $log->info( "(fetch_by_dn) Trying to use datasource ($ds) for class ($class)" );
         $p->{connect_key} = $ds;
         my $object = eval { $class->SUPER::fetch_by_dn( $dn, $p ) };
         if ( $object ) {
@@ -99,7 +104,8 @@ sub fetch_group_all {
     my @all_objects = ();
     foreach my $ds ( @ds_list ) {
         $p->{connect_key} = $ds;
-        DEBUG && _w( 1, "Trying to fetch from datasource ($ds)" );
+        $log->is_info &&
+            $log->info( "Trying to fetch from datasource ($ds)" );
         my $object_list = $class->SUPER::fetch_group( $p );
         if ( $object_list and ref $object_list eq 'ARRAY' ) {
             foreach my $object ( @{ $object_list } ) {
@@ -143,7 +149,8 @@ sub _get_datasource_list {
     # call in the first place.
 
     unless ( ref $ds_list eq 'ARRAY' and scalar @{ $ds_list } ) {
-        DEBUG && _w( 1, "No datasources in configuration for ($class).",
+        $log->is_info &&
+            $log->info( "No datasources in configuration for ($class).",
                         "Using SPOPS::LDAP->$method()" );
         my $full_method = "SUPER::$method";
         return $class->$full_method( @args );

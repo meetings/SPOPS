@@ -2,14 +2,16 @@
 
 use strict;
 use DBI;
+use Log::Log4perl;
+Log::Log4perl::init( 'log4perl.conf' );
 
-my $DB_FILE = 'sqlite_test';
+my $DB_FILE = 'sqlite_test.db';
 if ( -f $DB_FILE ) {
     warn "Removing old database file...\n";
     unlink( $DB_FILE );
 }
 
-my $dbh = DBI->connect( "DBI:SQLite:$DB_FILE",
+my $dbh = DBI->connect( "DBI:SQLite:dbname=$DB_FILE",
                         '', '', { AutoCommit => 1 } )
                     || die "Cannot connect: $DBI::errstr";
 $dbh->{RaiseError} = 1;

@@ -1,9 +1,12 @@
 #!/usr/bin/perl
 
-# $Id: datasource_configure_ldap.pl,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: datasource_configure_ldap.pl,v 3.1 2004/01/10 02:49:58 lachoy Exp $
 
 use strict;
 use Data::Dumper qw( Dumper );
+use Log::Log4perl;
+Log::Log4perl::init( 'log4perl.conf' );
+
 use SPOPS::Initialize;
 
 # Assumes you have user entries in $LDAP_BASE_DN

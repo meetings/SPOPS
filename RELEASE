@@ -1,6 +1,22 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.81  Mon Mar 15 08:13:46 EST 2004
+
+ * Use Log::Log4perl for logging/debugging
+
+ * A number of small bugfixes and enhancements
+
+
+0.80  Sat Nov 29 13:17:17 EST 2003
+
+ * Add auto-generated mutators
+
+ * Customize 'links_to' generation for DBI classes
+
+ * Small bugfixes and enhancements
+
+
 0.79  Sun Sep  7 22:45:07 EDT 2003
 
  * Number of small fixes
@@ -237,4 +253,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 3.14 2003/09/08 01:59:53 lachoy Exp $
+$Id: RELEASE,v 3.16 2004/03/15 13:05:44 lachoy Exp $

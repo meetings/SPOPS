@@ -1,17 +1,11 @@
 package SPOPS::DBI::Oracle;
 
-# $Id: Oracle.pm,v 3.3 2003/08/12 03:40:40 lachoy Exp $
+# $Id: Oracle.pm,v 3.4 2004/01/06 21:25:55 lachoy Exp $
 
 use strict;
 use SPOPS::Utility;
 
-$SPOPS::DBI::Oracle::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
-
-sub sql_quote {
-    my ( $class, $value, $type, $db ) = @_;
-    $db ||= $class->global_datasource_handle;
-    return $db->quote( $value, $type );
-}
+$SPOPS::DBI::Oracle::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return SPOPS::Utility->now() }
 

@@ -1,14 +1,17 @@
 package SPOPS::Iterator::WrapList;
 
-# $Id: WrapList.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
+# $Id: WrapList.pm,v 3.3 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Iterator );
+use Log::Log4perl qw( get_logger );
 
-use SPOPS           qw( DEBUG _w );
+use SPOPS;
 use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 
-$SPOPS::Iterator::WrapList::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Iterator::WrapList::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 sub initialize {
     my ( $self, $p ) = @_;

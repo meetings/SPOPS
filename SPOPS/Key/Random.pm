@@ -1,14 +1,17 @@
 package SPOPS::Key::Random;
 
-# $Id: Random.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
+# $Id: Random.pm,v 3.3 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
-use SPOPS  qw( _w DEBUG );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 use SPOPS::Utility;
 
-$SPOPS::Key::Random::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Key::Random::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEFAULT_ID_WIDTH => 8;
+
+my $log = get_logger();
 
 sub pre_fetch_id  {
     my ( $class, $p ) = @_;
@@ -21,7 +24,7 @@ sub pre_fetch_id  {
         $width ||= DEFAULT_ID_WIDTH;
     }
     my $code =  SPOPS::Utility->generate_random_code( $width );
-    DEBUG() && _w( 0, "Created insert ID [$code]" );
+    $log->warn( "Created insert ID [$code]" );
     return ( $code, 1 );
 }
 

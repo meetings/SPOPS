@@ -1,16 +1,17 @@
 package SPOPS::ClassFactory;
 
-# $Id: ClassFactory.pm,v 3.4 2003/06/09 03:21:37 lachoy Exp $
+# $Id: ClassFactory.pm,v 3.5 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
+use Log::Log4perl qw( get_logger );
 
 use Class::ISA;
 use Data::Dumper  qw( Dumper );
-use SPOPS         qw( _w DEBUG );
+use SPOPS;
 use SPOPS::Exception;
 
-$SPOPS::ClassFactory::VERSION   = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::VERSION   = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::ClassFactory::EXPORT_OK = qw( OK DONE NOTIFY ERROR RESTART
                                       FACTORY_METHOD RULESET_METHOD );
 
@@ -21,6 +22,8 @@ use constant ERROR          => 'ERROR';
 use constant RESTART        => 'RESTART';
 use constant FACTORY_METHOD => 'behavior_factory';
 use constant RULESET_METHOD => 'ruleset_factory';
+
+my $log = get_logger();
 
 my %REQ_CLASSES = ();
 
@@ -152,7 +155,8 @@ sub create_stub {
     my ( $class, $config ) = @_;
 
     my $this_class = $config->{class};
-    DEBUG() && _w( 2, "Creating stub ($this_class) with main alias ($config->{main_alias})");
+    $log->is_debug &&
+        $log->debug( "Creating stub ($this_class) with main alias ($config->{main_alias})");
 
     # Create the barest information forming the class; just substitute our
     # keywords (currently only the class name) for the items in the
@@ -163,7 +167,8 @@ sub create_stub {
     my $isa_listing = join( ' ', @{ $config->{isa} } );
     $module        =~ s/%%ISA%%/$isa_listing/g;
 
-    DEBUG() && _w( 5, "Trying to create class with the code:\n$module\n" );
+    $log->is_debug &&
+        $log->debug( "Trying to create class with the code:\n$module\n" );
 
     # Capture 'warn' calls that get triggered as a result of warnings,
     # redefined subroutines or whatnot; these get dumped to STDERR and
@@ -198,7 +203,8 @@ sub require_config_classes {
             return ( ERROR, "Error requiring class [$req_class] from ISA " .
                             "or 'rules_from' in [$this_class]: $@" );
         }
-        DEBUG() && _w( 3, "Class [$req_class] require'd by [$this_class] ok." );
+        $log->is_debug &&
+            $log->debug( "Class [$req_class] require'd by [$this_class] ok." );
         $REQ_CLASSES{ $req_class }++;
     }
     return ( OK, undef );
@@ -215,8 +221,10 @@ sub require_config_classes {
 
 sub install_configuration {
     my ( $class, $this_class, $config ) = @_;
-    DEBUG() && _w( 1, "Installing configuration to class ($this_class)" );
-    DEBUG() && _w( 4, "Config ($this_class)\n", Dumper( $config ) );
+    $log->is_info &&
+        $log->info( "Installing configuration to class ($this_class)" );
+    $log->is_debug &&
+        $log->debug( "Config ($this_class)\n", Dumper( $config ) );
     my $class_config = $this_class->CONFIG;
     while ( my ( $k, $v ) = each %{ $config } ) {
         $class_config->{ $k } = $v;
@@ -253,12 +261,14 @@ sub find_behavior {
         # the class config.
 
         my $behaviors = $behavior_gen_sub->( $this_class ) || {};
-        DEBUG() && _w( 2, "Behaviors returned for ($this_class): ",
+        $log->is_debug &&
+            $log->debug( "Behaviors returned for ($this_class): ",
                           join( ', ', keys %{ $behaviors } ) );
         foreach my $slot_name ( keys %{ $behaviors } ) {
             my $typeof = ref $behaviors->{ $slot_name };
             next unless ( $typeof eq 'CODE' or $typeof eq 'ARRAY' );
-            DEBUG() && _w( 2, "Adding slot behaviors for ($slot_name)" );
+            $log->is_debug &&
+                $log->debug( "Adding slot behaviors for ($slot_name)" );
             if ( $typeof eq 'CODE' ) {
                 push @{ $this_config->{ $PK }{behavior_table}{ $slot_name } },
                             $behaviors->{ $slot_name };
@@ -295,7 +305,8 @@ METHOD:
             if ( defined( $src->{ $method } ) and
                  defined( my $sub = *{ $src->{ $method } }{CODE} ) ) {
                 push @subs, [ $check_class, $sub ];
-                DEBUG() && _w( 2, "($this_class): Found ($method) in class ($check_class)" );
+                $log->is_debug &&
+                    $log->debug( "($this_class): Found ($method) in class ($check_class)" );
                 last METHOD;
             }
         }
@@ -322,7 +333,8 @@ sub exec_behavior {
     return 1 unless ( ref $behavior_list eq 'ARRAY' );
     my $num_behaviors = scalar @{ $behavior_list };
     return 1 unless ( $num_behaviors > 0 );
-    DEBUG() && _w( 2, "# behaviors in ($this_class)($slot_name): $num_behaviors" );
+    $log->is_debug &&
+        $log->debug( "# behaviors in ($this_class)($slot_name): $num_behaviors" );
 
     # Cycle through the behaviors for this slot. Note that they are
     # currently unordered -- that is, the order shouldn't
@@ -331,21 +343,24 @@ sub exec_behavior {
 BEHAVIOR:
     foreach my $behavior ( @{ $behavior_list } ) {
 
-        DEBUG() && _w( 2, "Running behavior for slot ($slot_name) and class ($this_class)" );
+        $log->is_debug &&
+            $log->debug( "Running behavior for slot ($slot_name) and class ($this_class)" );
 
         # If this behavior has already been run, then skip it. This
         # becomes relevant when we get a RESTART status from one of
         # the behaviors (below)
 
         if ( $this_config->{ $PK }{behavior_run}{ $behavior } ) {
-            DEBUG() && _w( 2, "Skipping behavior, already run." );
+            $log->is_debug &&
+                $log->debug( "Skipping behavior, already run." );
             next BEHAVIOR;
         }
         # Every behavior should return a two-element list with the
         # status and (potentially empty) message
 
         my ( $status, $msg ) = $behavior->( $this_class );
-        DEBUG() && _w( 1, "Status returned from behavior: ($status)" );
+        $log->is_info &&
+            $log->info( "Status returned from behavior: ($status)" );
 
         if ( $status eq ERROR ) {
             SPOPS::Exception->throw( "Cannot run behavior in [$slot_name] [$this_class]: $msg" );
@@ -388,7 +403,8 @@ BEHAVIOR:
                                                      $new_behavior_map,
                                                      $this_config->{ $PK }{behavior_map} );
             next BEHAVIOR if ( $behaviors_same );
-            DEBUG() && _w( 2, "Behaviors changed after receiving RESTART; re-running",
+            $log->is_debug &&
+                $log->debug( "Behaviors changed after receiving RESTART; re-running",
                               "from slot ($SLOTS[0]) to ($slot_name)" );
             $this_config->{ $PK }{behavior_map} = $new_behavior_map;
             for ( my $i = 0; $i <= $SLOT_NUM{ $slot_name }; $i++ ) {
@@ -407,7 +423,8 @@ sub sync_isa {
     my $config_isa = $this_class->CONFIG->{isa};
     no strict 'refs';
     @{ $this_class . '::ISA' } = @{ $config_isa };
-    DEBUG && _w( 2, "ISA for ($this_class) synched, now: ", join( ', ', @{ $config_isa } ) );
+    $log->is_debug &&
+        $log->debug( "ISA for ($this_class) synched, now: ", join( ', ', @{ $config_isa } ) );
     my ( $status, $msg ) = $class->require_config_classes( $this_class->CONFIG );
     if ( $status eq ERROR ) { SPOPS::Exception->throw( $msg ) }
     return 1;

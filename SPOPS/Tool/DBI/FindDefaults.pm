@@ -1,16 +1,20 @@
 package SPOPS::Tool::DBI::FindDefaults;
 
-# $Id: FindDefaults.pm,v 3.1 2003/01/02 06:00:21 lachoy Exp $
+# $Id: FindDefaults.pm,v 3.2 2004/01/10 02:21:39 lachoy Exp $
 
 use strict;
-use SPOPS               qw( DEBUG _w );
+use Log::Log4perl qw( get_logger );
+use SPOPS;
 use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
 
-$SPOPS::Tool::DBI::FindDefaults::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::Tool::DBI::FindDefaults::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
-    DEBUG() && _w( 1, "Installing default discovery for ($class)" );
+    $log->is_info &&
+        $log->info( "Installing default discovery for ($class)" );
     return { manipulate_configuration => \&find_defaults };
 }
 

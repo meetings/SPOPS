@@ -1,15 +1,18 @@
 package SPOPS::DBI::SQLite;
 
-# $Id: SQLite.pm,v 3.3 2003/01/02 06:00:23 lachoy Exp $
+# $Id: SQLite.pm,v 3.4 2004/01/10 02:21:40 lachoy Exp $
 
 use strict;
+use Log::Log4perl qw( get_logger );
 
 use DBI qw( SQL_VARCHAR );
-use SPOPS  qw( _w DEBUG );
+use SPOPS;
 use SPOPS::DBI::TypeInfo;
 use SPOPS::Utility;
 
-$SPOPS::DBI::SQLite::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
+
+$SPOPS::DBI::SQLite::VERSION = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return SPOPS::Utility->now }
 

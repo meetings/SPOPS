@@ -1,26 +1,18 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 3.5 2003/09/08 01:58:39 lachoy Exp $
+# $Id: SQLInterface.pm,v 3.10 2004/02/26 01:04:59 lachoy Exp $
 
 use strict;
 use Data::Dumper          qw( Dumper );
 use DBI;
-use SPOPS                 qw( _w _wm DEBUG );
+use Log::Log4perl         qw( get_logger );
 use SPOPS::DBI::TypeInfo;
 use SPOPS::Exception      qw( spops_error );
 use SPOPS::Exception::DBI qw( spops_dbi_error );
 
-$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+my $log = get_logger();
 
-my ( $DEBUG_SELECT, $DEBUG_INSERT, $DEBUG_UPDATE, $DEBUG_DELETE );
-sub DEBUG_SELECT     { return $DEBUG_SELECT }
-sub SET_DEBUG_SELECT { $DEBUG_SELECT = $_[1] }
-sub DEBUG_UPDATE     { return $DEBUG_UPDATE }
-sub SET_DEBUG_UPDATE { $DEBUG_UPDATE = $_[1] }
-sub DEBUG_INSERT     { return $DEBUG_INSERT }
-sub SET_DEBUG_INSERT { $DEBUG_INSERT = $_[1] }
-sub DEBUG_DELETE     { return $DEBUG_DELETE }
-sub SET_DEBUG_DELETE { $DEBUG_DELETE = $_[1] }
+$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.10 $ =~ /(\d+)\.(\d+)/);
 
 my %TYPE_INFO = ();
 
@@ -32,14 +24,21 @@ sub throw_no_database_handle_error {
                 "to return a valid DBI handle.";
 }
 
-# This can get overridden to use the $type of the field to give the
-# database driver a hint as to how to quote it. But some drivers don't
-# suppor this, so we use the default here.
+# Drivers that don't support the two-argument form of DBI->quote
+# should override...
 
 sub sql_quote {
     my ( $class, $value, $type, $db ) = @_;
+    return 'NULL' unless ( defined $value );
     $db ||= $class->global_datasource_handle;
-    return $db->quote( $value );
+    unless ( ref $db ) {
+        spops_error "No database handle could be found!";
+    }
+
+    # This issues a warning when '$type' is unknown; need to figure
+    # out how to set '$type' to a known value
+
+    return $db->quote( $value, $type );
 }
 
 # Note: not sure how to integrate the fieldtype discovery
@@ -66,7 +65,6 @@ sub sql_quote {
 
 sub db_select {
     my ( $class, $p ) = @_;
-    my $DEBUG = DEBUG_SELECT || $p->{DEBUG} || 0;
     my $db    = $p->{db} || $class->global_datasource_handle;
     $class->throw_no_database_handle_error unless ( $db );
 
@@ -77,7 +75,8 @@ sub db_select {
         spops_error 'Cannot run without select/from statements!';
     }
 
-    $DEBUG && _wm( 2, $DEBUG, "Entering db_select with ", Dumper( $p ) );
+    $log->is_debug &&
+        $log->debug( "Entering db_select with ", Dumper( $p ) );
     $p->{return} ||= 'list';
     $p->{value}  ||= [];
     my $sql = $p->{sql};
@@ -85,7 +84,8 @@ sub db_select {
     # If we don't have any SQL, build it (straightforward).
 
     unless ( $sql ) {
-        $DEBUG && _wm( 1, $DEBUG, "No SQL passed in to execute directly; building." );
+        $log->is_info &&
+            $log->info( "No SQL passed in to execute directly; building." );
 
         $p->{from} ||= $p->{table}; # allow an alias
         if ( $p->{from} and ref $p->{from} ne 'ARRAY' ) {
@@ -106,7 +106,8 @@ sub db_select {
             $order
         /;
     }
-    $DEBUG && _wm( 1, $DEBUG, "SQL for select: $sql" );
+    $log->is_info &&
+        $log->info( "SQL for select: $sql" );
 
     # First prepare and check for errors...
 
@@ -118,7 +119,8 @@ sub db_select {
     # Execute with any bound parameters; note that for Sybase you do
     # not need to pass any types at all.
 
-    $DEBUG && _wm( 1, $DEBUG, "Values bound: ", join( '//', @{ $p->{value} } ) );
+    $log->is_info &&
+        $log->info( "Values bound: ", join( '//', @{ $p->{value} } ) );
     eval { $sth->execute( @{ $p->{value} } ) };
     if ( $@ ) {
         spops_dbi_error $@, { sql         => $sql,
@@ -129,7 +131,8 @@ sub db_select {
     # If they asked for the handle back, give it to them
 
     if ( $p->{return} eq 'sth' ) {
-        $DEBUG && _wm( 1, $DEBUG, "Returning statement handle (after prepare/execute)" );
+        $log->is_info &&
+            $log->info( "Returning statement handle (after prepare/execute)" );
         return $sth;
     }
 
@@ -137,7 +140,8 @@ sub db_select {
     # field1, field2, ...]
 
     if ( $p->{return} eq 'single' ) {
-        $DEBUG && _wm( 1, $DEBUG, "Returning single row." );
+        $log->is_info &&
+            $log->info( "Returning single row." );
         my $row =  eval { $sth->fetchrow_arrayref; };
         if ( $@ ) {
             spops_dbi_error $@, { sql         => $sql,
@@ -150,7 +154,8 @@ sub db_select {
     # If they asked for a list of results, return an arrayref of arrayrefs
 
     elsif ( $p->{return} eq 'list' ) {
-        $DEBUG && _wm( 1, $DEBUG, "Returning list of lists." );
+        $log->is_info &&
+            $log->info( "Returning list of lists." );
         my $rows = eval { $sth->fetchall_arrayref; };
         if ( $@ ) {
             spops_dbi_error $@, { sql         => $sql,
@@ -163,7 +168,8 @@ sub db_select {
     # return the first element of each record in an arrayref
 
     elsif ( $p->{return} eq 'single-list' ) {
-        $DEBUG && _wm( 1, $DEBUG, "Returning list of single items." );
+        $log->is_info &&
+            $log->info( "Returning list of single items." );
         my $rows = eval { $sth->fetchall_arrayref };
         if ( $@ ) {
             spops_dbi_error $@, { sql         => $sql,
@@ -176,7 +182,8 @@ sub db_select {
     # If they asked for a hash, return a list of hashrefs
 
     elsif ( $p->{return} eq 'hash' ) {
-        $DEBUG && _wm( 1, $DEBUG, "Returning list of hashrefs." );
+        $log->is_info &&
+            $log->info( "Returning list of hashrefs." );
         my @rows = ();
 
         # Note -- we may need to change this to zip through $row every
@@ -206,11 +213,11 @@ sub db_select {
 
 sub db_insert {
     my ( $class, $p ) = @_;
-    my $DEBUG   = DEBUG_INSERT || $p->{DEBUG} || 0;
     my $db    = $p->{db} || $class->global_datasource_handle;
     $class->throw_no_database_handle_error unless ( $db );
 
-    $DEBUG && _wm( 2, $DEBUG, "Enter insert procedure\n", Dumper( $p ) );
+    $log->is_debug &&
+        $log->debug( "Enter insert procedure\n", Dumper( $p ) );
 
     # If we weren't given direct sql or a list of values or table, bail
 
@@ -240,7 +247,8 @@ sub db_insert {
         $p->{no_quote} ||= {};
         $p->{field}    ||= [];
         $p->{value}    ||= [];
-        $DEBUG && _wm( 2, $DEBUG, "Fields/values: ", Dumper( $p->{field}, $p->{value} ) );
+        $log->is_debug &&
+            $log->debug( "Fields/values: ", Dumper( $p->{field}, $p->{value} ) );
 
         # Cycle through the fields and values, creating lists
         # suitable for join()ing into the SQL statement.
@@ -254,8 +262,10 @@ sub db_insert {
             my $value = ( $p->{no_quote}{ $field } )
                           ? $p->{value}->[ $count ]
                           : $class->sql_quote( $p->{value}->[ $count ],
-                                               $type_info->get_type( $field ), $db );
-            $DEBUG && _wm( 1, $DEBUG, "Trying to add quoted value [$value] ",
+                                               $type_info->get_type( $field ),
+                                               $db );
+            $log->is_info &&
+                $log->info( "Trying to add quoted value [$value] ",
                                       "for field [$field]" );
             push @value_list, $value;
             $count++;
@@ -277,7 +287,8 @@ sub db_insert {
     # if this becomes a performance hang (doubtful), we can only
     # do p/e if the user's asked for the statement handle
 
-    $DEBUG && _wm( 1, $DEBUG, "Preparing\n$sql" );
+    $log->is_info &&
+        $log->info( "Preparing\n$sql" );
     my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
         spops_dbi_error $@, { sql => $sql, action => 'prepare' };
@@ -287,7 +298,8 @@ sub db_insert {
     if ( $@ ) {
         spops_dbi_error $@, { sql => $sql, action => 'execute' };
     }
-    $DEBUG && _wm( 1, $DEBUG, "Prepare/execute went ok." );
+    $log->is_info &&
+        $log->info( "Prepare/execute went ok." );
 
     # Everything is ok; return either a true value
     # or the statement handle, if they've asked for it.
@@ -306,7 +318,6 @@ sub db_insert {
 
 sub db_update {
     my ( $class, $p ) = @_;
-    my $DEBUG   = DEBUG_UPDATE || $p->{DEBUG} || 0;
     my $db    = $p->{db} || $class->global_datasource_handle;
     $class->throw_no_database_handle_error unless ( $db );
 
@@ -339,15 +350,17 @@ sub db_update {
         my $count  = 0;
         $p->{no_quote} ||= {};
         foreach my $field ( @{ $p->{field} } ) {
-            $DEBUG && _wm( 1, $DEBUG, "Trying to add value [$p->{value}[$count]] ",
+            my $rawval = $p->{value}[$count];
+            $log->is_info &&
+                $log->info( "Trying to add value [", defined $rawval ? $rawval : '', "] ",
                                       "with field [$field] and type ",
                                       "[", $type_info->get_type( $field ), "]" );
 
             # Quote the value unless the user asked us not to
 
             my $value = ( $p->{no_quote}{ $field } )
-                          ? $p->{value}[ $count ]
-                          : $class->sql_quote( $p->{value}[ $count ],
+                          ? $rawval
+                          : $class->sql_quote( $rawval,
                                                $type_info->get_type( $field ),
                                                $db );
             push @update, "$field = $value";
@@ -361,7 +374,8 @@ sub db_update {
             $where
         /;
     }
-    $DEBUG && _wm( 1, $DEBUG, "Prepare/execute\n$sql" );
+    $log->is_info &&
+        $log->info( "Prepare/execute\n$sql" );
     my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
         spops_dbi_error $@, { sql => $sql, action => 'prepare' };
@@ -382,7 +396,6 @@ sub db_update {
 
 sub db_delete {
     my ( $class, $p ) = @_;
-    my $DEBUG   = DEBUG_DELETE || $p->{DEBUG} || 0;
     my $db    = $p->{db} || $class->global_datasource_handle;
     $class->throw_no_database_handle_error unless ( $db );
 
@@ -404,7 +417,8 @@ sub db_delete {
         $sql = qq/ DELETE FROM $p->{table} $where /;
     }
 
-    $DEBUG && _wm( 1, $DEBUG, "SQL for DELETE:\n$sql" );
+    $log->is_info &&
+        $log->info( "SQL for DELETE:\n$sql" );
     $p->{value} ||= [];
     my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
@@ -424,7 +438,6 @@ sub db_delete {
 
 sub db_discover_types {
     my ( $class, $table, $p ) = @_;
-    my $DEBUG   = DEBUG || $p->{DEBUG} || 0;
 
     # Create the index used to find the table info later
 
@@ -433,7 +446,8 @@ sub db_discover_types {
 
     my $db_name = eval { $db->{Name} } || eval { $db->{name} };
     my $type_idx = join( '-', lc $db_name , lc $table );
-    $DEBUG && _wm( 2, $DEBUG, "Type index used to discover data types: [$type_idx]" );
+    $log->is_debug &&
+        $log->debug( "Type index used to discover data types: [$type_idx]" );
 
     # If we've already discovered the types, get the cached copy
 
@@ -531,6 +545,18 @@ through a method of the class called 'global_datasource_handle'.
 There are very few methods in this class, but each one can do quite a
 bit.
 
+=head2 sql_quote( $value, $type, $db )
+
+Quotes a value for insertion/update or selection when bound parameters
+are inappropriate or unavailable. Returns 'NULL' if C<$value> is
+undef, otherwise calls C<quote( $value, $type )> on the DBI handle
+C<$db>.
+
+Drivers that do not implement the two-argument form of C<quote()>
+should override this method.
+
+Returns: quoted C<$value> appropriate to use in a SQL statement
+
 =head2 db_select( \%params )
 
 Executes a SELECT. Return value depends on what you ask for. Many of
@@ -575,11 +601,6 @@ but they will get quoted as if they were a SQL_VARCHAR type of value.
 B<return> ($) (optional)
 
 What the method should return. Potential values are:
-
-B<DEBUG> ($) (optional)
-
-Positive values trigger debugging with larger values triggering more
-debugging.
 
 =over 4
 
@@ -713,11 +734,6 @@ B<return_sth> ($) (optional)
 
 If true, return the statement handle rather than a status.
 
-B<DEBUG> ($) (optional)
-
-Positive values trigger debugging with larger values triggering more
-debugging.
-
 B<Examples>:
 
 Perl statement:
@@ -793,11 +809,6 @@ B<no_quote> (\%) (optional)
 
 Specify fields not to quote
 
-B<DEBUG> ($) (optional)
-
-Positive values trigger debugging with larger values triggering more
-debugging.
-
 B<Examples>:
 
 Perl statement:
@@ -844,11 +855,6 @@ B<value> (\@) (optional unless you use '?' placeholders)
 List of values to bind to '?' that may be found either in
 the where clause passed in or in the where clause found
 in the SQL statement.
-
-B<DEBUG> ($) (optional)
-
-Positive values trigger debugging with larger values triggering more
-debugging.
 
 B<Examples>:
 
@@ -919,11 +925,6 @@ Other parameters:
 DBI database handle. (Optional only if you have a
 C<global_datasource_handle()> class method defined.
 
-=item B<DEBUG> ($) (optional)
-
-Positive values trigger debugging with larger values triggering more
-debugging.
-
 =item B<dbi_type_info> (\%) (optional)
 
 If your DBD driver cannot retrieve type information from the database,
@@ -939,46 +940,6 @@ Example:
   foreach my $field ( $type_info->get_fields ) {
       print "$field is DBI type ", $type_info->get_type( $field ), "\n";
   }
-
-=head2 Debugging Methods
-
-Note: we may scrap these in the future and simply use the global
-C<DEBUG> value exported from L<SPOPS|SPOPS>.
-
-Debugging levels go from 0 to 5, with 5 being the most verbose. The
-reasons for the different levels are unclear.
-
-B<SET_DEBUG_SELECT( $level )>
-
-Sets the debugging value for selecting records.
-
-B<DEBUG_SELECT>
-
-Returns the current debugging value for selecting objects.
-
-B<SET_DEBUG_INSERT( $level )>
-
-Sets the debugging value for inserting records.
-
-B<DEBUG_INSERT>
-
-Returns the current debugging value for inserting objects.
-
-B<SET_DEBUG_UPDATE( $level )>
-
-Sets the debugging value for updating records.
-
-B<DEBUG_UPDATE>
-
-Returns the current debugging value for updating objects.
-
-B<SET_DEBUG_DELETE( $level )>
-
-Sets the debugging value for deleting records.
-
-B<DEBUG_DELETE>
-
-Returns the current debugging value for deleting objects.
 
 =head1 ERROR HANDLING
 

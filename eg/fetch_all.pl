@@ -1,10 +1,12 @@
 #!/usr/bin/perl
 
-# $Id: fetch_all.pl,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: fetch_all.pl,v 3.1 2004/01/10 02:49:58 lachoy Exp $
 
 # Fetch all objects in the database
 
 use strict;
+use Log::Log4perl;
+Log::Log4perl::init( 'log4perl.conf' );
 
 require My::Security;
 require My::User;
