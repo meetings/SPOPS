@@ -1,13 +1,13 @@
 package SPOPS::Key::DBI::Identity;
 
-# $Id: Identity.pm,v 1.9 2001/07/08 21:12:02 lachoy Exp $
+# $Id: Identity.pm,v 1.10 2001/08/22 10:51:45 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
 @SPOPS::Key::DBI::Identity::ISA      = ();
-$SPOPS::Key::DBI::Identity::VERSION  = '1.7';
-$SPOPS::Key::DBI::Identity::Revision = substr(q$Revision: 1.9 $, 10);
+$SPOPS::Key::DBI::Identity::VERSION  = '1.8';
+$SPOPS::Key::DBI::Identity::Revision = substr(q$Revision: 1.10 $, 10);
 
 # Ensure only POST_fetch_id used
 

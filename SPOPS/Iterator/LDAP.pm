@@ -1,32 +1,32 @@
-package SPOPS::Iterator::DBI;
+package SPOPS::Iterator::LDAP;
 
-# $Id: DBI.pm,v 1.5 2001/08/22 10:51:45 lachoy Exp $
+# $Id: LDAP.pm,v 1.4 2001/08/28 21:09:54 lachoy Exp $
 
 use strict;
 use SPOPS           qw( _w DEBUG );
 use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 use SPOPS::Secure   qw( :level );
 
-@SPOPS::Iterator::DBI::ISA      = qw( SPOPS::Iterator );
-$SPOPS::Iterator::DBI::VERSION  = '1.8';
-$SPOPS::Iterator::DBI::Revision = substr(q$Revision: 1.5 $, 10);
+@SPOPS::Iterator::LDAP::ISA = qw( SPOPS::Iterator );
+$SPOPS::Iterator::LDAP::VERSION  = '1.8';
+$SPOPS::Iterator::LDAP::Revision = substr(q$Revision: 1.4 $, 10);
 
-# Keys with _DBI at the beginning are specific to this implementation;
-# keys without _DBI at the begining are used in all iterators.
+# Keys with _LDAP at the beginning are specific to this implementation;
+# keys without _LDAP at the begining are used in all iterators.
 
 sub initialize {
     my ( $self, $p ) = @_;
-    $self->{_DBI_STH}       = $p->{sth};
-    $self->{_DBI_OFFSET}    = $p->{offset};
-    $self->{_DBI_MAX}       = $p->{max};
-    $self->{_DBI_ID_LIST}   = $p->{id_list};
-    $self->{_DBI_COUNT}     = 0;
-    $self->{_DBI_RAW_COUNT} = 0;
+    $self->{_LDAP_MSG}       = $p->{ldap_msg};
+    $self->{_LDAP_OFFSET}    = $p->{offset};
+    $self->{_LDAP_MAX}       = $p->{max};
+    $self->{_LDAP_ID_LIST}   = $p->{id_list};
+    $self->{_LDAP_COUNT}     = 0;
+    $self->{_LDAP_RAW_COUNT} = 0;
 }
 
 
 # TODO [fetch_object]: Put the pre_fetch_action in here for when we
-# don't have _DBI_ID_LIST
+# don't have _LDAP_ID_LIST
 
 sub fetch_object {
     my ( $self ) = @_;
@@ -36,11 +36,11 @@ sub fetch_object {
 
     my ( $obj );
     my $object_class = $self->{_CLASS};
-    if ( $self->{_DBI_ID_LIST} ) {
-        my $id = $self->{_DBI_ID_LIST}->[ $self->{_DBI_RAW_COUNT} ];
-        DEBUG() && _w( 1, "Trying to retrieve idx ($self->{_DBI_RAW_COUNT}) with ",
+    if ( $self->{_LDAP_ID_LIST} ) {
+        my $id = $self->{_LDAP_ID_LIST}->[ $self->{_LDAP_RAW_COUNT} ];
+        DEBUG() && _w( 1, "Trying to retrieve idx ($self->{_LDAP_RAW_COUNT}) with ",
                           "ID ($id) from class ($self->{_CLASS}" );
-        $obj = eval { $object_class->fetch( $id, 
+        $obj = eval { $object_class->fetch( $id,
                                             { skip_security => $self->{_SKIP_SECURITY} } ) };
 
         # If the object doesn't exist then it's likely a security issue,
@@ -48,7 +48,7 @@ sub fetch_object {
         # position!) and try again.
 
         if ( $@ ) {
-            $self->{_DBI_RAW_COUNT}++;
+            $self->{_LDAP_RAW_COUNT}++;
             return $self->fetch_object;
         }
 
@@ -56,24 +56,24 @@ sub fetch_object {
             return ITER_IS_DONE;
         }
 
-        if ( $self->{_DBI_OFFSET} and 
-             ( $self->{_DBI_COUNT} < $self->{_DBI_OFFSET} ) ) {
-            $self->{_DBI_COUNT}++;
-            $self->{_DBI_RAW_COUNT}++;
+        if ( $self->{_LDAP_OFFSET} and 
+             ( $self->{_LDAP_COUNT} < $self->{_LDAP_OFFSET} ) ) {
+            $self->{_LDAP_COUNT}++;
+            $self->{_LDAP_RAW_COUNT}++;
             return $self->fetch_object;
         }
 
     }
     else {
-        my $row = $self->{_DBI_STH}->fetchrow_arrayref;
-        unless ( $row ) {
+        my $entry = $self->{_LDAP_MSG}->shift_entry;
+        unless ( $entry ) {
             return ITER_IS_DONE;
         }
 
         # It's ok to create the object now
 
         $obj = $object_class->new;
-        $obj->_fetch_assign_row( $self->{_FIELDS}, $row );
+        $obj->_fetch_assign_row( undef, $entry );
 
         # Check security on the row unless overridden. If the security
         # check fails that's ok, just skip the row and move on -- DO
@@ -85,7 +85,7 @@ sub fetch_object {
                                                    required => SEC_LEVEL_READ }) };
             if ( $@ ) {
                 DEBUG() && _w( 1, "Security check for ($self->{_CLASS}) failed." );
-                $self->{_DBI_RAW_COUNT}++;
+                $self->{_LDAP_RAW_COUNT}++;
                 return $self->fetch_object;
             }
         }
@@ -93,7 +93,7 @@ sub fetch_object {
         # Now call the post_fetch callback; if it fails, fetch another row
 
         unless ( $obj->_fetch_post_process( {}, $obj->{tmp_security_level} ) ) {
-            $self->{_DBI_RAW_COUNT}++;
+            $self->{_LDAP_RAW_COUNT}++;
             return $self->fetch_object;
         }
     }
@@ -108,17 +108,17 @@ sub fetch_object {
     # through 1-20, not know that we actually picked the records
     # 1-10,12,14,16-22,24-25 and discarded the others due to security.
 
-    if ( $self->{_DBI_OFFSET} and 
-         ( $self->{_DBI_COUNT} < $self->{_DBI_OFFSET} ) ) {
-        $self->{_DBI_COUNT}++;
-        $self->{_DBI_RAW_COUNT}++;
+    if ( $self->{_LDAP_OFFSET} and 
+         ( $self->{_LDAP_COUNT} < $self->{_LDAP_OFFSET} ) ) {
+        $self->{_LDAP_COUNT}++;
+        $self->{_LDAP_RAW_COUNT}++;
         return $self->fetch_object;
     }
 
     # Oops, we've gone past the max. Finish up.
 
-    if ( $self->{_DBI_MAX} and
-         ( $self->{_DBI_COUNT} > $self->{_DBI_MAX} ) ) {
+    if ( $self->{_LDAP_MAX} and
+         ( $self->{_LDAP_COUNT} > $self->{_LDAP_MAX} ) ) {
         return ITER_IS_DONE;
     }
 
@@ -126,10 +126,10 @@ sub fetch_object {
     # actually return this record. So bump up both counts. Note that
     # we also use this count for the ID list.
 
-    $self->{_DBI_COUNT}++;
-    $self->{_DBI_RAW_COUNT}++;
+    $self->{_LDAP_COUNT}++;
+    $self->{_LDAP_RAW_COUNT}++;
 
-    return ( $obj, $self->{_DBI_COUNT} );
+    return ( $obj, $self->{_LDAP_COUNT} );
 }
 
 
@@ -137,7 +137,7 @@ sub fetch_object {
 
 sub finish {
     my ( $self ) = @_;
-    $self->{_DBI_STH}->finish()  if ( $self->{_DBI_STH} );
+    undef $self->{_LDAP_MSG};
     return $self->{ ITER_FINISHED() } = 1;
 }
 
@@ -149,42 +149,52 @@ __END__
 
 =head1 NAME
 
-SPOPS::Iterator::DBI - Implementation of SPOPS::Iterator for SPOPS::DBI
+SPOPS::Iterator::LDAP - Implementation of SPOPS::Iterator for SPOPS::LDAP
 
 =head1 SYNOPSIS
 
   my $iter = My::SPOPS->fetch_iterator({ 
                              skip_security => 1,
-                             where => 'package = ?',
-                             value => [ 'base_theme' ],
-                             order => 'name' });
-  while ( $iter->has_next ) {
-      my $template = $iter->get_next;
-      print "Item ", $iter->position, ": $template->{package} / $template->{name}";
-      print " (", $iter->is_first, ") (", $iter->is_last, ")\n";
+                             filter => '&(objectclass=person)(mail=chris*)' });
+  while ( my $person = $iter->get_next ) {
+      print "Item ", $iter->position, ": $person->{first_name}: $person->{mail}",
+            " (", $iter->is_first, ") (", $iter->is_last, ")\n";
   }
 
 =head1 DESCRIPTION
 
 This is an implementation of the C<SPOPS::Iterator> interface -- for
 usage guidelines please see the documentation for that module. The
-methods documented here are for SPOPS developers (versus SPOPS users).
+methods listed here are for SPOPS developers (versus SPOPS users).
 
 =head1 METHODS
 
 B<initialize()>
 
+Store the L<Net::LDAP::Message> object so we can peel off one record
+at a time, along with the various other pieces of information.
+
 B<fetch_object()>
+
+Peel off a record, see if it fits in our min/max requirements and if
+this user can see it. If so return, otherwise try again.
 
 B<finish()>
 
+Just clear out the C<Net::LDAP::Message> object.
+
 =head1 SEE ALSO
 
-L<SPOPS::Iterator>, L<SPOPS::DBI>
+L<SPOPS::Iterator>
+
+L<SPOPS::LDAP>
+
+L<Net::LDAP>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 Marketing Service Northwest, GmbH. All rights
+reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

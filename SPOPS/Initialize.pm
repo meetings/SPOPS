@@ -1,13 +1,13 @@
 package SPOPS::Initialize;
 
-# $Id: Initialize.pm,v 1.6 2001/07/20 02:26:43 lachoy Exp $
+# $Id: Initialize.pm,v 1.11 2001/08/22 11:10:04 lachoy Exp $
 
 use strict;
 use SPOPS        qw( _w DEBUG );
-use SPOPS::Configure;
+use SPOPS::ClassFactory;
 
-$SPOPS::Initialize::VERSION   = '1.7';
-$SPOPS::Initialize::Revision  = substr(q$Revision: 1.6 $, 10);
+$SPOPS::Initialize::VERSION   = '1.8';
+$SPOPS::Initialize::Revision  = substr(q$Revision: 1.11 $, 10);
 
 # Main interface -- take the information read in from 'read_config()'
 # and create SPOPS classes, then initialize them
@@ -15,32 +15,41 @@ $SPOPS::Initialize::Revision  = substr(q$Revision: 1.6 $, 10);
 sub process {
     my ( $class, $p ) = @_;
     $p ||= {};
+    my $config = $p->{config};
     if ( $p->{directory} or $p->{filename} ) {
-        my $new_config = $class->read_config( $p );
-        return unless ( ref $new_config eq 'HASH' );
+        $config = $class->read_config( $p );
+        return unless ( ref $config eq 'HASH' );
         delete $p->{filename};
         delete $p->{directory};
         delete $p->{pattern};
-        $p->{config} = $new_config;
     }
-    $p->{require_isa} = 1;
 
-    my $class_created_ok = SPOPS::Configure->process_config( $p ) || [];
+    # We were given more than one configuration to process, so merge
+
+    if ( ref $config eq 'ARRAY' ) {
+        my $full_config = {};
+        foreach my $single_config ( @{ $config } ) {
+            next unless ( ref $single_config eq 'HASH' );
+            foreach my $object_key ( keys %{ $single_config } ) {
+                $full_config->{ $object_key } = $single_config->{ $object_key };
+            }
+        }
+        $config = $full_config;
+    }
+
+    my $class_created_ok = SPOPS::ClassFactory->create( $config, $p ) || [];
     unless ( scalar @{ $class_created_ok } ) {
-        _w( 0, "No classes were created by 'SPOPS::Configure->process_config()'" );
+        _w( 0, "No classes were created by 'SPOPS::ClassFactory->create()'" );
         return undef;
     }
-    my %class_created_map = map { $_ => 1 } @{ $class_created_ok };
 
     # Now go through each of the classes created and initialize
 
     my @full_success = ();
-    foreach my $spops_key ( keys %{ $p->{config} } ) {
-        my $spops_class = $p->{config}->{ $spops_key }->{class};
-        next unless ( $class_created_map{ $spops_class } );
-        $spops_class->class_initialize( $p->{config}->{ $spops_key } );
+    foreach my $spops_class ( @{ $class_created_ok } ) {
+        eval { $spops_class->class_initialize() };
         if ( $@ ) {
-            die "Running '->class_initialize()' on SPOPS class ($spops_class) failed: $@";
+            die "Running '$spops_class->class_initialize()' failed: $@";
         }
         push @full_success, $spops_class;
     }
@@ -61,19 +70,19 @@ sub read_config {
             push @config_files, @{ $p->{filename} };
         }
         else {
-            push @config_files, $p->{filename};      
+            push @config_files, $p->{filename};
         }
     }
 
     # Or specify a directory and, optionally, a pattern to match for
     # files to read
 
-    elsif ( $p->{directory} and -d $p->{directory} ) {    
+    elsif ( $p->{directory} and -d $p->{directory} ) {
         my $dir = $p->{directory};
         DEBUG() && _w( 1, "Reading configuration files from ($dir) with pattern ($p->{pattern})" );
-        opendir( CONF, $dir ) 
+        opendir( CONF, $dir )
                || die "Cannot open directory ($dir): $!";
-        my @directory_files = readdir( CONF );    
+        my @directory_files = readdir( CONF );
         close( CONF );
         foreach my $file ( @directory_files ) {
             my $full_filename = "$dir/$file";
@@ -138,34 +147,46 @@ SPOPS::Initialize - Provide methods for initializing groups of SPOPS objects at 
 =head1 SYNOPSIS
 
  # Bring in the class
- 
+
  use SPOPS::Initialize;
 
  # Assumes that all your SPOPS configuration information is collected
  # in a series of files 'spops/*.perl'
 
- my $config = SPOPS::Initialize->read_config({ 
-                                     directory => '/path/to/spops',
-                                     pattern   => '\.perl' });
+ my $config = SPOPS::Initialize->read_config({
+                              directory => '/path/to/spops',
+                              pattern   => '\.perl' });
 
  # You could also have all your SPOPS classes in a single file:
 
- my $config = SPOPS::Initialize->read_config({ 
+ my $config = SPOPS::Initialize->read_config({
                               filename => '/path/to/my/spops.config' });
 
  # Or in a number of files:
 
- my $config = SPOPS::Initialize->read_config({ 
+ my $config = SPOPS::Initialize->read_config({
                               filename => [ '/path/to/my/spops.config.1',
                                             '/path/to/my/spops.config.2' ] });
 
- # Bring all necessary SPOPS:: classes and initialize them
-
- SPOPS::Initialize->process({ config => $config });
-
  # As a shortcut, you read the config and process all at once
 
+ SPOPS::Initialize->process({ directory => '/path/to/spops',
+                              pattern   => '\.perl' });
+
  SPOPS::Initialize->process({ filename => '/path/to/my/spops.config' });
+
+ SPOPS::Initialize->process({ filename => [ '/path/to/my/spops.config.1',
+                                            '/path/to/my/spops.config.2' ] });
+
+ # Use an already-formed config hashref from somewhere else
+
+ SPOPS::Initialize->process({ config => \%spops_config });
+
+ # You can also pass in multiple config hashrefs that get processed at
+ # once, taking care of circular relationship problems (e.g., 'user'
+ # links-to 'group', 'group' links-to 'user').
+
+ SPOPS::Initialize->process({ config => [ $config1, $config2 ] });
 
 =head1 DESCRIPTION
 
@@ -187,8 +208,7 @@ Ensure that the classes used by SPOPS are 'require'd.
 
 =item 3.
 
-Build the SPOPS class, using L<SPOPS::Configure> or a subclass of
-it. 
+Build the SPOPS class, using L<SPOPS::ClassFactory>.
 
 =item 4.
 
@@ -201,22 +221,51 @@ will.
 
 =head1 METHODS
 
-B<process( \%spops_config, \%params )>
+B<process( \%params )>
 
-Take configuration information
+The configuration parameter 'config' can refer to one or more SPOPS
+object configuration hashrefs. These can be already-formed
+configuration hashrefs which, if there are more than one,are merged.
 
-The first parameter, C<\%spops_config> is a hashref of SPOPS object
-information. Key should be the SPOPS alias, value the configuration
-information for this object.
+Example:
 
-Parameters (passed in C<\%params>) depend on C<SPOPS::Configure> --
+ SPOPS::Initialize->process({ config => $spops_config });
+ SPOPS::Initialize->process({ config => [ $spops_config, $spops_config ] });
+
+You can also pass one or more filenames of SPOPS information (using
+'filename', or a combination of 'directory' and
+'pattern'). Filename/directory processing parameters are passed
+directly to C<read_config()>.
+
+Examples:
+
+ # Process configurations in files 'user/spops.perl' and
+ # 'group/spops.perl'
+
+ SPOPS::Initialize->process({ filename => [ 'user/spops.perl',
+                                            'group/spops.perl' ] });
+
+ # Process all configuration files ending in .perl in the directory
+ # 'conf/spops/':
+
+ SPOPS::Initialize->process({ directory => 'conf/spops/',
+                              pattern   => q(\.perl$) });
+
+Other parameters in C<\%params> depend on C<SPOPS::ClassFactory> --
 any values you pass will be passed through. This is fairly rare -- the
-only one you might ever want to pass is 'meta', which is a hashref of
-information that determines how the object configuration is
-treated. (See L<SPOPS::Configure> for more info.)
+only one you might ever want to pass is 'alias_list', which is an
+arrayref of aliases in the (merged or not) SPOPS config hashref to
+process.
 
-You can also pass in parameters that can be used for C<read_config()>
--- see below.
+Example:
+
+ # We're just clowning around, so only process 'bozo' -- 'user' and
+ # 'group' aren't touched
+
+ my $config = {  user  => { ... },
+                 group => { ... },
+                 bozo  => { ... } };
+ SPOPS::Initialize->process({ config => $config, alias_list => [ 'bozo' ] });
 
 B<read_config( \%params )>
 
@@ -253,7 +302,7 @@ to match all the files ending in '.perl' and read them in.
 
 =head1 SEE ALSO
 
-L<SPOPS::Configure>
+L<SPOPS::ClassFactory>
 
 =head1 COPYRIGHT
 

@@ -1,66 +1,225 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 1.23 2001/07/20 02:33:42 lachoy Exp $
+# $Id: SPOPS.pm,v 1.41 2001/08/28 21:09:54 lachoy Exp $
 
 use strict;
+use Data::Dumper  qw( Dumper );
 require Exporter;
-use SPOPS::Tie    qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
-use SPOPS::Tie::StrictField;
+use SPOPS::Error;
+use SPOPS::Tie    qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure qw( SEC_LEVEL_WRITE );
 use Storable      qw( store retrieve nstore );
 
 $SPOPS::AUTOLOAD  = '';
 @SPOPS::ISA       = qw( Exporter Storable );
 @SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
-$SPOPS::VERSION   = '0.41';
-$SPOPS::Revision  = substr(q$Revision: 1.23 $, 10);
+$SPOPS::VERSION   = '0.50';
+$SPOPS::Revision  = substr(q$Revision: 1.41 $, 10);
+
+# Note that switching on DEBUG will generate LOTS of messages, since
+# many SPOPS classes import this constant
 
 use constant DEBUG => 0;
 
-# Allow subclasses read-only access to the 
-# index where the data are stored within an object.
 
-sub _idx_data { return IDX_DATA; }
+########################################
+# CLASS CONFIGURATION
+########################################
 
-# If a class doesn't define a config method (even tho it always
-# should), return an empty hashref so things run as expected
+# These are default configuration behaviors -- all SPOPS classes have
+# the option of using them or of halting behavior before they're
+# called
 
-sub CONFIG              { return {} }
+sub behavior_factory {
+    my ( $class ) = @_;
+    require SPOPS::ClassFactory::DefaultBehavior;
+    DEBUG() && _w( 1, "Installing SPOPS default behaviors for ($class)" );
+    return { manipulate_configuration =>
+                    \&SPOPS::ClassFactory::DefaultBehavior::conf_modify_config,
+             read_code                =>
+                    \&SPOPS::ClassFactory::DefaultBehavior::conf_read_code,
+             id_method                =>
+                    \&SPOPS::ClassFactory::DefaultBehavior::conf_id_method,
+             has_a                    =>
+                    \&SPOPS::ClassFactory::DefaultBehavior::conf_relate_hasa,
+             fetch_by                 =>
+                    \&SPOPS::ClassFactory::DefaultBehavior::conf_relate_fetchby,
+             add_rule                 =>
+                    \&SPOPS::ClassFactory::DefaultBehavior::conf_add_rules, };
+}
 
-# Language of the object (not used now)
 
-sub lang                { return $_[0]->CONFIG->{lang}               }
+########################################
+# CLASS INITIALIZATION
+########################################
 
-# Field hash and list (not just for databases...); plus the name of
-# the ID field and the timestamp field
+# Subclasses should almost certainly define some behavior here by
+# overriding this method
+
+sub class_initialize {}
+
+
+########################################
+# OBJECT CREATION/DESTRUCTION
+########################################
+
+# Constructor
+
+sub new {
+    my ( $pkg, $p ) = @_;
+    my $class = ref $pkg || $pkg;
+    my $params = {};
+    my $tie_class = 'SPOPS::Tie';
+
+    my $CONFIG = $class->CONFIG;
+
+    # Setup field checking if specified
+
+    if ( $CONFIG->{strict_field} ) {
+        my $fields = $class->field;
+        if ( keys %{ $fields } ) {
+            $params->{field} = [ keys %{ $fields } ];
+            require SPOPS::Tie::StrictField;
+            $tie_class = 'SPOPS::Tie::StrictField'
+        }
+    }
+
+    # Setup lazy loading if specified
+
+    if ( ref $CONFIG->{column_group} eq 'HASH' and
+         keys %{ $CONFIG->{column_group} } ) {
+        $params->{is_lazy_load}  = 1;
+        $params->{lazy_load_sub} = $class->get_lazy_load_sub;
+    }
+
+    # Setup field mapping if specified
+
+    if ( ref $CONFIG->{field_map} eq 'HASH' and
+         scalar keys %{ $CONFIG->{field_map} } ) {
+        $params->{is_field_map} = 1;
+        $params->{field_map} = \%{ $CONFIG->{field_map} };
+    }
+
+    # Setup multivalue fields if specified
+
+    my $multivalue_ref = ref $CONFIG->{multivalue};
+    if ( $multivalue_ref eq 'HASH' or $multivalue_ref eq 'ARRAY' ) {
+        my $num = ( $multivalue_ref eq 'HASH' )
+                    ? scalar keys %{ $CONFIG->{multivalue} }
+                    : scalar @{ $CONFIG->{multivalue} };
+        if ( $num > 0 ) {
+            $params->{is_multivalue} = 1;
+            $params->{multivalue} = ( $multivalue_ref eq 'HASH' )
+                                      ? \%{ $CONFIG->{multivalue} }
+                                      : \@{ $CONFIG->{multivalue} };
+        }
+    }
+
+    DEBUG() && _w( 1, "Creating new object of class ($class) with tie class ",
+                      "($tie_class); lazy loading ($params->{is_lazy_load});",
+                      "field mapping ($params->{is_field_map})" );
+    my ( %data );
+    my $int = tie %data, $tie_class, $class, $params;
+    DEBUG() && _w( 4, "Internal tie structure of new object: ", Dumper( $int ) );
+    my $self = bless( \%data, $class );
+    $self->initialize( $p );
+    return $self;
+}
+
+
+sub DESTROY {
+    my ( $self ) = @_;
+    DEBUG() && _w( 2, "Destroying SPOPS object (". ref( $self ) . ") ID: " .
+                      "(" . $self->id . ") at time: ", scalar localtime );
+}
+
+
+# Create a new object from an old one, allowing any passed-in
+# values to override the ones from the old object
+
+sub clone {
+    my ( $self, $p ) = @_;
+    my $class = $p->{_class} || ref $self;
+    DEBUG() && _w( 1, "Cloning new object of class ($class) from old ",
+                       "object of class (", ref $self, ")" );
+    my $clone = $class->new;
+    my $id_field = $class->id_field;
+    if ( $id_field ) {
+        my $new_id = $p->{ $id_field } || $p->{id};
+        $clone->{ $id_field } = $new_id   if ( $new_id );
+    }
+    while ( my ( $k, $v ) = each %{ $self } ) {
+        next if ( $id_field and $k eq $id_field );
+        $clone->{ $k } = $p->{ $k } || $v;
+    }
+    return $clone;
+}
+
+
+# Simple initialization: subclasses can override for
+# field validation or whatever.
+
+sub initialize {
+    my ( $self, $p ) = @_;
+    $p ||= {};
+
+    # Creating a new object, all fields are set to 'loaded' so we don't
+    # try to lazy-load a field when the object hasn't even been saved
+
+    $self->set_all_loaded();
+
+    # We allow the user to substitute id => value instead for the
+    # specific fieldname.
+
+    $p->{ $self->id_field } ||= $p->{id};
+
+    # Go through the data passed in and set data for fields used by
+    # this class
+
+    my $class_fields = $self->field || {};
+    while ( my ( $field, $value ) = each %{ $p } ) {
+        next unless ( $class_fields->{ $field } );
+        $self->{ $field } = $value;
+    }
+}
+
+
+########################################
+# CONFIGURATION
+########################################
+
+# If a class doesn't define a config method then something is seriously wrong
+
+sub CONFIG {
+    require Carp;
+    Carp::croak "SPOPS class not created properly, since CONFIG being called ",
+                "from SPOPS.pm rather than your object class.";
+}
+
+
+# Some default configuration methods that all SPOPS classes use
 
 sub field               { return $_[0]->CONFIG->{field} || {}              }
 sub field_list          { return $_[0]->CONFIG->{field_list} || []         }
 sub id_field            { return $_[0]->CONFIG->{id_field}                 }
-sub timestamp_field     { return $_[0]->CONFIG->{timestamp_field}          } 
-sub creation_security   { return $_[0]->CONFIG->{creation_security} || {}  } 
+sub timestamp_field     { return $_[0]->CONFIG->{timestamp_field}          }
+sub creation_security   { return $_[0]->CONFIG->{creation_security} || {}  }
 sub no_security         { return $_[0]->CONFIG->{no_security}              }
 
-# Empty method for subclasses to override
 
-sub class_initialize    { return; }
+########################################
+# RULESET METHODS
+########################################
 
-# All objects are by default cached; set the key 'no_cache'
-# to a true value to *not* cache this object
+# So all SPOPS classes have a ruleset_add in their lineage
 
-sub no_cache            { return $_[0]->CONFIG->{no_cache} || 0; }
+sub ruleset_add     { return __PACKAGE__ }
+sub ruleset_factory {}
 
-# Your class should determine how to get to these very important
-# items. This is typically done through the use of a 'stash class',
-# where important per-application information is kept.
-
-sub global_cache        { return undef; }
-sub global_config       { return undef; }
-
-# Actions to do before/after a fetch, save and remove; note
+# These are actions to do before/after a fetch, save and remove; note
 # that overridden methods must return a 1 on success or the
-# fetch/save/remove will fail; this allows any of a number of rules
-# to short-circuit an operation; see RULESETS below
+# fetch/save/remove will fail; this allows any of a number of rules to
+# short-circuit an operation; see RULESETS in POD
 #
 # clarification: $_[0] in the following can be *either* a class or an
 # object; $_[1] is the (optional) hashref passed as the only argument
@@ -72,14 +231,15 @@ sub post_save_action    { return $_[0]->ruleset_process_action( 'post_save_actio
 sub pre_remove_action   { return $_[0]->ruleset_process_action( 'pre_remove_action',  $_[1] ) }
 sub post_remove_action  { return $_[0]->ruleset_process_action( 'post_remove_action', $_[1] ) }
 
-# Go through all of the subroutines found in a particular
-# class relating to a particular action; 
+
+# Go through all of the subroutines found in a particular class
+# relating to a particular action
 
 sub ruleset_process_action {
     my ( $item, $action, $p ) = @_;
     $action = lc $action;
-    DEBUG() && _w( 1, "Trying to process $action for a", ( ref $item ) ? ref $item : $item, 
-                      "type of object" );
+    DEBUG() && _w( 1, "Trying to process $action for a",
+                      ( ref $item ) ? ref $item : $item, "type of object" );
 
     # Grab the ruleset table for this class and immediately
     # return if the list of rules to apply for this action is empty
@@ -91,176 +251,185 @@ sub ruleset_process_action {
 
     # Cycle through the rules -- the only return value can be true or false,
     # and false short-circuits the entire operation
-  
+
+    my $count_rules = 0;
     foreach my $rule_sub ( @{ $rs_table->{ $action } } ) {
         return undef unless ( $rule_sub->( $item, $p ) );
+        $count_rules++;
     }
-    DEBUG() && _w( 1, "$action processed without error" );
+    DEBUG() && _w( 1, "$action processed ($count_rules rules successful) without error" );
     return 1;
 }
 
-sub ruleset_add { return __PACKAGE__; }
 
-# Actions to do before/after retrieving/saving/removing
-# an item from the cache
+########################################
+# SERIALIZATION
+########################################
 
-sub pre_cache_fetch     { return 1; }
-sub post_cache_fetch    { return 1; }
-sub pre_cache_save      { return 1; }
-sub post_cache_save     { return 1; }
-sub pre_cache_remove    { return 1; }
-sub post_cache_remove   { return 1; }
+# Routines for subclases to override
 
-# Define methods for implementors to override to do
-# something in case a fetch / save / remove fails
+sub save        {}
+sub fetch       {}
+sub remove      {}
+sub log_action  { return 1 }
 
-sub fail_fetch          { return undef; }
-sub fail_save           { return undef; }
-sub fail_remove         { return undef; }
+# Define methods for implementors to override to do something in case
+# a fetch / save / remove fails
 
-# Actions to check security on an object -- the default access is
-# read/write (which also includes delete)
+sub fail_fetch  {}
+sub fail_save   {}
+sub fail_remove {}
 
-sub check_security          { return SEC_LEVEL_WRITE; }
-sub check_action_security   { return SEC_LEVEL_WRITE; } 
-sub create_initial_security { return 1;               }
 
-# Return either a data hashref or a list with the
-# data hashref and object, depending on context
+########################################
+# SERIALIZATION SUPPORT
+########################################
 
-sub new {
-    my ( $pkg, $p ) = @_;
-    my $class = ref $pkg || $pkg;
-    my $params = {};
-    my $tie_class = 'SPOPS::Tie';
-    if ( $class->CONFIG->{strict_field} ) {
-        my $fields = $class->field;
-        if ( keys %{ $fields } ) {
-            $params->{field} = [ keys %{ $fields } ];
-            $tie_class = 'SPOPS::Tie::StrictField'
-        }
+# initialize limit tracking vars -- the limit passed in can be:
+# limit => 'x,y'  --> 'offset = x, max = y'
+# limit => 'x'    --> 'max = x'
+
+sub fetch_determine_limit {
+    my ( $class, $limit ) = @_;
+    my ( $offset, $max );
+    return ( 0, 0 ) unless ( $limit );
+    if ( $limit =~ /,/ ) {
+        ( $offset, $max ) = split /\s*,\s*/, $limit;
+        $max += $offset;
     }
-    if ( ref $class->CONFIG->{column_group} eq 'HASH' and 
-         keys %{ $class->CONFIG->{column_group} } ) {
-        $params->{is_lazy_load}  = 1;
-        $params->{lazy_load_sub} = $class->get_lazy_load_sub;
+    else {
+        $max = $limit;
     }
-    DEBUG() && _w( 1, "Creating new object of class ($class) with tie class ($tie_class)" );
-    my ( %data );
-    my $int = tie %data, $tie_class, $class, $params;
-    my $self = bless( \%data, $class );
-    $self->initialize( $p );
-    return $self;
+    DEBUG() && _w( 1, "Limit set: Start $offset to $max" );
+    return ( $offset, $max );
 }
 
 
-# Create a new object from an old one, allowing any passed-in
-# values to override the ones from the old object
+########################################
+# LAZY LOADING
+########################################
 
-sub clone {
-    my ( $self, $p ) = @_;
-    my $new = $self->new; 
-    my $id_field = $self->id_field();
-    if ( $id_field ) {
-        my $new_id = $p->{ $id_field } || $p->{id};
-        $new->{ $id_field } = $new_id   if ( $new_id );
-    }
-    while ( my ( $k, $v ) = each %{ $self } ) {
-        next if ( $id_field and $k eq $id_field );
-        $new->{ $k } = $p->{ $k } || $v;
-    }
-    return $new;
-}
-
-
-# Simple initialization: subclasses can override for
-# field validation or whatever.
-
-sub initialize {
-    my ( $self, $p ) = @_;
-
-    # Creating a new object, all fields are set to 'loaded' so we don't
-    # try to lazy-load a field when the object hasn't even been saved
-
-    $self->set_all_loaded();
-
-    return unless ( ref $p eq 'HASH' );  
-
-    # Go through the data passed in and set
-
-    while ( my ( $field, $value ) = each %{ $p } ) {
-        $self->{ $field } = $value;
-    }
-}
-
-
-# Create routines for subclases to override
-
-sub save   { return undef; }
-sub fetch  { return undef; }
-sub remove { return undef; }
-
-
-# We should probably deprecate these...
-
-sub get { return $_[0]->{ $_[1] }; }
-sub set { return $_[0]->{ $_[1] } = $_[2]; }
-
-
-# return a simple hashref of this object's data -- not tied, not as an
-# object
-
-sub data {
-    my ( $self ) = @_;
-    return { map { $_ => $self->{ $_ } } keys %{ $self } };
-}
-
-
-# Lazy loading stuff
-
-sub get_lazy_load_sub { return \&perform_lazy_load; }
-sub perform_lazy_load { return undef; }
+sub get_lazy_load_sub { return \&perform_lazy_load }
+sub perform_lazy_load { return undef }
 
 sub is_loaded         { return tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }->{ $_[1] } }
 
 sub set_loaded        { return tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }->{ $_[1] }++ }
 
-sub set_all_loaded { 
+sub set_all_loaded {
     my ( $self ) = @_;
     DEBUG() && _w( 1, "Setting all fields to loaded for object class", ref $self );
     my %loaded = map { $_ => 1 } @{ $self->field_list };
     tied( %{ $self } )->{ IDX_LAZY_LOADED() } = \%loaded;
 }
 
-sub clear_loaded { tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }->{ $_[1] } = undef; }
+sub clear_loaded { tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }->{ $_[1] } = undef }
 
-sub clear_all_loaded { 
+sub clear_all_loaded {
     DEBUG() && _w( 1, "Clearing all fields to unloaded for object class", ref $_[0] );
-    tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() } = {}
+    tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() } = {};
 }
 
+
+########################################
+# FIELD CHECKING
+########################################
 
 # Is this object doing field checking?
 
 sub is_checking_fields { return tied( %{ $_[0] } )->{ IDX_CHECK_FIELDS() }; }
 
 
+########################################
+# MODIFICATION STATE
+########################################
+
 # Track whether this object has changed (keep 'changed()' for backward
 # compatibility)
 
-sub changed      { is_changed( @_ )               }
+sub changed      { is_changed( @_ ) }
 sub is_changed   { return $_[0]->{ IDX_CHANGE() } }
-sub has_change   { $_[0]->{ IDX_CHANGE() } = 1    }
-sub clear_change { $_[0]->{ IDX_CHANGE() } = 0    }
+sub has_change   { $_[0]->{ IDX_CHANGE() } = 1 }
+sub clear_change { $_[0]->{ IDX_CHANGE() } = 0 }
 
+
+########################################
+# SERIALIZATION STATE
+########################################
 
 # Track whether this object has been saved (keep 'saved()' for
 # backward compatibility)
 
-sub saved        { is_saved( @_ )                 }
-sub is_saved     { return $_[0]->{ IDX_SAVE() }   }
-sub has_save     { $_[0]->{ IDX_SAVE() } = 1      }
-sub clear_save   { $_[0]->{ IDX_SAVE() } = 0      }
+sub saved        { is_saved( @_ ) }
+sub is_saved     { return $_[0]->{ IDX_SAVE() } }
+sub has_save     { $_[0]->{ IDX_SAVE() } = 1 }
+sub clear_save   { $_[0]->{ IDX_SAVE() } = 0 }
+
+
+########################################
+# TIMESTAMP
+########################################
+
+# WARNING: THESE MAY GO AWAY
+
+# returns the timestamp value for this object, if
+# one has been defined
+
+sub timestamp {
+    my ( $self ) = @_;
+    return undef  if ( ! ( ref $self ) );
+    if ( my $ts_field = $self->timestamp_field ) {
+        return $self->{ $ts_field };
+    }
+    return undef;
+}
+
+
+# Pass in a value for a timestamp to check and compare it to what is
+# currently in the object; if there is no timestamp field specified,
+# just return true so everything will continue as normal
+
+sub timestamp_compare {
+    my ( $self, $check ) = @_;
+    if ( my $ts_field = $self->timestamp_field ) {
+        return ( $check eq $self->{ $ts_field } );
+    }
+    return 1;
+}
+
+
+########################################
+# OBJECT INFORMATION
+########################################
+
+# Return the name of this object (what type it is), title of the
+# object and url (in a hashref) to be used to make a link, or whatnot.
+
+sub object_description {
+    my ( $self ) = @_;
+    my $title_info = $self->CONFIG->{name};
+    my $title = '';
+    if ( ref $title_info eq 'CODE' ) {
+        $title = $title_info->( $self );
+    }
+    elsif ( ! ref $title_info ) {
+        $title = $self->{ $title_info };
+    }
+    $title ||= 'Cannot find name';
+    my $link_info = $self->CONFIG->{display};
+    my $oid       = $self->id;
+    my $id_field  = $self->id_field;
+    my $url       = "$link_info->{url}?" . $id_field . '=' . $oid;
+    my $url_edit  = "$link_info->{url}?edit=1;" . $id_field . '=' . $oid;
+    return { class     => ref $self,
+             object_id => $oid,
+             oid       => $oid,
+             id_field  => $id_field,
+             name      => $self->CONFIG->{object_name},
+             title     => $title,
+             url       => $url,
+             url_edit  => $url_edit };
+}
 
 
 # This is very primitive, but objects that want something more
@@ -278,53 +447,110 @@ sub as_string {
 }
 
 
-# returns the timestamp value for this object, if
-# one has been defined
+# This is even more primitive, but again, we're just providing the
+# basics :-)
 
-sub timestamp {
+sub as_html {
     my ( $self ) = @_;
-    return undef  if ( ! ( ref $self ) );
-    if ( my $ts_field = $self->timestamp_field ) {
-        return $self->{ $ts_field };
-    }
-    return undef; 
+    return "<pre>" . $self->as_string . "\n</pre>\n";
 }
 
 
-# Pass in a value for a timestamp to check and compare it to what is
-# currently in the object; if there is no timestamp field specified,
-# just return true so everything will continue as normal
+########################################
+# SECURITY
+########################################
 
-sub timestamp_compare {
-    my ( $self, $check ) = @_;
-    if ( my $ts_field = $self->timestamp_field ) {
-        return ( $check eq $self->{ $ts_field } );
+# These are the default methods that classes not using security
+# inherit. Default action is WRITE, so everything is allowed
+
+sub check_security          { return SEC_LEVEL_WRITE }
+sub check_action_security   { return SEC_LEVEL_WRITE }
+sub create_initial_security { return 1               }
+
+
+########################################
+# CACHING
+########################################
+
+# NOTE: CACHING IS NOT FUNCTIONAL AND THESE MAY RADICALLY CHANGE
+
+# All objects are by default cached; set the key 'no_cache'
+# to a true value to *not* cache this object
+
+sub no_cache            { return $_[0]->CONFIG->{no_cache} || 0 }
+
+# Your class should determine how to get to the cache -- the normal
+# way is to have all your objects inherit from a common base class
+# which deals with caching, datasource handling, etc.
+
+sub global_cache        { return undef }
+
+# Actions to do before/after retrieving/saving/removing
+# an item from the cache
+
+sub pre_cache_fetch     { return 1 }
+sub post_cache_fetch    { return 1 }
+sub pre_cache_save      { return 1 }
+sub post_cache_save     { return 1 }
+sub pre_cache_remove    { return 1 }
+sub post_cache_remove   { return 1 }
+
+
+sub get_cached_object {
+    my ( $class, $p ) = @_;
+    return undef unless ( $p->{id} );
+    return undef unless ( $class->use_cache( $p ) );
+
+    # If we can retrieve an item from the cache, then create a new object
+    # and assign the values from the cache to it.
+
+    if ( my $item_data = $class->global_cache->get({ class => $class, id => $p->{id} }) ) {
+        DEBUG() && _w( 1, "Retrieving from cache..." );
+        return $class->new( $item_data );
     }
+    DEBUG() && _w( 1, "Cached data not found." );
+    return undef;
+}
+
+
+sub set_cached_object {
+    my ( $self, $p ) = @_;
+    return undef unless ( ref $self );
+    return undef unless ( $self->id );
+    return undef unless ( $self->use_cache( $p ) );
+    return $self->global_cache->set({ data => $self });
+}
+
+
+# Return 1 if we're using the cache; undef if not -- right now we
+# always return undef since caching isn't enabled
+
+sub use_cache {
+    return undef;
+    my ( $class, $p ) = @_;
+    return undef if ( $p->{skip_cache} );
+    return undef if ( $class->no_cache );
+    return undef unless ( $class->global_cache );
     return 1;
 }
 
 
-# Return the name of this object (what type it is), title of the
-# object and url (in a hashref) to be used to make a link, or whatnot.
+########################################
+# ACCESSORS/MUTATORS
+########################################
 
-sub object_description {
+# We should probably deprecate these...
+
+sub get { return $_[0]->{ $_[1] } }
+sub set { return $_[0]->{ $_[1] } = $_[2] }
+
+
+# return a simple hashref of this object's data -- not tied, not as an
+# object
+
+sub data {
     my ( $self ) = @_;
-    my $title_info = $self->CONFIG->{name};
-    my $title = '';
-    if ( ref $title_info eq 'CODE' ) {
-        $title = $title_info->( $self );
-    }
-    elsif ( ! ref $title_info ) {
-        $title = $self->{ $title_info };
-    }
-    $title ||= 'Cannot find name';
-    my $link_info = $self->CONFIG->{display};
-    my $url       = "$link_info->{url}?" . $self->id_field . '=' . $self->id;
-    my $url_edit  = "$link_info->{url}?edit=1;" . $self->id_field . '=' . $self->id;
-    return { name     => $self->CONFIG->{object_name},
-             title    => $title, 
-             url      => $url,
-             url_edit => $url_edit };
+    return { map { $_ => $self->{ $_ } } keys %{ $self } };
 }
 
 
@@ -332,18 +558,18 @@ sub AUTOLOAD {
     my ( $item ) = @_;
     my $request = $SPOPS::AUTOLOAD;
     $request =~ s/.*://;
-  
+
   # First, give a nice warning and return undef if $item is just a
   # class rather than an object
-  
+
     my $class = ref $item;
     unless ( $class ) {
         _w( 0, "Cannot fill request ($request) from class $item" );
         return undef;
     }
-  
+
     no strict 'refs';
-    DEBUG() && _w( 1, "Trying to fulfill $request from $class (ISA: ", 
+    DEBUG() && _w( 1, "Trying to fulfill $request from $class (ISA: ",
                       join( " // ", @{ $class . '::ISA' } ), ")" );
     if ( ref $item and $item->is_checking_fields ) {
         my $fields = $item->field || {};
@@ -372,16 +598,13 @@ sub AUTOLOAD {
     DEBUG() && _w( 2, "$class is not checking fields, so create sub and return",
                       "data for <<$request>>" );
     *{ $class . '::' . $request } = sub { return $_[0]->{ $request } };
-    return $item->{ $request }; 
+    return $item->{ $request };
 }
 
 
-sub DESTROY {
-    my ( $self ) = @_;
-    DEBUG() && _w( 2, "Destroying SPOPS object (". ref( $self ) . ") ID: " .
-                      "(" . $self->id . ") at time: ", scalar localtime );
-}
-
+########################################
+# DEBUGGING
+########################################
 
 sub _w {
     my $lev   = shift || 0;
@@ -398,7 +621,7 @@ sub _wm {
     return unless ( $check >= $lev );
     my ( $pkg, $file, $line ) = caller;
     my @ci = caller(1);
-    warn "$ci[3] ($line) >> ", join( ' ', @_ ), "\n"; 
+    warn "$ci[3] ($line) >> ", join( ' ', @_ ), "\n";
 }
 
 1;
@@ -414,7 +637,7 @@ SPOPS -- Simple Perl Object Persistence with Security
 =head1 SYNOPSIS
 
  # Define an object completely in a configuration file
- my $spops = { 
+ my $spops = {
    myobject => {
     class => 'MySPOPS::Object',
     isa => qw( SPOPS::DBI ),
@@ -422,11 +645,8 @@ SPOPS -- Simple Perl Object Persistence with Security
    }, ...
  };
 
- # Process the configuration:
- SPOPS::Configure->process_config( { config => $spops } );
- 
- # Initialize the class
- MySPOPS::Object->class_initialize;
+ # Process the configuration and initialize the class
+ SPOPS::Initialize->process({ config => $spops });
 
  # create the object
  my $object = MySPOPS::Object->new;
@@ -453,28 +673,28 @@ the DBI), but you should be able to adapt it to use any storage
 mechanism for accomplishing these tasks.  (An early version of this
 used GDBM, although it was not pretty.)
 
-The goals of this package are fairly simple: 
+The goals of this package are fairly simple:
 
 =over 4
 
-=item * 
+=item *
 
 Make it easy to define the parameters of an object
 
-=item * 
+=item *
 
 Make it easy to do common operations (fetch, save, remove)
 
-=item * 
+=item *
 
 Get rid of as much SQL (or other domain-specific language) as
 possible, but...
 
-=item * 
+=item *
 
 ... do not impose a huge cumbersome framework on the developer
 
-=item * 
+=item *
 
 Make applications easily portable from one database to another
 
@@ -483,11 +703,11 @@ Make applications easily portable from one database to another
 Allow people to model objects to existing data without modifying the
 data
 
-=item * 
+=item *
 
-Include flexibility to allow extensions 
+Include flexibility to allow extensions
 
-=item * 
+=item *
 
 Let people simply issue SQL statements and work with normal datasets
 if they want
@@ -645,7 +865,7 @@ And you can fetch batches of objects at once:
    }
  }
 
- # Retrieve lots of objects, display a value and call a 
+ # Retrieve lots of objects, display a value and call a
  # method on each
  my $data_list = eval { MyClass->fetch_group( where => "last_name like 'winter%'" ) };
  if ( $@ ) { ... report error ... }
@@ -727,7 +947,7 @@ Example: MyApplication::User, MyApplication::Document, ...
 
 =head2 SPOPS Object States
 
-Basically, each SPOPS object is always in one of two states: 
+Basically, each SPOPS object is always in one of two states:
 
 =over 4
 
@@ -777,11 +997,11 @@ In the discussion below, the following holds:
 
 =over 4
 
-=item * 
+=item *
 
 When we say B<base class>, think B<SPOPS>
 
-=item * 
+=item *
 
 When we say B<subclass>, think of B<SPOPS::DBI> for example
 
@@ -812,8 +1032,48 @@ parameter name specifying an object ID. For instance:
 In this case, we do not need to know the name of the ID field used by
 the MyUser class.
 
+We use a number of parameters from your object configuration. These
+are:
+
+=over 4
+
+=item *
+
+B<strict_field> (bool) (optional)
+
+If set to true, you will use the L<SPOPS::Tie::StrictField> tie
+implementation, which ensures you only get/set properties that exist
+in the field listing.
+
+=item *
+
+B<column_group> (\%) (optional)
+
+Hashref of column aliases to arrayrefs of fieldnames. If defined
+objects of this class will use L<LAZY LOADING>, and the different
+aliases you define can typically be used in a C<fetch()>,
+C<fetch_group()> or C<fetch_iterator()> statement. (Whether they can
+be used depends on the SPOPS implementation.)
+
+=item *
+
+B<field_map> (\%) (optional)
+
+Hashref of field alias to field name. This allows you to get/set
+properties using a different name than how the properties are
+stored. For instance, you might need to retrofit SPOPS to an existing
+table that contains news stories. Retrofitting is not a problem, but
+another wrinkle of your problem is that the news stories need to fit a
+certain interface and the property names of the interface do not match
+the fieldnames in the existing table.
+
+All you need to do is create a field map, defining the interface
+property names as the keys and the database field names as the values.
+
+=back
+
 Returns on success: a tied hashref object with any passed data
-already assigned. 
+already assigned.
 
 Returns on failure: undef.
 
@@ -823,13 +1083,16 @@ Examples:
  my $data = MyClass->new();
 
  # ...with initialization
- my $data = MyClass->new({ balance => 10532, 
+ my $data = MyClass->new({ balance => 10532,
                            account => '8917-918234' });
 
 B<clone( \%params )>
 
 Returns a new object from the data of the first. You can override the
-original data with that in the \%params passed in.
+original data with that in the \%params passed in. You can also clone
+an object into a new class by passing the new class name as the
+'_class' parameter -- of course, the interface must either be the same
+or there must be a 'field_map' to account for the differences.
 
 Examples:
 
@@ -840,12 +1103,21 @@ Examples:
  $bozo->{login_name} = 'bozosenior';
  eval { $bozo->save };
  if ( $@ ) { ... report error .... }
- 
+
  # Clone bozo; first_name is 'Bozo' and last_name is 'the Clown',
  # as in the $bozo object, but login_name is 'bozojunior'
  my $bozo_jr = $bozo->clone({ login_name => 'bozojunior' });
  eval { $bozo_jr->save };
  if ( $@ ) { ... report error ... }
+
+ # Copy all users from a DBI datastore into an LDAP datastore by
+ # cloning from one and saving the clone to the other
+
+ my $dbi_users = DBIUser->fetch_group();
+ foreach my $dbi_user ( @{ $dbi_users } ) {
+     my $ldap_user = $dbi_user->clone({ _class => 'LDAPUser' });
+     $ldap_user->save;
+ }
 
 B<initialize()>
 
@@ -870,14 +1142,14 @@ if you override this method you need to simply call:
 
 somewhere in the overridden method.
 
-B<fetch( $oid, [ \%params ] )>
+B<fetch( $object_id, [ \%params ] )>
 
 Implemented by subclass.
 
 This method should be called from either a class or another object
 with a named parameter of 'id'.
 
-Returns on success: a SPOPS object.
+Returns on success: an SPOPS object.
 
 Returns on failure: undef; if the action failed (incorrect fieldname
 in the object specification, database not online, database user cannot
@@ -895,8 +1167,8 @@ B<(datasource)> (obj) (optional)
 
 For most SPOPS implementations, you can pass the data source (a DBI
 database handle, a GDBM tied hashref, etc.) into the routine. For DBI
-this variable is C<db>, but for other implementations it can be
-something else.
+this variable is C<db>, for LDAP it is C<ldap>, but for other
+implementations it can be something else.
 
 =item *
 
@@ -942,6 +1214,28 @@ Example:
    if ( $@ ) { ... report error ... }
    else      { push @object_list, $obj  if ( $obj ) }
  }
+
+B<fetch_determine_limit( $limit )>
+
+This method of the SPOPS parent class supports the C<fetch()>
+implementation of subclasses. It is used to help figure out what
+records to fetch. Pass in a C<$limit> string and get back a two-item
+list with the offset and max.
+
+The C<$limit> string can be in one of two formats:
+
+  'x,y'  --> offset = x, max = y
+  'x'    --> offset = 0, max = x
+
+Example:
+
+ $p->{limit} = "20,30";
+ my ( $offset, $max ) = $self->fetch_determine_limit( $p->{limit} );
+
+ # Offset is 20, max is 30, so you should get back records 20 - 30.
+
+If no C<$limit> is passed in, the values of both items in the
+two-value list are 0.
 
 B<save( [ \%params ] )>
 
@@ -1156,7 +1450,7 @@ $spops = {
       isa          => [ qw/ SPOPS::DBI::Pg SPOPS::DBI / ],
       field        => [ qw/ page_id location title author content / ],
       column_group => { listing => [ qw/ location title author / ] },
-      ... 
+      ...
    },
 };
 
@@ -1220,7 +1514,7 @@ Here are the methods and interfaces for implementing lazy loading:
 
 =over 4
 
-B<get_lazy_load_sub> 
+B<get_lazy_load_sub>
 
 Called by SPOPS when initializing a new object if one or more
 'column_group' entries are found in the configuration. It should
@@ -1262,6 +1556,78 @@ Sets the 'loaded' property of all fields in the object to false.
 For an example of how a SPOPS subclass implements lazy-loading, see
 L<SPOPS::DBI>.
 
+=head1 FIELD MAPPING
+
+As of version 0.50, SPOPS has the ability to make an object look like
+another object, or to put a prettier face on existing data.
+
+In your configuration, just specify:
+
+ field_map => { new_name => 'old_name', ... }
+
+For example, you might need to make your user objects stored in an
+LDAP directory look like user objects stored in a DBI database. You
+could say:
+
+ field_map    => { 'last_name'  => 'sn',
+                   'first_name' => 'givenname',
+                   'password'   => 'userpassword',
+                   'login_name' => 'uid',
+                   'email'      => 'mail',
+                   'user_id'    => 'cn',  }
+
+So, despite having entirely different schemas, the following would
+print out equivalent information:
+
+ sub display_user_data {
+     my ( $user ) = @_;
+     return <<INFO;
+   ID:     $user->{user_id}
+   Name:   $user->{first_name} $user->{last_name}
+   Login:  $user->{login_name}
+   Email:  $user->{email}
+ INFO
+ }
+
+ print display_user_data( $my_ldap_user );
+ print display_user_data( $my_dbi_user );
+
+Another use might be to represent properties in a different language.
+
+Note that you can have more than one new field pointing to the same
+old field.
+
+=head1 MULTIVALUED FIELDS
+
+Some data storage backends -- like LDAP -- can store multiple values
+for a single field. As of version 0.50, SPOPS can do the same.
+
+All you need to do is specify in your configuration which fields
+should be multivalued:
+
+ multivalue => [ 'field1', 'field2' ]
+
+Thereafter you can access them as below (more examples in
+L<SPOPS::Tie>):
+
+ my $object = My::Object->new;
+
+ # Set field1 to [ 'a', 'b' ]
+ $object->{field1} = [ 'a', 'b' ];
+
+ # Replace the value of 'a' with 'z'
+ $object->{field1} = { replace => { a => 'z' } };
+
+ # Add the value 'c'
+ $object->{field1} = 'c';
+
+ # Find only the ones I want
+ my @ones = grep { that_i_want( $_ ) } @{ $object->{field1} };
+
+Note that the value returned from a field access to a multivalue field
+is always an array reference. If there are no values, the reference is
+empty.
+
 =head1 DATA ACCESS METHODS
 
 Most of this information can be accessed through the I<CONFIG>
@@ -1275,14 +1641,14 @@ information. The following are defined:
 
 =over 4
 
-=item * 
+=item *
 
 B<lang> ($)
 
 Returns a language code (e.g., 'de' for German; 'en' for
 English). This only works if defined by your class.
 
-=item * 
+=item *
 
 B<no_cache> (bool)
 
@@ -1290,20 +1656,20 @@ Returns a boolean based on whether this object can be cached or
 not. This does not mean that it B<will> be cached, just whether the
 class allows its objects to be cached.
 
-=item * 
+=item *
 
 B<field> (\%)
 
 Returns a hashref (which you can sort by the values if you wish) of
 fieldnames used by this class.
 
-=item * 
+=item *
 
 B<field_list> (\@)
 
 Returns an arrayref of fieldnames used by this class.
 
-=item * 
+=item *
 
 B<timestamp_field> ($)
 
@@ -1320,18 +1686,9 @@ Subclasses can define their own where appropriate.
 
 These objects are tied together by just a few things:
 
-B<global_config>
-
-A few items sprinkled throughout the SPOPS hierarchy need information
-provided in a configuration file. See L<SPOPS::Configure> for more
-information about what should be in it, what form it should take and
-some of the nifty tricks you can do with it.
-
-Returns: a hashref of configuration information.
-
 B<global_cache>
 
-A caching object. If you have 
+A caching object. If you have
 
  {cache}->{SPOPS}->{use}
 
@@ -1391,7 +1748,7 @@ guideline 1 states the rules can be executed in any order, changing
 data for use in a separate rule would create a dependency between
 them.
 
-NOTE: This item is up for debate (as of 0.40). 
+NOTE: This item is up for debate (as of 0.40).
 
 =item 3.
 
@@ -1452,7 +1809,7 @@ Interface for adding rulesets to a class. The first argument is the
 class to which we want to add the ruleset, the second is the ruleset
 for the class. The ruleset is simply a hash reference with keys as the
 methods named above ('pre_fetch_action', etc.) pointing to an arrayref
-of code references. 
+of code references.
 
 This means that every phase named above above ('pre_fetch_action',
 etc.) can run more than one rule. Here is an example of what such a
@@ -1539,7 +1896,7 @@ Called after an object is successfully removed from the cache.
 
 B<get( $param_name )>
 
-Returns the currently stored information within 
+Returns the currently stored information within
 the object for $param.
 
  my $value = $obj->get( 'username' );
@@ -1614,20 +1971,28 @@ otherwise.
 
 B<object_description()>
 
-Returns a hashref with three keys of information about a particular
-object:
+Returns a hashref with metadata about a particular object. The keys of
+the hashref are:
 
 =over 4
 
 =item *
 
-B<url> ($)
+B<class> ($)
 
-URL that will display this object
+Class of this object
 
-B<url_edit> ($)
+=item *
 
-URL that will display this object in editable form.
+B<object_id> ($)
+
+ID of this object. (Also under 'oid' for compatibility.)
+
+=item *
+
+B<id_field> ($)
+
+Field used for the ID.
 
 =item *
 
@@ -1641,6 +2006,18 @@ B<title> ($)
 
 Title of this particular object (e.g., 'Man bites dog, film at 11')
 
+=item *
+
+B<url> ($)
+
+URL that will display this object. Note that the URL might not
+necessarily work due to security reasons.
+
+B<url_edit> ($)
+
+URL that will display this object in editable form. Note that the URL
+might not necessarily work due to security reasons.
+
 =back
 
 The defaults put together by SPOPS by reading your configuration file
@@ -1652,15 +2029,33 @@ object title:
   package My::Object;
 
   sub object_description {
-    my ( $self ) = @_;
-    my $info = $self->SUPER::object_description();
-    $info->{title} = join( ' ', sales_adjective_of_the_day(), 
-                                $info->{title} );
-    return $info; 
+      my ( $self ) = @_;
+      my $info = $self->SUPER::object_description();
+      $info->{title} = join( ' ', sales_adjective_of_the_day(),
+                                  $info->{title} );
+      return $info;
   }
 
 And be sure to include this class in your 'code_class' configuration
 key. (See L<SPOPS::Configure> for more info.)
+
+=head1 OTHER
+
+Some other methods that might actually be categoriezed at a later
+date.
+
+B<as_string>
+
+Represents the SPOPS object as a string fit for human consumption. The
+SPOPS method is extremely crude -- if you want things to look nicer,
+override it.
+
+B<as_html>
+
+Represents the SPOPS object as a string fit for HTML (browser)
+consumption. The SPOPS method is double extremely crude, since it just
+wraps the results of C<as_string()> (which itself is crude) in '<pre>'
+tags.
 
 =head1 ERROR HANDLING
 
@@ -1682,14 +2077,10 @@ implementation) will get hosed.
 
 =head1 TO DO
 
-B<Allow call to pass information to rulesets>
+B<Method object_description() should be more robust>
 
-Modify all calls to C<pre_fetch_action> (etc.) to take a hashref of
-information that can be used by the ruleset. For instance, if I do not
-want an object indexed by the full-text ruleset (even though the class
-uses it), I could do:
-
- eval { $obj->save({ full_text_skip => 1 }) };
+In particular, the 'url' and 'url_edit' keys of object_description()
+should be more robust.
 
 B<Objects composed of many records>
 
@@ -1738,7 +2129,7 @@ Copyright (c) 2001 intes.net, inc.. All rights reserved.
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
-=head1 MORE INFORMATION
+=head1 SEE ALSO
 
 Find out more about SPOPS -- current versions, updates, rants, ideas
 -- at:
@@ -1750,20 +2141,30 @@ openinteract-dev list) are at:
 
  http://sourceforge.net/projects/openinteract/
 
+Also see the 'Changes' file in the source distribution for comments
+about how the module has evolved.
+
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
 
-The following people have offered patches, advice, etc. to SPOPS:
+The following people have offered patches, advice, development funds,
+etc. to SPOPS:
 
 =over 4
 
 =item *
 
+Ray Zimmerman <rz10@cornell.edu> -- had offered tons of great design
+ideas and general help, pushing SPOPS into new domains. Too much to
+list here.
+
+=item *
+
 Christian Lemburg <lemburg@aixonix.de> -- contributed excellent
-documentation, far too many good ideas to implement as well as design
-help with L<SPOPS::Secure::Hierarchy>, the rationale for moving
-methods from the main SPOPS subclass to L<SPOPS::Utility>
+documentation, too many good ideas to implement as well as design help
+with L<SPOPS::Secure::Hierarchy>, the rationale for moving methods
+from the main SPOPS subclass to L<SPOPS::Utility>
 
 =item *
 
@@ -1773,24 +2174,11 @@ functionality in L<SPOPS::DBI>
 
 =item *
 
-Ray Zimmerman <rz10@cornell.edu> -- had offered tons of great design
-ideas and general help. From SPOPS.pm: moving the C<id()> method into
-the generated code and what state the object should be in after
-calling 'remove()' on it. From the code generation and configuration:
-found a bug in L<SPOPS::Configure> in 'find_config_class()', found a
-bug in L<SPOPS::Configure::Ruleset> resulting from an inheritance
-diamond and pointed out that classes should be able to implement their
-own rulesets, and found a bug in L<SPOPS::Configure::DBI> in the
-generated *_remove method. He also offered excellent detailed and
-well-documented ideas for enhanced 'has_a' and 'links_to' semantics.
-
-=item *
-
 Rick Myers <rik@sumthin.nu> -- got rid of lots of warnings when
 running under C<-w> and helped out with permission issues with
 SPOPS::GDBM.
 
-=item * 
+=item *
 
 Harry Danilevsky <hdanilevsky@DeerfieldCapital.com> -- helped out with
 Sybase-specific issues, including inspiring L<SPOPS::Key::DBI::Identity>.
@@ -1804,6 +2192,12 @@ L<SPOPS::Configure>, specifically the linking semantics.
 
 David Boone <dave@bis.bc.ca> -- prodded the creation of
 L<SPOPS::Initialize>.
+
+=item *
+
+MSN Marketing Service Nordwest, GmbH -- funded development of LDAP
+functionality, including L<SPOPS::LDAP>,
+L<SPOPS::LDAP::MultiDatasource>, and L<SPOPS::Iterator::LDAP>.
 
 =back
 

@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: dbi.t,v 1.5 2001/07/20 02:54:16 lachoy Exp $
+# $Id: 30_dbi.t,v 1.2 2001/08/20 21:06:12 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -11,6 +11,13 @@ use Data::Dumper qw( Dumper );
 
 use constant NUM_TESTS       => 18;
 use constant TEST_TABLE_NAME => 'spops_test';
+
+my %DRIVERS = (
+   Pg     => 'SPOPS::DBI::Pg',
+   Sybase => 'SPOPS::DBI::Sybase',
+   ASAny  => 'SPOPS::DBI::Sybase',
+   mysql  => 'SPOPS::DBI::MySQL',
+);
 
 {
     # Read in the config file and make sure we're supposed to run
@@ -64,7 +71,7 @@ ASANY
     my $spops_config = {
         tester => {
            class        => 'DBITest',
-           isa          => [ qw/ SPOPS::DBI::Pg SPOPS::DBI / ],
+           isa          => [ $DRIVERS{ $config->{DBI_driver} }, 'SPOPS::DBI' ],
            field        => [ qw/ spops_id spops_name spops_goop spops_num / ],
            id_field     => 'spops_id',
            skip_undef   => { spops_num => 1 },
@@ -95,8 +102,8 @@ ASANY
 
     # First connect to the database
 
-    my $db = DBI->connect( $config->{DBI_dsn}, 
-                           $config->{DBI_user}, 
+    my $db = DBI->connect( $config->{DBI_dsn},
+                           $config->{DBI_user},
                            $config->{DBI_password} );
     unless ( $db ) {
         die "Cannot connect to database using parameters given. Please\n",
@@ -137,14 +144,14 @@ SQL
 
     # Create an object
     {
-        my $obj = eval { DBITest->new({ spops_name => 'MyProject', 
+        my $obj = eval { DBITest->new({ spops_name => 'MyProject',
                                         spops_goop => 'oopie doop',
-                                        spops_num  => 241, 
+                                        spops_num  => 241,
                                         spops_id   => 42 } ) };
         ok( ! $@, 'Create object' );
 
         # Save the object
-        
+
         eval { $obj->save({ is_add => 1, db => $db, skip_cache => 1 }) };
         ok( ! $@, 'Save object (create)' );
         if ( $@ ) {
@@ -188,7 +195,7 @@ SQL
         if ( $@ ) {
             warn "Cannot save object: $@\n", Dumper( SPOPS::Error->get ), "\n";
         }
-    } 
+    }
 
     # Create another object, but this time don't define the spops_num
     # field and see if the default comes through
@@ -207,7 +214,7 @@ SQL
         if ( $@ ) {
             warn "Cannot retrieve objects: $@\n", Dumper( SPOPS::Error->get ), "\n";
         }
-        
+
         ok( ref $obj_list eq 'ARRAY' && scalar @{ $obj_list } == 3, 'Fetch group (return check)' );
     }
 
@@ -248,19 +255,17 @@ sub cleanup {
     }
     $db->disconnect;
 }
- 
 
-sub _sybase_setup { 
+
+sub _sybase_setup {
      my $config = shift;
-     $ENV{SYBASE} = $config->{ENV_SYBASE} if ( $config->{ENV_SYBASE} ); 
-     require SPOPS::DBI::Sybase;
-     unshift @DBITest::ISA, 'SPOPS::DBI::Sybase';
+     $ENV{SYBASE} = $config->{ENV_SYBASE} if ( $config->{ENV_SYBASE} );
 }
 
 
 sub _assign_types {
-    DBITest->CONFIG->{dbi_type_info} = { spops_id   => 'num',  
+    DBITest->CONFIG->{dbi_type_info} = { spops_id   => 'num',
                                          spops_name => 'char',
-                                         spops_goop => 'char', 
+                                         spops_goop => 'char',
                                          spops_num  => 'num' };
 }

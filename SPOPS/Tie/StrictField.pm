@@ -1,6 +1,6 @@
 package SPOPS::Tie::StrictField;
 
-# $Id: StrictField.pm,v 1.9 2001/07/11 03:52:35 lachoy Exp $
+# $Id: StrictField.pm,v 1.10 2001/08/22 10:51:45 lachoy Exp $
 
 use strict;
 use Carp       qw( carp );
@@ -8,8 +8,8 @@ use SPOPS::Tie qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP
                    IDX_CHECK_FIELDS $PREFIX_TEMP $PREFIX_INTERNAL );
 
 @SPOPS::Tie::StrictField::ISA      = qw( SPOPS::Tie );
-$SPOPS::Tie::StrictField::VERSION  = '1.7';
-$SPOPS::Tie::StrictField::Revision = substr(q$Revision: 1.9 $, 10);
+$SPOPS::Tie::StrictField::VERSION  = '1.8';
+$SPOPS::Tie::StrictField::Revision = substr(q$Revision: 1.10 $, 10);
 
 *_w    = *SPOPS::_w;
 *DEBUG = *SPOPS::DEBUG;

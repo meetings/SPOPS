@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: hash_file.t,v 1.2 2001/07/20 02:31:57 lachoy Exp $
+# $Id: 10_hash_file.t,v 1.1 2001/07/30 22:11:49 lachoy Exp $
 
 use File::Copy;
 use Test::More tests => 10;

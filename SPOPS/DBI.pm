@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 1.34 2001/07/20 02:25:58 lachoy Exp $
+# $Id: DBI.pm,v 1.46 2001/08/24 20:20:06 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -12,19 +12,17 @@ use SPOPS::SQLInterface;
 use SPOPS::Tie    qw( $PREFIX_INTERNAL );
 
 @SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
-$SPOPS::DBI::VERSION   = '1.7';
-$SPOPS::DBI::Revision  = substr(q$Revision: 1.34 $, 10);
+$SPOPS::DBI::VERSION   = '1.8';
+$SPOPS::DBI::Revision  = substr(q$Revision: 1.46 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
 use constant DEBUG_FETCH  => 0;
 use constant DEBUG_SAVE   => 0;
 
-# For children to override as needed
-
-# Called by save() and remove(); currently unimplemented
-
-sub log_action    { return 1; }
+########################################
+# CONFIGURATION
+########################################
 
 # Point by default to configuration values; children
 # can override with hardcoded values if desired
@@ -39,9 +37,35 @@ sub no_update     { return $_[0]->CONFIG->{no_update}   || {}  }
 sub skip_undef    { return $_[0]->CONFIG->{skip_undef}  || {}  }
 sub no_save_sync  { return $_[0]->CONFIG->{no_save_sync}       }
 
+
+########################################
+# CLASS CONFIGURATION
+########################################
+
+sub behavior_factory {
+    my ( $class ) = @_;
+    require SPOPS::ClassFactory::DBI;
+    DEBUG() && _w( 1, "Installing SPOPS::DBI behaviors for ($class)" );
+    return { links_to => \&SPOPS::ClassFactory::DBI::conf_relate_links_to };
+}
+
+
+########################################
+# CONNECTION RETRIEVAL
+########################################
+
 # Override this to get the db handle from somewhere
 
-sub global_db_handle   { return undef; }
+sub global_datasource_handle { return undef }
+
+# Backward compatible
+
+sub global_db_handle         { my $o = shift; return $o->global_datasource_handle( @_ ) }
+
+
+########################################
+# SQL DEFAULTS
+########################################
 
 # This is (I think) an ANSI SQL default for returning
 # the current date/datetime; db-specific modules should
@@ -54,6 +78,11 @@ sub global_db_handle   { return undef; }
 sub sql_current_date  { return 'CURRENT_TIMESTAMP()' }
 sub sql_fetch_types   { return "SELECT * FROM $_[1] WHERE 1 = 0" }
 
+
+########################################
+# CLASS INITIALIZATION
+########################################
+
 # Make this the default for everyone -- they can override it
 # themselves...
 
@@ -61,10 +90,10 @@ sub class_initialize {
     my ( $class, $CONFIG )  = @_;
     $CONFIG ||= {};
     my $C = $class->CONFIG;
-    $C->{field_list}  = [ sort{ $C->{field}->{$a} <=> $C->{field}->{$b} } 
+    $C->{field_list}  = [ sort{ $C->{field}->{$a} <=> $C->{field}->{$b} }
                           keys %{ $C->{field} } ];
     $C->{table_owner} = $CONFIG->{db_info}->{db_owner};
-    $C->{table_name}  = ( $C->{table_owner} ) 
+    $C->{table_name}  = ( $C->{table_owner} )
                           ? "$C->{table_owner}.$C->{base_table}" : $C->{base_table};
 
     # For databases that cannot respond properly to $sth->{TYPE} commands,
@@ -83,142 +112,44 @@ sub class_initialize {
 }
 
 
-# Dummy method for subclasses to override
-
-sub _class_initialize { return 1; }
+sub _class_initialize { return 1 }
 
 
-# Override the default SPOPS initialize call so we can use ->{id} and
-# mixed-case fields
+########################################
+# OBJECT IDENTIFICATION
+########################################
 
-sub initialize {
-    my ( $self, $p ) = @_;
-    $self->set_all_loaded();
-    return unless ( ref $p and scalar keys %{ $p } );
-
-    # We allow the user to substitute id => value instead for the
-    # specific fieldname.
-
-    $p->{ $self->id_field } ||= $p->{id};
-
-    # Use all lowercase to allow people to give us fieldnames in mixed
-    # case (we are very nice)
-
-    my %data = map { lc $_ => $p->{ $_ } } keys %{ $p };
-    my $field = $self->field;
-    foreach my $key ( keys %data ) {
-        $self->{ $key } = $data{ $key } if ( $field->{ $key } );
-    }
-    return $self;
-}
-
-
-# Typical call:
-# $self->check_action_security({ required => SEC_LEVEL_WRITE });
-
-# Note that we return SEC_LEVEL_WRITE to all requests where the object
-# does not have an ID -- meaning that the object has not yet been
-# saved, and this object creation security must be handled by the
-# application rather than SPOPS
-
-# Returns the security level if ok, die()s with an error message if not
-
-sub check_action_security {
-    my ( $self, $p ) = @_;
-
-    # since the assumption outlined above (only saved objects have ids)
-    # might not be true in all cases, provide an escape route for classes
-    # that need security and want to handle their ids themselves
-
-    return SEC_LEVEL_WRITE if ( $p->{is_add} ); #or ! $self->saved ); 
-
-    # If the class has told us they're not using security, then 
-    # everyone can do everything
-  
-    return SEC_LEVEL_WRITE if ( $self->no_security );
-
-    # This gets filled with the found security level, oddly, the user
-    # can pass in a security level if it's already been found
-
-    my $level = $p->{security_level};
-
-    # Check to see that the ID exists -- if not, it's an add and will
-    # not be checked since SPOPS relies on your application to implement
-    # who should and should not create an object. 
-    #
-    # NOTE:This is a source of some thoughts right now -- if you think
-    # SPOPS can/should implement this, hop on over to the
-    # openinteract-dev mailing list at:
-    #
-    # http://lists.sourceforge.net/lists/listinfo/openinteract-dev
-
-    my ( $class, $id );
-    unless ( $level ) {
-        $class = ref $self || $self;
-        $id    = ( ref $self ) ? $self->id : $p->{id};
-        return SEC_LEVEL_WRITE unless ( $id ); 
-        DEBUG() && _w( 1, "Checking action on $class ($id) and required",
-                          "level is ($p->{required})" );
-
-        # Calls to SPOPS::Secure->... note that we do not need to
-        # explicitly pass in group/user information, since SPOPS::Secure
-        # will retrieve it for us.
-
-        $level = eval { $class->check_security({ class     => $class, 
-                                                 object_id => $id }) };
-        if ( $@ ) {
-            $SPOPS::Error::user_msg = "Cannot check security for object: $class ($id)";
-            die $SPOPS::Error::user_msg;
-        }
-    }
-    DEBUG() && _w( 1, "Found security level of ($level)" );
-
-    # If the level is below what is necessary, set an error message and
-    # die with a general one.
-
-    if ( $level < $p->{required} ) {
-        DEBUG() && _w( 1, "Cannot access $class record with ID $id; ", 
-                          "access: $level while $p->{required} is required." );
-        my $msg = "Action prohibited due to security. Insufficient access for requested action";
-        SPOPS::Error->set({ user_msg   => $msg, 
-                            type       => 'security',
-                            system_msg => "Required access: $p->{required}; retrieved access: $level",
-                            extra      => { security => $level } });
-        die $msg;
-    }
-    return $level; # Rock and roll
-}
-
-
-# Return a snippet suitable for a where clause: page_id = 5 or
-# comment_id = '818172723'
+# Generic method to return a SQL clause to identify a particular
+# record -- a suitable for a where clause:
+#   page_id = 5
+#   comment_id = '818172723'
 
 sub id_clause {
     my ( $item, $id, $opt, $p ) = @_;
     $opt ||= '';
     $p   ||= {};
-  
-    # If we weren't passed an ID and $item isn't an 
+
+    # If we weren't passed an ID and $item isn't an
     # object, there's a problem
-  
+
     unless ( $id or ref( $item ) ) {
         _w( 0, "No ID passed in and called as a class method rather than an object method." );
         return undef;
     }
-  
-    $id     ||= $item->id;
-    my $db    = $p->{db} || $item->global_db_handle;
+    $id ||= $item->id;
+
+    my $db = $p->{db} || $item->global_db_handle;
     unless ( $db ) {
         _w( 0, "Cannot create ID clause because no database handle accessible." );
         my $msg = 'Cannot create ID clause';
-        SPOPS::Error->set({ user_msg   => $msg, 
+        SPOPS::Error->set({ user_msg   => $msg,
                             system_msg => 'No db handle available when id_clause routine entered',
-                            method     => 'id_clause', 
+                            method     => 'id_clause',
                             type       => 'db' } );
         die $msg;
     }
     my $id_field  = $item->id_field;
-    my $type_info = eval { $item->db_discover_types( $item->base_table, 
+    my $type_info = eval { $item->db_discover_types( $item->base_table,
                                                      { dbi_type_info => $p->{dbi_type_info},
                                                        db            => $db } ) };
 
@@ -230,12 +161,16 @@ sub id_clause {
         _w( 0, "Likely was not passed sufficient information to ",
                "get infromation requested. Making a 'best guess'" );
     }
-    my $use_id_field = ( $opt eq 'noqualify' ) 
-                         ? $id_field 
+    my $use_id_field = ( $opt eq 'noqualify' )
+                         ? $id_field
                          : join( '.', $item->table_name, $id_field );
     return join(' = ', $use_id_field, $db->quote( $id, $type_info->{ $id_field } ) );
 }
 
+
+########################################
+# FETCHING
+########################################
 
 # Allows the user to define how fields will be formatted
 # in a SELECT (date formatting, substrings, etc)
@@ -253,64 +188,25 @@ sub format_select {
 }
 
 
-sub get_cached_object {
-    my ( $class, $p ) = @_;
-    return undef unless ( $p->{id} );
-    return undef unless ( $class->use_cache( $p ) );
-  
-    # If we can retrieve an item from the cache, then create a new object
-    # and assign the values from the cache to it.
-
-    if ( my $item_data = $class->global_cache->get({ class => $class, id => $p->{id} }) ) {
-        DEBUG() && _w( 1, "Retrieving from cache..." );
-        return $class->new( $item_data );
-    }
-    DEBUG() && _w( 1, "Cached data not found." );
-    return undef;
-}
-
-
-sub set_cached_object {
-    my ( $self, $p ) = @_;
-    return undef unless ( ref $self );
-    return undef unless ( $self->id );
-    return undef unless ( $self->use_cache( $p ) );
-    return $self->global_cache->set({ data => $self });
-}
-
-
-# Return 1 if we're using the cache; undef if not
-
-sub use_cache {
-    my ( $class, $p ) = @_;
-    return undef if ( $p->{skip_cache} );
-    return undef if ( $class->no_cache );
-    my $C = $class->global_config;
-    return undef unless ( ref $C eq 'HASH' );
-    return undef unless ( $C->{cache}->{data}->{SPOPS} );
-    return 1;
-}
-
-
 sub fetch {
     my ( $class, $id, $p ) = @_;
     $id ||= 0;
     $p  ||= {};
     DEBUG() && _wm( 2, DEBUG_FETCH,
-                    "Trying to fetch an item of $class with ID $id and params ", 
+                    "Trying to fetch an item of $class with ID $id and params ",
                     join " // ",
                     map { $_ . ' -> ' . ( defined( $p->{$_} ) ? $p->{$_} : '' ) }
                         keys %{ $p } );
- 
+
     # No ID, no object
 
     return undef   unless ( $id and $id !~ /^tmp/ );
-  
-    # Security violations bubble up to caller  
+
+    # Security violations bubble up to caller
 
     my $level = $p->{security_level};
     unless ( $p->{skip_security} ) {
-        $level ||= $class->check_action_security({ id       => $id, 
+        $level ||= $class->check_action_security({ id       => $id,
                                                    required => SEC_LEVEL_READ });
     }
 
@@ -318,7 +214,7 @@ sub fetch {
     # any of the actions returns undef (false), we bail.
 
     return undef unless ( $class->pre_fetch_action( { %{ $p }, id => $id } ) );
-  
+
     my $obj = undef;
 
     # If we were passed the data for an object, go ahead and create
@@ -328,28 +224,28 @@ sub fetch {
         $obj = $class->new( $p->{data} );
     }
     else {
-        $obj = $class->get_cached_object( { %{ $p }, id => $id } );
+        $obj = $class->get_cached_object({ %{ $p }, id => $id });
         $p->{skip_cache}++;         # Set so we don't re-cache it later
     }
-  
-    unless ( ref $obj eq $class ) {    
-        my ( $raw_fields, $select_fields ) = $class->_fetch_select_fields( $p );    
+
+    unless ( ref $obj eq $class ) {
+        my ( $raw_fields, $select_fields ) = $class->_fetch_select_fields( $p );
         DEBUG() && _wm( 1, DEBUG_FETCH, "SELECTing: ", join( "//", @{ $select_fields } ) );
-    
-        # Put all the arguments into a hash (so we can reuse them simply 
+
+        # Put all the arguments into a hash (so we can reuse them simply
         # later) and grab the record
-    
+
         my %args = ( from   => [ $class->table_name ],
                      select => $select_fields,
                      where  => $class->id_clause( $id, undef, $p ),
                      db     => $p->{db},
                      return => 'single' );
         my $row = eval { $class->db_select( \%args ); };
-    
+
         # Keep the SQLInterface error messages in place
-    
+
         if ( $@ ) {
-            $class->fail_fetch( \%args );   
+            $class->fail_fetch( \%args );
             _w( 0, "FETCH failed. Error returned: $@" );
             die $SPOPS::Error::user_msg;
         }
@@ -378,7 +274,7 @@ sub fetch_iterator {
     DEBUG() && _w( 1, "Trying to create an Iterator with: ", Dumper( $p ) );
     ( $p->{fields}, $p->{select} ) = $class->_construct_group_select( $p );
     $p->{class}                    = $class;
-    ( $p->{offset}, $p->{max} )    = $class->_determine_limits( $p );
+    ( $p->{offset}, $p->{max} )    = $class->fetch_determine_limit( $p->{limit} );
     unless ( ref $p->{id_list} ) {
         $p->{sth} = $class->_execute_multiple_record_query( $p );
     }
@@ -392,7 +288,7 @@ sub fetch_group {
     my ( $class, $p ) = @_;
     ( $p->{raw_fields}, $p->{select} ) = $class->_construct_group_select( $p );
     my $sth              = $class->_execute_multiple_record_query( $p );
-    my ( $offset, $max ) = $class->_determine_limits( $p );
+    my ( $offset, $max ) = $class->fetch_determine_limit( $p->{limit} );
     my @obj_list = ();
 
     my $row_count = 0;
@@ -419,7 +315,7 @@ ROW:
 
         # Not to the offset yet, so go to the next row but still increment
         # the counter so we calculate limits properly
-    
+
         if ( $offset and ( $row_count < $offset ) ) {
             $row_count++;
             next ROW;
@@ -435,26 +331,6 @@ ROW:
     }
     $sth->finish;
     return \@obj_list;
-}
-
-
-# initialize limit tracking vars -- the limit passed in can be:
-# limit => 'n,n'  --> limit => 'offset,max'
-# limit => 'n'    --> limit => 'max'
-
-sub _determine_limits {
-    my ( $class, $p ) = @_;
-    my ( $offset, $max );
-    return ( 0, 0 ) unless ( $p->{limit} );
-    if ( $p->{limit} =~ /,/ ) {
-        ( $offset, $max ) = split /\s*,\s*/, $p->{limit};
-        $max += $offset;
-    } 
-    else {
-        $max = $p->{limit};
-    }
-    DEBUG() && _wm( 1, DEBUG_FETCH, "Limit set: Start $offset to $max" );
-    return ( $offset, $max );
 }
 
 
@@ -568,32 +444,36 @@ sub _fetch_post_process {
 
     $self->set_cached_object( $p );
 
-    # Execute any actions the class (or any parent) wants after 
+    # Execute any actions the class (or any parent) wants after
     # creating the object (see SPOPS.pm)
-  
+
     return undef unless ( $self->post_fetch_action( $p ) );
-  
+
     # Clear the 'changed' flag
-  
+
     $self->clear_change;
-  
+
     # Mark this as being a saved object
 
     $self->has_save;
 
     # Set the security fetched from above into this object
-    # as a temporary property (see SPOPS::Tie for more info 
+    # as a temporary property (see SPOPS::Tie for more info
     # on temporary properties); note that this is set whether
     # we retrieve a cached copy or not
 
     $self->{tmp_security_level} = $level;
-    DEBUG() && _wm( 1, DEBUG_FETCH, 
+    DEBUG() && _wm( 1, DEBUG_FETCH,
                     ref $self, "(", $self->id, ") : cache set (if available),",
                     "post_fetch_action() done, change flag cleared and save ",
                     "flag set. Security: $level" );
     return $self;
 }
 
+
+########################################
+# LAZY LOADING
+########################################
 
 # This is to be passed to SPOPS::Tie as a coderef so it can do a
 # lazy-load a field that hasn't yet been loaded (fetched) so instead
@@ -622,8 +502,13 @@ sub perform_lazy_load {
 }
 
 
+########################################
+# SAVING
+########################################
+
+
 sub save {
-    my ( $self, $p ) = @_; 
+    my ( $self, $p ) = @_;
     my $DEBUG = DEBUG_SAVE || $p->{DEBUG};
     $DEBUG && _wm( 1, $DEBUG, "Trying to save a <<", ref $self, ">>" );
     my $id = $self->id;
@@ -639,13 +524,10 @@ sub save {
 
     unless ( $is_add or $self->changed ) {
         $DEBUG && _wm( 1, $DEBUG, "This object exists and has not changed. Exiting." );
-        return $id;
+        return $self;
     }
 
-    # First ensure that we are allowed to create this object Note that
-    # the security object needs to be able to say whether a user can
-    # create ANY of a particular type of object, likely by specifying
-    # a class and oid of '0'
+    # Check security for create/update
 
     my $action = ( $is_add ) ? 'create' : 'update';
     my ( $level );
@@ -657,7 +539,7 @@ sub save {
 
     # Callback for objects to do something before they're saved
 
-    return undef unless ( $self->pre_save_action({ %{ $p }, 
+    return undef unless ( $self->pre_save_action({ %{ $p },
                                                    is_add => $is_add }) );
 
     # Do not include these fields in the insert/update at all
@@ -675,22 +557,22 @@ FIELD:
         my $value = $self->{ $field };
         next FIELD if ( ! defined $value and $skip_undef->{ $field } );
         push @{ $p->{field} }, $field;
-        push @{ $p->{value} }, $value; 
+        push @{ $p->{value} }, $value;
     }
 
     # Do the insert/update based on whether the object is new; don't
     # catch the die() that might be thrown -- let that percolate
 
-    if ( $is_add ) { $self->_save_insert( $p )  } 
+    if ( $is_add ) { $self->_save_insert( $p )  }
     else           { $self->_save_update( $p )  }
 
     # Do any actions that need to happen after you save the object
 
-    return undef unless ( $self->post_save_action({ %{ $p }, 
+    return undef unless ( $self->post_save_action({ %{ $p },
                                                     is_add => $is_add }) );
 
     # Save the newly-created/updated object to the cache
-  
+
     $self->set_cached_object( $p );
 
     # Note the action that we've just taken (opportunity for subclasses)
@@ -699,23 +581,17 @@ FIELD:
         $self->log_action( $action, $self->id );
     }
 
-    # Yes, this is now a saved object
+    # Set flags and return the object so we can do chained method calls
 
     $self->has_save;
-  
-    # Being newly-created/updated, there are no changes
-
     $self->clear_change;
-
-    # Return the object so we can do chained method calls
-
     return $self;
 }
 
 # Called by _save_insert()
 
-sub pre_fetch_id  { return undef; }
-sub post_fetch_id { return undef; }
+sub pre_fetch_id  { return undef }
+sub post_fetch_id { return undef }
 
 sub _save_insert {
     my ( $self, $p ) = @_;
@@ -724,11 +600,11 @@ sub _save_insert {
     $DEBUG && _wm( 1, $DEBUG, "Treating the save as an INSERT." );
 
     my $db = $p->{db} || $self->global_db_handle;
-  
+
     # Ability to get the ID you want before the insert statement
     # is executed. If something is returned, push the value
     # plus the ID field onto the appropriate stack.
-  
+
     my $pre_id = $self->pre_fetch_id( { %{ $p }, db => $db } );
     if ( $pre_id ) {
         $self->id( $pre_id );
@@ -745,13 +621,13 @@ sub _save_insert {
     # Note also that we pass \%p in just in case we want to tell
     # db_insert not to quote anything from the original call.
 
-    my %args = ( table      => $self->table_name, 
-                 return_sth => 1, 
+    my %args = ( table      => $self->table_name,
+                 return_sth => 1,
                  db         => $db,
                  %{ $p } );
     my $sth = eval { $self->db_insert( \%args ) };
 
-    # Don't overwrite the values in $SPOPS::Error that 
+    # Don't overwrite the values in $SPOPS::Error that
     # were already set by SPOPS::SQLInterface
 
     if ( $@ ) {
@@ -760,13 +636,13 @@ sub _save_insert {
         $SPOPS::Error::user_msg = 'Error saving record to database';
         die $SPOPS::Error::user_msg;
     }
-  
+
     # Ability to get the ID from the statement just inserted
     # via an overridden subclass method; if something is
     # returned, set the ID in the object.
 
     my $post_id = $self->post_fetch_id( { %{ $p }, db => $db, statement => $sth } );
-    if ( $post_id ) {	 
+    if ( $post_id ) {	
         $self->id( $post_id );
         $DEBUG && _wm( 1, $DEBUG, "ID fetched after insert: $post_id" );
     }
@@ -781,9 +657,9 @@ sub _save_insert {
     unless ( $p->{no_sync} or $self->no_save_sync ) {
         my $fill_in_fields = $self->CONFIG->{sql_defaults} || [];
         if ( scalar @{ $fill_in_fields } ) {
-            $DEBUG && _wm( 1, $DEBUG, "Fetching defaults for fields ", 
+            $DEBUG && _wm( 1, $DEBUG, "Fetching defaults for fields ",
                            join( ' // ', @{ $fill_in_fields } ), " after insert." );
-            my $row = eval { $self->db_select({ 
+            my $row = eval { $self->db_select({
                                  from   => [ $self->table_name ],
                                  select => $fill_in_fields,
                                  where  => $self->id_clause( undef, undef, $p ),
@@ -795,7 +671,7 @@ sub _save_insert {
 
             if ( $@ ) {
                 $SPOPS::Error::user_msg = 'Cannot re-fetch row. Continuing with normal process';
-                _w( 0, $SPOPS::Error::user_msg, "(Simple: $@)", 
+                _w( 0, $SPOPS::Error::user_msg, "(Simple: $@)",
                     "(Enhanced: $SPOPS::Error::system_msg)" );
             }
             else {
@@ -806,15 +682,15 @@ sub _save_insert {
             }
         }
     }
-  
+
     # Now create the initial security for this object unless
     # we have requested to skip it
-  
+
     unless ( $p->{skip_security} ) {
         eval { $self->create_initial_security({ object_id => $self->id }) };
         _w( 0, "Error creating initial security: $@" ) if ( $@ );
     }
-    return 1; 
+    return 1;
 }
 
 
@@ -822,20 +698,20 @@ sub _save_update {
     my ( $self, $p ) = @_;
     my $DEBUG = DEBUG_SAVE || $p->{DEBUG};
 
-    # If the ID of the object is changing, we still need to be able to 
+    # If the ID of the object is changing, we still need to be able to
     # refer to the row with its old ID; allow the user to pass in the old
     # ID in this case so we can create the ID clause with it
-  
-    my $id_clause = ( $p->{use_id} ) 
-                      ? $self->id_clause( $p->{use_id}, undef, $p ) 
+
+    my $id_clause = ( $p->{use_id} )
+                      ? $self->id_clause( $p->{use_id}, undef, $p )
                       : $self->id_clause( undef, undef, $p );
     $DEBUG && _wm( 1, $DEBUG, "Processing save as UPDATE with clause ($id_clause)" );
 
-    # Note that the 'field' and 'value' parameters are in $p and 
+    # Note that the 'field' and 'value' parameters are in $p and
     # exist when the hashref is expanded into %args
 
-    my %args = ( where => $id_clause, 
-                 table => $self->table_name, 
+    my %args = ( where => $id_clause,
+                 table => $self->table_name,
                  %{ $p } );
     my $rv =  eval { $self->db_update( \%args ); };
     if ( $@ ) {
@@ -848,7 +724,9 @@ sub _save_update {
 }
 
 
-# Remove one or more objects
+########################################
+# REMOVING
+########################################
 
 sub remove {
     my ( $self, $p ) = @_;
@@ -898,7 +776,7 @@ sub remove {
     # ... execute any actions after a successful removal
 
     return undef unless ( $self->post_remove_action( $p ) );
- 
+
     # ... and log the deletion
 
     $self->log_action( 'delete', $id ) unless ( $p->{skip_log} );
@@ -934,41 +812,40 @@ module should implement:
 
 =over 4
 
-=item * 
+=item *
 
 (optional) Methods to sort member objects or perform operations on
 groups of them at once.
 
-=item * 
+=item *
 
 (optional) Methods to relate an object of this class to objects of
 other classes -- for instance, to find all users within a group.
 
-=item * 
+=item *
 
 (optional) The initialization method (I<_class_initialize()>), which
 should create a I<config()> object stored in the package variable and
 initialize it with configuration information relevant to the class.
 
-=item * 
+=item *
 
 (optional) Methods to accomplish actions before/after many of the
 actions implemented here: fetch/save/remove.
 
-=item * 
+=item *
 
 (optional) Methods to accomplish actions before/after saving or
 removing an object from the cache.
 
 =back
 
-Of course, these methods can also do anything else you like. :)
+Of course, these methods can also do anything else you like. :-)
 
 As you can see, all the methods are optional. Along with
-L<SPOPS::Configure> and L<SPOPS::Configure::DBI>, you can create an
-entirely virtual class consisting only of configuration
-information. So you can actually create the implementation for a new
-object in two steps:
+L<SPOPS::ClassFactory>, you can create an entirely virtual class
+consisting only of configuration information. So you can actually
+create the implementation for a new object in two steps:
 
 =over 4
 
@@ -991,7 +868,9 @@ reference of the database handle with the object for complexity
 reasons (but you can actually implement this if you would
 like). Instead you either need to pass a database handle to a method
 using the C<db> parameter or define a method in your object
-C<global_db_handle()> which returns an appropriate database handle.
+C<global_datasource_handle()> which returns an appropriate database
+handle. (Note: the old C<global_db_handle()> method is deprecated and
+will be removed eventually.)
 
 The latter sounds more difficult than it is. And if you have many
 objects using the same handle it is definitely the way to go. For
@@ -1014,7 +893,7 @@ instance, your database handle class could look like:
 
  my ( $DB );
 
- sub global_db_handle {
+ sub global_datasource_handle {
    unless ( ref $DB ) {
      $DB = DBI->connect( DBI_DSN, DBI_USER, DBI_PASS,
                          { RaiseError => 1, LongReadLen => 65536, LongTruncOk => 0 } )
@@ -1094,11 +973,11 @@ in. Examples:
  /;
  print "SQL: $sql";
 
- >> SQL: 
+ >> SQL:
       DELETE FROM this_table
        WHERE this_table.this_id = 35
 
- $class->db_select( ... where => $class->id_clause( 15 ), ... ) 
+ $class->db_select( ... where => $class->id_clause( 15 ), ... )
 
 If the system cannot determine the data type of the id field, it makes
 a best guess based on the package variable GUESS_ID_FIELD_TYPE. It
@@ -1119,7 +998,7 @@ the second argument. To use the example from above:
  /;
  print "SQL: $sql";
 
- >> SQL: 
+ >> SQL:
       DELETE FROM this_table
        WHERE this_id = 35
 
@@ -1148,7 +1027,9 @@ Parameters:
 B<column_group> ($) (optional)
 
 Name a group of columns you want to fetch. Only the values for these
-columns will be retrieved, and an arrayref of 
+columns will be retrieved, and an arrayref of
+
+=item *
 
 B<field_alter> (\%) (optional)
 
@@ -1169,29 +1050,29 @@ particular statement dumped into the error log:
 
 B<fetch_group( \%params )>
 
-Returns an arrayref of objects that meet the criteria you 
+Returns an arrayref of objects that meet the criteria you
 specify.
 
 This is actually fairly powerful. Examples:
 
  # Get all the user objects and put them in a hash
  # indexed by the id
- my %uid = map { $_->id => $_ } @{ $R->user->fetch_group({ order => 'last_name' }) }; 
+ my %uid = map { $_->id => $_ } @{ $R->user->fetch_group({ order => 'last_name' }) };
 
  # Get only those user objects for people who have
  # logged in today
  my $users = $R->user->fetch_group( {
                where => 'datediff( dd, last_login, get_date() ) = 0',
-               order => 'last_name' 
+               order => 'last_name'
              } );
  foreach my $user ( @{ $users } ) {
    print "User: $user->{login_name} logged in today.\n";
  }
 
-Note that you can also return objects that match the results of a 
+Note that you can also return objects that match the results of a
 join query:
 
- my $list = eval { $class->fetch_group({ 
+ my $list = eval { $class->fetch_group({
                                order => 'item.this, item.that',
                                from => [ 'item', 'modifier' ],
                                where => 'modifier.property = ? AND ' .
@@ -1202,7 +1083,7 @@ And you can use parameters found in C<fetch()>:
 
  my $list = eval { $class->fetch_group({ column_group => 'minimal' }) };
 
-Parameters: 
+Parameters:
 
 =over 4
 
@@ -1212,10 +1093,14 @@ B<where> ($)
 
 A WHERE clause; leave this blank and you will get all entries
 
+=item *
+
 B<value> (\@)
 
 If you use placeholders in your WHERE clause, put the values in order
 in this parameter and they will be properly quoted.
+
+=item *
 
 B<order> ($)
 
@@ -1224,6 +1109,8 @@ An ORDER BY clause; leave this blank and the order is arbitrary
 have ORDER BY clauses that use more than one field, such as:
 
  order => 'active_date, updated_date DESC'
+
+=item *
 
 B<limit> ($)
 
@@ -1250,6 +1137,31 @@ Other parameters get passed onto the fetch() statement when the
 records are being retrieved.
 
 =back
+
+B<fetch_iterator \%params )>
+
+Uses the same parameters as C<fetch_group()> but instead of returning
+an arrayref with all the objects, it returns an
+L<SPOPS::Iterator::DBI> object. You can use this object to step
+through the objects one at a time, which can be an enormous resource
+savings if you are retrieving large groups of objects.
+
+Example:
+
+  my $iter = My::SPOPS->fetch_iterator({
+                             where         => 'package = ?',
+                             value         => [ 'base_theme' ],
+                             order         => 'name' });
+  while ( my $template = $iter->get_next ) {
+      print "Item ", $iter->position, ": $template->{package} / $template->{name}";
+      print " (", $iter->is_first, ") (", $iter->is_last, ")\n";
+  }
+
+All security restrictions are still upheld -- if a user cannot
+retrieve an object with C<fetch()> or C<fetch_group()>, the user
+cannot retrieve it with C<fetch_iterator()> either.
+
+Parameters: see C<fetch_group()>.
 
 B<fetch_count( \%params )>
 
@@ -1369,9 +1281,9 @@ If you are interested: the method C<perform_lazy_load()> does the
 actual fetch of the field value.
 
 B<Important Note>: If you use lazy loading, you B<must> define a
-method C<global_db_handle()> (see L<DATABASE HANDLE> above) for your
-object -- otherwise the C<perform_lazy_load()> method will not be able
-to get it.
+method C<global_datasource_handle()> (see L<DATABASE HANDLE> above)
+for your object -- otherwise the C<perform_lazy_load()> method will
+not be able to get it.
 
 =head1 ERROR HANDLING
 
@@ -1391,6 +1303,8 @@ these two things to each other. (It is not that difficult, just making
 a note to deal with it later.)
 
 =head1 BUGS
+
+None known.
 
 =head1 COPYRIGHT
 

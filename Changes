@@ -1,6 +1,183 @@
 Revision history for Perl extension SPOPS.
 
-0.41
+0.50  Tue Aug 28 16:59:39 EDT 2001
+
+Overall:
+
+     - You can now use LDAP to store your objects! Also included is
+     SPOPS::LDAP::MultiDatastore, which lets you specify multiple
+     directories to query for objects. Thanks to MSN Marketing Service
+     Nordwest, GmbH, for funding development!
+
+     - Configuration process has been totally rewritten and renamed
+     (SPOPS::ClassFactory)
+
+     - Added multivalue and name mapping functions tie interface
+
+
+Individual:
+
+   * Makefile.PL:
+
+     - Added support for non-interactive execution 
+       ('perl Makefile.PL AUTO' if you have a 'spops_test.conf' file
+       around from a previous test)
+
+     - Added support for LDAP test definitions
+
+   * eg/README:
+
+     - Information about the examples now here
+
+   * eg/stock_user_group.pl:
+
+     - Added script to stock the sample user/group/security objects.
+
+   * eg/users_groups_(mysql|psql|tsql).sql
+
+     - Added SQL structure files for the sample user/group/security
+     objects.
+
+   * eg/My/(Common|Group|Security|User).pm:
+
+     - Define sample user/group/security objects.
+
+   * SPOPS.pm:
+
+     - Added (and documented) a few keys to the information returned
+     by the 'object_description' method.
+
+     - Documented information that is used in object configuration for
+     the tie interface by the 'new()' method.
+
+     - Modified 'initialize()' to set object values passed to new()
+
+     - Removed 'global_config()' method and the need for it -- it was
+     only being used for caching and when we tackle that we'll figure
+     out what's necessary.
+
+     - Moved a number of cache methods from SPOPS/DBI.pm here
+
+     - Removed the '_idx_data()' method
+
+     - The 'clone()' method can now clone an object from one class to
+     another given the parameter '_class'. This could be an extremely
+     easy way to copy objects having the same interface from one
+     datastore to another. (See POD for an example.)
+
+     - Moved the method '_determine_limits()' from SPOPS/DBI.pm here,
+     renaming it 'fetch_determine_limit()'
+
+     - Added 'behavior_factory' which installs the default behaviors
+     (found in SPOPS::ClassFactory::DefaultBehavior) to subclasses
+
+     - Added 'as_html' to represent an object as HTML. (Note that the
+     default just wraps 'as_string' in '<pre>' tags. U-G-L-Y. Override
+     if you value aesthetics.)
+
+   * SPOPS/ClassFactory.pm:
+
+     - Added new configuration process. Instead of a monolithic
+     process this class simply gathers behaviors for a class based on
+     its inheritance tree. These behaviors are put into a particular
+     slot (type) and run in turn. This is quite extensible and easy to
+     customize. See POD for more.
+
+   * SPOPS/ClassFactory/DefaultBehavior.pm:
+
+     - Holds default behaviors run (potentially) by every SPOPS subclass
+
+   * SPOPS/ClassFactory/DBI.pm:
+
+     - Holds implementation-specific behaviors for subclasses of
+     SPOPS::DBI
+
+   * SPOPS/ClassFactory/LDAP.pm:
+
+     - Holds implementation-specific behaviors for subclasses for
+     SPOPS::LDAP
+
+   * SPOPS/DBI.pm:
+
+     - Moved 'check_action_security()' to SPOPS::Secure
+
+     - Removed 'initialize()' (now inherits from SPOPS.pm); caching
+     methods (moved to SPOPS.pm)
+
+     - Moved '_determine_limits()' to SPOPS.pm as
+     'fetch_determine_limit()'
+
+     - Added 'behavior_factory' which installs the
+     implementation-specific behaviors (found in
+     SPOPS::ClassFactory::DBI) to subclasses
+
+   * SPOPS/Initialize.pm:
+
+     - Better documented the process() method and added the ability to
+     pass multiple already-formed SPOPS configuration hashrefs at
+     once.
+
+     - Modified to work with SPOPS::ClassFactory
+
+   * SPOPS/Iterator/LDAP.pm:
+
+     - Added implementation of SPOPS::Iterator for SPOPS::LDAP
+
+   * SPOPS/LDAP.pm:
+
+     - Added new datastore for SPOPS. You can now save, fetch and
+     remove objects from an LDAP datastore as you would a DBI
+     datastore.
+
+   * SPOPS/LDAP/MultiDatastore.pm:
+
+     - Add subclass to SPOPS::LDAP - be able to query multiple
+     directories at once by using this (instead of SPOPS::LDAP) as a
+     parent class and specifying multiple datasources in the object
+     configuration.
+
+   * SPOPS/Secure.pm
+
+     - Updated docs and added information about subclassing to create
+     custom security.
+
+     - Added method 'check_action_security()' from SPOPS/DBI.pm so
+     that other implementation classes can use it and
+     non-SPOPS::Secure objects can just call the stub in SPOPS.pm.
+
+   * SPOPS/SQLInterface.pm
+
+     - Patch from Ray Zimmerman to actually return data when you
+     specify a return value of 'hash' for db_select().
+
+     - Patch from Ray Zimmerman to return from 'db_insert()',
+     'db_update()' and 'db_delete()' the return value from the
+     '$sth->execute()' statement. This is an API change but a very
+     small one -- if successful the return value should still be true,
+     since even if (for instance) an update affects no rows DBI
+     returns '0E0' which is numerically zero but evaluates to
+     true. Also added note regarding various return values to
+     'db_update()' docs.
+
+   * SPOPS/Tie.pm
+
+     - Added functionality for multivalued properties. A single
+     property can have non-duplicate, unordered multiple values. This
+     is necessary for SPOPS::LDAP. (Documentation included!)
+
+     - Added functionality for field mapping. This allows you to
+     retrofit an existing object interface to a table scheme with
+     different field names. (Documentation included!)
+
+   * t/*
+
+     - Renamed all tests from 'name.t' to '##_name.t' so we can have
+     some control over the order in which they're executed.
+
+     - Added LDAP test suite (40_ldap.t).
+
+
+0.41  Fri Jul 20 07:00:38 EDT 2001
 
    Overall:
 

@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: gdbm.t,v 1.4 2001/07/20 02:54:16 lachoy Exp $
+# $Id: 20_gdbm.t,v 1.1 2001/07/30 22:11:49 lachoy Exp $
 
 use strict;
 

@@ -1,14 +1,14 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 1.8 2001/07/11 03:52:35 lachoy Exp $
+# $Id: MySQL.pm,v 1.9 2001/08/22 10:51:45 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 use SPOPS::Key::DBI::HandleField;
 
 @SPOPS::DBI::MySQL::ISA      = ();
-$SPOPS::DBI::MySQL::VERSION  = '1.7';
-$SPOPS::DBI::MySQL::Revision = substr(q$Revision: 1.8 $, 10);
+$SPOPS::DBI::MySQL::VERSION  = '1.8';
+$SPOPS::DBI::MySQL::Revision = substr(q$Revision: 1.9 $, 10);
 
 sub sql_current_date  { return 'NOW()' }
 

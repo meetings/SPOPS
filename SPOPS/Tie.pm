@@ -1,35 +1,41 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 1.11 2001/07/11 03:52:34 lachoy Exp $
+# $Id: Tie.pm,v 1.16 2001/08/22 10:51:45 lachoy Exp $
 
 use strict;
-use vars  qw( $PREFIX_TEMP $PREFIX_INTERNAL );
-use Carp  qw( carp );
-
+use vars         qw( $PREFIX_TEMP $PREFIX_INTERNAL );
+use Carp         qw( carp );
+use Data::Dumper qw( Dumper );
 require Exporter;
 
 @SPOPS::Tie::ISA       = qw( Exporter );
 @SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_INTERNAL IDX_TEMP  
                              IDX_CHECK_FIELDS IDX_LAZY_LOADED
                              $PREFIX_TEMP $PREFIX_INTERNAL );
-$SPOPS::Tie::VERSION   = '1.7';
-$SPOPS::Tie::Revision  = substr(q$Revision: 1.11 $, 10);
+$SPOPS::Tie::VERSION   = '1.8';
+$SPOPS::Tie::Revision  = substr(q$Revision: 1.16 $, 10);
 
-use constant IDX_DATA          => '_collection_data';
-use constant IDX_CHANGE        => '_changed';
-use constant IDX_SAVE          => '_saved';
-use constant IDX_INTERNAL      => '_internal';
-use constant IDX_TEMP          => '_temp_data';
-use constant IDX_IS_LAZY_LOAD  => '_is_lazy_load';
-use constant IDX_LAZY_LOADED   => '_lazy_load_fields';
-use constant IDX_LAZY_LOAD_SUB => '_lazy_load_sub';
-use constant IDX_CHECK_FIELDS  => '_CHECK_FIELD_LIST';
+use constant IDX_DATA          => '_dat';
+use constant IDX_CHANGE        => '_chg';
+use constant IDX_SAVE          => '_svd';
+use constant IDX_INTERNAL      => '_int';
+use constant IDX_TEMP          => '_tmp';
+use constant IDX_IS_LAZY_LOAD  => '_ill';
+use constant IDX_LAZY_LOADED   => '_ll';
+use constant IDX_LAZY_LOAD_SUB => '_lls';
+use constant IDX_CHECK_FIELDS  => '_chk';
+use constant IDX_IS_MULTIVALUE => '_imv';
+use constant IDX_MULTIVALUE    => '_mv';
+use constant IDX_IS_FIELD_MAP  => '_ifm';
+use constant IDX_FIELD_MAP     => '_fm';
 
 $PREFIX_TEMP       = 'tmp_';
 $PREFIX_INTERNAL   = '_internal';
 
+require SPOPS;
 *_w    = *SPOPS::_w;
 *DEBUG = *SPOPS::DEBUG;
+
 
 # Tie interface stuff below here; see 'perldoc perltie' for what
 # each method does. (Or better yet, read Damian Conway's discussion
@@ -43,20 +49,40 @@ $PREFIX_INTERNAL   = '_internal';
 
 sub TIEHASH {
     my ( $class, $base_class, $p ) = @_;
+    $p ||= {};
 
-    # If we haven't already stored the fields associated with
-    # this class, do so
+    # See if we're supposed to do any field checking
 
     my $HAS_FIELD = $class->_field_check( $base_class, $p );
-    return bless ({ class              => $base_class, 
+
+    # Be able to deal with either an arrayref or a hashref of multivalue fields
+
+    if ( ref $p->{multivalue} eq 'HASH' ) {
+        $p->{multivalue} = { map { lc $_ => lc $p->{multivalue}{ $_ } } keys %{ $p->{multivalue} } };
+    }
+
+    if ( ref $p->{multivalue} eq 'ARRAY' ) {
+        $p->{multivalue} = { map { lc $_ => 1 } @{ $p->{multivalue} } };
+    }
+
+    # Be sure all field map fields are lower-cased
+    if ( ref $p->{field_map} eq 'HASH' ) {
+        $p->{field_map} = { map { lc $_ => lc $p->{field_map}{ $_ } } keys %{ $p->{field_map} } };
+    }
+
+    return bless ({ class              => $base_class,
                     IDX_TEMP()         => {},
                     IDX_INTERNAL()     => {},
-                    IDX_CHANGE()       => 0, 
+                    IDX_CHANGE()       => 0,
                     IDX_SAVE()         => 0,
                     IDX_DATA()         => {},
                     IDX_IS_LAZY_LOAD() => $p->{is_lazy_load},
                     IDX_LAZY_LOADED()  => {},
                     IDX_LAZY_LOAD_SUB()=> $p->{lazy_load_sub},
+                    IDX_IS_MULTIVALUE()=> ( ref $p->{multivalue} eq 'HASH' ),
+                    IDX_MULTIVALUE()   => $p->{multivalue},
+                    IDX_IS_FIELD_MAP() => ( ref $p->{field_map} eq 'HASH' ),
+                    IDX_FIELD_MAP()    => $p->{field_map},
                     IDX_CHECK_FIELDS() => $HAS_FIELD }, $class );
 }
 
@@ -67,50 +93,129 @@ sub _field_check { return undef; }
 
 sub FETCH {
     my ( $self, $key ) = @_;
+    my $cmp_key = lc $key;
     DEBUG() && _w( 3, " tie: Trying to retrieve value for ($key)\n" );
-    return $self->{ IDX_CHANGE() }                if ( $key eq IDX_CHANGE );
-    return $self->{ IDX_SAVE() }                  if ( $key eq IDX_SAVE );
-    return $self->{ IDX_TEMP() }->{ lc $key }     if ( $key =~ /^$PREFIX_TEMP/ );
-    return $self->{ IDX_INTERNAL() }->{ lc $key } if ( $key =~ /^$PREFIX_INTERNAL/ );
+    return $self->{ IDX_CHANGE() }                 if ( $key eq IDX_CHANGE );
+    return $self->{ IDX_SAVE() }                   if ( $key eq IDX_SAVE );
+    return $self->{ IDX_TEMP() }->{ $cmp_key }     if ( $key =~ /^$PREFIX_TEMP/ );
+    return $self->{ IDX_INTERNAL() }->{ $cmp_key } if ( $key =~ /^$PREFIX_INTERNAL/ );
     return undef unless ( $self->_can_fetch( $key ) );
-    if ( $self->{ IDX_IS_LAZY_LOAD() } and 
-         ! $self->{ IDX_LAZY_LOADED() }->{ $key } ) {
+    if ( $self->{ IDX_IS_FIELD_MAP() } and
+         $self->{ IDX_FIELD_MAP() }->{ $cmp_key } ) {
+        #warn "(FETCH) using field map: old value ($cmp_key) new ($self->{ IDX_FIELD_MAP() }->{ $cmp_key })\n";
+        $cmp_key = $self->{ IDX_FIELD_MAP() }->{ $cmp_key };
+    }
+    if ( $self->{ IDX_IS_LAZY_LOAD() } and
+         ! $self->{ IDX_LAZY_LOADED() }->{ $cmp_key } ) {
         $self->_lazy_load( $key );
     }
-    return $self->{ IDX_DATA() }->{ lc $key };
+    if ( $self->{ IDX_IS_MULTIVALUE() } and $self->{ IDX_MULTIVALUE() }->{ $cmp_key } ) {
+        #warn "(FETCH) using multivalue for key $cmp_key\n";
+        return [ keys %{ $self->{ IDX_DATA() }->{ $cmp_key } } ];
+    }
+    return $self->{ IDX_DATA() }->{ $cmp_key };
 }
 
-sub _can_fetch { return 1; }
+
+sub _can_fetch { return 1 }
+
 
 sub _lazy_load {
     my ( $self, $key ) = @_;
+    my $cmp_key = lc $key;
     unless ( ref $self->{ IDX_LAZY_LOAD_SUB() } eq 'CODE' ) {
         die "Lazy loading activated but no load function specified!\n";
     }
     DEBUG() && _w( 1, "Trying to lazy load ($key) since the loaded is:",
-                      $self->{ IDX_LAZY_LOADED() }->{ $key } );
-    $self->{ IDX_DATA() }->{ lc $key } = 
+                      $self->{ IDX_LAZY_LOADED() }->{ $cmp_key } );
+    $self->{ IDX_DATA() }->{ $cmp_key } = 
                     $self->{ IDX_LAZY_LOAD_SUB() }->( $self->{class}, 
                                                       $self->{ IDX_DATA() }, 
                                                       $key );
-    $self->{ IDX_LAZY_LOADED() }->{ $key }++;  
+    $self->{ IDX_LAZY_LOADED() }->{ $cmp_key }++;
 }
+
 
 # Similar to FETCH
 
 sub STORE {
     my ( $self, $key, $value ) = @_;
+    my $cmp_key = lc $key;
     DEBUG() && _w( 3,  " tie: Trying to store in ($key) value ($value)\n" );
-    return $self->{ IDX_CHANGE() } = $value                if ( $key eq IDX_CHANGE );
-    return $self->{ IDX_SAVE() } = $value                  if ( $key eq IDX_SAVE );
-    return $self->{ IDX_TEMP() }->{ lc $key } = $value     if ( $key =~ /^$PREFIX_TEMP/ );
-    return $self->{ IDX_INTERNAL() }->{ lc $key } = $value if ( $key =~ /^$PREFIX_INTERNAL/ );
+    return $self->{ IDX_CHANGE() } = $value                 if ( $key eq IDX_CHANGE );
+    return $self->{ IDX_SAVE() } = $value                   if ( $key eq IDX_SAVE );
+    return $self->{ IDX_TEMP() }->{ $cmp_key } = $value     if ( $key =~ /^$PREFIX_TEMP/ );
+    return $self->{ IDX_INTERNAL() }->{ $cmp_key } = $value if ( $key =~ /^$PREFIX_INTERNAL/ );
     return undef unless ( $self->_can_store( $key, $value ) );
     $self->{ IDX_CHANGE() }++;
-    return $self->{ IDX_DATA() }->{ lc $key } = $value;
+
+    if ( $self->{ IDX_IS_FIELD_MAP() } and 
+         $self->{ IDX_FIELD_MAP() }->{ $cmp_key } ) {
+        #warn "(STORE) using field map: old value ($cmp_key) new ($self->{ IDX_FIELD_MAP() }->{ $cmp_key })\n";
+        $cmp_key = $self->{ IDX_FIELD_MAP() }->{ $cmp_key };
+    }
+
+    # Non-multivalue properties just return the newly stored value
+
+    unless ( $self->{ IDX_IS_MULTIVALUE() } and $self->{ IDX_MULTIVALUE() }->{ $cmp_key } ) {
+        return $self->{ IDX_DATA() }->{ $cmp_key } = $value;
+    }
+
+    #warn "(STORE) using multivalue for key $cmp_key\n";
+
+    # If we're using multiple values we need to see what type of
+    # $value we've got
+
+    # If $value is undef, we clear out all values in the object
+
+    unless ( defined $value ) {
+        $self->{ IDX_DATA() }->{ $cmp_key } = {};
+        return undef;
+    }
+
+    my $typeof = ref $value;
+
+    # If a scalar, just set it
+
+    unless ( $typeof ) {
+        $self->{ IDX_DATA() }->{ $cmp_key }->{ $value } = 1;
+        return $value;
+    }
+
+    # If array, set it (if the array is empty, then we're
+    # resetting the values)
+
+    if ( $typeof eq 'ARRAY' ) {
+        #warn "(STORE) Current value of ($cmp_key)", Dumper( $self->{ IDX_DATA() }->{ $cmp_key } ), "\n";
+        $self->{ IDX_DATA() }->{ $cmp_key } = { map { $_ => 1 } @{ $value } };
+        #warn "(STORE) Value after set of ($cmp_key)", Dumper( $self->{ IDX_DATA() }->{ $cmp_key } ), "\n";
+        return undef;
+    }
+
+    # If hash, go through each of the potential options and
+    # perform the action; everything else is ignored
+
+    if ( $typeof eq 'HASH' ) {
+        my $remove_fields =  ( ref $value->{remove} eq 'ARRAY' ) ? $value->{remove} : [ $value->{remove} ];
+        foreach my $rmv ( @{ $remove_fields } ) {
+            next unless ( $rmv );
+            delete $self->{ IDX_DATA() }->{ $cmp_key }->{ $rmv };
+        }
+
+        my $modify_fields = $value->{modify} || {};
+        foreach my $mdfy ( keys %{ $modify_fields } ) {
+            delete $self->{ IDX_DATA() }->{ $cmp_key }->{ $mdfy };
+            $self->{ IDX_DATA() }->{ $cmp_key }->{ $modify_fields->{ $mdfy } } = 1
+        }
+        return undef;
+    }
+
+    # We don't know how to handle anything else
+
+    die "I do not know what to do with a value type of ($typeof) with multivalues";
 }
 
-sub _can_store { return 1; }
+sub _can_store { return 1 }
 
 
 # For EXISTS and DELETE, We can only do these actions on the actual
@@ -269,8 +374,6 @@ the tie interface:
                  field         => $fields };
   tie %data, 'SPOPS::Tie', $class, $params;
 
-
-
 =head2 Storing Information for Internal Use
 
 The final kind of information that can be stored in a SPOPS object is
@@ -288,6 +391,171 @@ of specification:
 Most of the time you will not need to deal with this, but check the
 documentation for the object you are using.
 
+=head2 Field Mapping
+
+You can setup a mapping of fields to make an SPOPS object look like
+another SPOPS object even though its storage is completely
+different. For instance, say we were tying a legacy data management of
+system of book data to a website. Our web designers do not like to see
+FLDNMS LK THS since they are used to the more robust capabilities of
+modern data systems.
+
+So we can use the field mapping capabilities of C<SPOPS::Tie> to make
+the objects more palatable:
+
+ my $obj = tie %data, 'SPOPS::Tie', 'My::Book',
+                      { field_map => { author         => 'AUTH',
+                                       title          => 'TTL',
+                                       printing       => 'PNUM',
+                                       classification => 'CLSF' } };
+
+(See the L<SPOPS> documentation for how to declare this in your SPOPS
+configuration.)
+
+So your web designers can use the objects:
+
+ print "Book author: $book->{author}\n",
+       "Title: $book->{title}\n";
+
+But the data are actually stored in the object (and retrieved by an
+L<each> query on the object -- be careful) using the old, ugly names
+'AUTH', 'TTL', 'PNUM' and 'CLSF'.
+
+This can be extremely helpful not only to rename fields for aesthetic
+reasons, but also to make objects conform to the same interface.
+
+=head2 Multivalue Fields
+
+Some data storage backends -- such as LDAP -- can store multiple
+values for a single field, and C<SPOPS::Tie> can represent it.
+
+Three basic rules when dealing with multivalue fields:
+
+=over 4
+
+=item 1.
+
+No duplicate values allowed.
+
+=item 2.
+
+Values are not sorted. If you need sorted values, use the tools perl
+provides you.
+
+=item 3.
+
+Values are always retrieved from a multivalue field as an array
+reference.
+
+=back
+
+The interface for setting values is somewhat different, so sit up
+straight and pay attention.
+
+B<(0) Telling SPOPS::Tie>
+
+ my $obj = tie %data, 'SPOPS::Tie', 'My::LDAP::Person',
+                      { multivalue => [ 'objectclass' ] };
+
+This means only the field 'objectclass' will be treated as a
+multivalue field.
+
+B<(1) Creating a new object>
+
+ my $person = My::LDAP::Person->new();
+ $person->{objectclass} = [ 'inetOrgPerson', 'organizationalPerson',
+                            'person' ];
+ $person->{sn}          = 'Winters';
+ $person->{givenname}   = 'Chris';
+ $person->{mail}        = 'chris@cwinters.com';
+ $person->save;
+
+The property 'objectclass' here is multivalued and currently has three
+values: 'inetOrgPerson', 'organizationalPerson', and 'person'.
+
+B<(2) Fetching and displaying an object>
+
+ my $person = My::LDAP::Person->fetch( 'chris@cwinters.com' );
+ print "Person info: $person->{givenname} $person->{sn} ",
+       "(mail: $person->{mail})\n";
+ print "Classes: ", join( ', ', @{ $person->{objectclass} } ), "\n";
+
+Displays:
+
+ > Person info: Chris Winters (mail: chris@cwinters.com)
+ > Classes: inetOrgPerson, organizationalPerson, person
+
+Note that if there were no values for defined for C<objectclass>, the
+value retrieval would return an arrayref. Value retrievals always
+return an array reference, even if there are B<no> values. This is to
+provide consistency of interface, and so you can always use the value
+as an array reference without cumbersome checking to see if the value
+is C<undef>.
+
+B<(3) Setting a single value>
+
+ my $person = My::LDAP::Person->fetch( 'chris@cwinters.com' );
+ $person->{objectclass} = 'newSchemaPerson';
+ $person->save;
+
+The property 'objectclass' now has four values: 'inetOrgPerson',
+'organizationalPerson', 'person', and 'newSchemaPerson'.
+
+B<(4) Setting all values>
+
+ my $person = My::LDAP::Person->fetch( 'chris@cwinters.com' );
+ $person->{objectclass} = [ 'newSchemaPerson', 'reallyNewPerson' ];
+ $person->save;
+
+The property 'objectclass' now has two values: 'newSchemaPerson',
+'reallyNewPerson'.
+
+B<(5) Removing one value>
+
+ my $person = My::LDAP::Person->fetch( 'chris@cwinters.com' );
+ $person->{objectclass} = { remove => 'newSchemaPerson' };
+ $person->save;
+
+The property 'objectclass' now has one value: 'reallyNewPerson'.
+
+ my $object_class_thingy = $person->{objectclass};
+ print "Object class return is a: ", ref $object_class_thingy, "\n";
+
+Displays:
+
+ > Object class return is a: ARRAY
+
+Again: when a multivalued property is retrieved it B<always> returns
+an arrayref, even if there is only one value.
+
+B<(6) Modifying one value>
+
+ my $person = My::LDAP::Person->fetch( 'chris@cwinters.com' );
+ $person->{objectclass} =
+      { modify => { reallyNewPerson => 'totallyNewPerson' } };
+ $person->save;
+
+The property 'objectclass' still has one value, but it has been
+changed to: 'totallyNewPerson'.
+
+Note: you could have gotten the same result in this example by doing:
+
+ $person->{objectclass} = [ 'totallyNewPerson' ];
+ $person->save;
+
+B<(7) Removing all values>
+
+ my $person = My::LDAP::Person->fetch( 'chris@cwinters.com' );
+ $person->{objectclass} = undef;
+ $person->save;
+
+The property 'objectclass' now has no values.
+
+You can also get the same result with:
+
+ $person->{objectclass} = [];
+ $person->save;
+
 =head1 METHODS
 
 See L<Tie::Hash> or L<perltie> for details of what the different
@@ -300,6 +568,8 @@ B<Benchmarking>
 We should probably benchmark this thing to see what it can do
 
 =head1 BUGS
+
+None known.
 
 =head1 SEE ALSO
 

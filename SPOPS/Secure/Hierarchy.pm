@@ -1,6 +1,6 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 1.12 2001/07/11 03:52:35 lachoy Exp $
+# $Id: Hierarchy.pm,v 1.14 2001/08/22 10:51:45 lachoy Exp $
 
 use strict;
 use vars          qw( $ROOT_OBJECT_NAME );
@@ -11,8 +11,8 @@ require Exporter;
 
 @SPOPS::Secure::Hierarchy::ISA       = qw( Exporter SPOPS::Secure );
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
-$SPOPS::Secure::Hierarchy::VERSION   = '1.7';
-$SPOPS::Secure::Hierarchy::Revision  = substr(q$Revision: 1.12 $, 10);
+$SPOPS::Secure::Hierarchy::VERSION   = '1.8';
+$SPOPS::Secure::Hierarchy::Revision  = substr(q$Revision: 1.14 $, 10);
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 
@@ -264,12 +264,12 @@ SPOPS::Secure::Hierarchy - Define hierarchical security
  # only.
 
  my $level = eval { SPOPS::Secure::Hierarchy->check_security({ 
-                           class => 'My::Nonexistent::File::Class',
-                           user => $my_user, 
-                           group => $my_group_list,
-                           security_object_class => 'My::SecurityObject',
-                           object_id   => '/docs/release/devel-only/v1.3/mydoc.html',
-                           hierarchy_separator => '/' }) };
+                      class                 => 'My::Nonexistent::File::Class',
+                      user                  => $my_user, 
+                      group                 => $my_group_list,
+                      security_object_class => 'My::SecurityObject',
+                      object_id             => '/docs/release/devel-only/v1.3/mydoc.html',
+                      hierarchy_separator   => '/' }) };
 
 =head1 DESCRIPTION
 

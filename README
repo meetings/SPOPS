@@ -65,8 +65,8 @@ new object with our just-created class.
         base_table   => 'fatbomb',
         id_field     => 'fatbomb_id',
         increment_field => 1,
-        skip_undef   => [ qw/ servings / ],
-        sql_defaults => [ qw/ servings / ],
+        skip_undef   => [ 'servings' ],
+        sql_defaults => [ 'servings' ],
       },
  };
  
@@ -121,14 +121,18 @@ Currently supported databases include (in alphabetical order):
  * Sybase Adaptive Server Anywhere (using DBD::ASAny and
    SPOPS::DBI::Sybase)
 
+We also support:
+
+ * LDAP (using Net:::LDAP -- if you have a need for access using
+   another client, let us know)
+
+ * GDBM (using GDBM_File)
+
 
 DO YOU HAVE A LIBRARY FOR <insert name here>?
 ========================
 
-Maybe. Near-future development will include:
-
- * LDAP (using Net::LDAP by default, but you'll be able to plug in other
-   drivers like Mozilla::LDAP)
+Maybe. Future development should include:
 
  * Oracle (using DBD::Oracle)
 
@@ -138,8 +142,10 @@ Maybe. Near-future development will include:
 
  * CORBA (likely using CORBA::ORBit in the beginning)
 
-Have something else you want implemented? Let us know! We might be
-able to do it ourselves, or we might be able to help you out.
+Have something you want implemented? Let us know! We might be able to
+help you out. Or you might be able to give something back to the
+community by funding development -- all LDAP functionality in SPOPS
+was funded by MSN Marketing Service Nordwest, GmbH.
 
 
 HOW DO I SAY IT?
@@ -164,11 +170,10 @@ Initializing objects
 
  perldoc SPOPS::Initialize
 
-Configuration
+Class Factory
 
- perldoc SPOPS::Configure
- perldoc SPOPS::Configure::DBI
- perldoc SPOPS::Configure::Ruleset
+ perldoc SPOPS::ClassFactory
+ perldoc SPOPS::ClassFactory::DefaultBehavior
 
 Error handling
 
@@ -177,18 +182,32 @@ Error handling
 Security
 
  perldoc SPOPS::Security
+ perldoc SPOPS::Security::Hierarchy
 
 DBI issues
 
+ perldoc SPOPS::ClassFactory::DBI
  perldoc SPOPS::DBI
  perldoc SPOPS::SQLInterface
  perldoc SPOPS::DBI::MySQL
  perldoc SPOPS::DBI::Sybase
  perldoc SPOPS::DBI::Pg
+ Perldoc SPOPS::Iterator::DBI
  perldoc SPOPS::Key::DBI::HandleField
  perldoc SPOPS::Key::DBI::Identity
  perldoc SPOPS::Key::DBI::Pool
  perldoc SPOPS::Key::DBI::Sequence
+
+LDAP issues
+
+ perldoc SPOPS::ClassFactory::LDAP
+ perldoc SPOPS::Iterator::LDAP
+ perldoc SPOPS::LDAP
+ perldoc SPOPS::LDAP::MultiDatasource
+
+Iterators
+
+ perldoc SPOPS::Iterator
 
 Utilities that might be useful:
 
@@ -231,13 +250,13 @@ AUTHORS
 Chris Winters <chris@cwinters.com> is the primary author of
 SPOPS. (Sourceforge name: 'lachoy')
 
-Other folks who have had a hand:
+Other folks who have had a hand to some degree or other:
 
 =over 4
 
 =item *
 
-Rusty Foster <rusty@kuro5hin.org>
+Ray Zimmerman <rz10@cornell.edu>
 
 =item *
 
@@ -249,11 +268,23 @@ Marcus Baker <mbaker@intes.net>
 
 =item *
 
+Rusty Foster <rusty@kuro5hin.org>
+
+=item *
+
 Rick Myers <rik@sumthin.nu>
 
 =item *
 
-Ray Zimmerman <rz10@cornell.edu>
+Harry Danilevsky <hdanilevsky@DeerfieldCapital.com>
+
+=item *
+
+Leon Brocard <acme@astray.com>
+
+=item *
+
+David Boone <dave@bis.bc.ca>
 
 =back
 
@@ -270,4 +301,4 @@ version 2 of the License (see 'COPYING'), or (at your option) any
 later version.
 
 =========================
-$Id: README,v 1.5 2001/06/06 06:19:00 lachoy Exp $
+$Id: README,v 1.6 2001/08/28 21:09:54 lachoy Exp $

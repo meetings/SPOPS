@@ -1,14 +1,14 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 1.8 2001/07/19 17:19:50 lachoy Exp $
+# $Id: Utility.pm,v 1.9 2001/08/22 10:51:45 lachoy Exp $
 
 use strict;
 use Date::Format  qw( time2str );
 use Date::Calc    ();
 
 @SPOPS::Utility::ISA      = qw();
-$SPOPS::Utility::VERSION  = '1.7';
-$SPOPS::Utility::Revision = substr(q$Revision: 1.8 $, 10);
+$SPOPS::Utility::VERSION  = '1.8';
+$SPOPS::Utility::Revision = substr(q$Revision: 1.9 $, 10);
 
 
 # Return a random code of length $length. If $opt is 'mixed', then the

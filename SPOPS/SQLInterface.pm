@@ -1,6 +1,6 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 1.18 2001/07/12 12:08:42 lachoy Exp $
+# $Id: SQLInterface.pm,v 1.22 2001/08/22 10:51:45 lachoy Exp $
 
 use strict;
 use Data::Dumper qw( Dumper );
@@ -8,8 +8,8 @@ use DBI          ();
 use SPOPS        qw( _w _wm DEBUG );
 
 @SPOPS::SQLInterface::ISA      = ();
-$SPOPS::SQLInterface::VERSION  = '1.7';
-$SPOPS::SQLInterface::Revision = substr(q$Revision: 1.18 $, 10);
+$SPOPS::SQLInterface::VERSION  = '1.8';
+$SPOPS::SQLInterface::Revision = substr(q$Revision: 1.22 $, 10);
 
 use constant DEBUG_SELECT     => 0;
 use constant DEBUG_INSERT     => 0;
@@ -205,7 +205,6 @@ sub db_select {
             while ( my $row = $sth->fetchrow_hashref ) {
                 push @rows, \%{ $row };
             }
-            return \@rows;
         };
         if ( $@ ) {
             my $msg = 'Fetch failed; cannot retrieve multiple records';
@@ -215,6 +214,7 @@ sub db_select {
                                 extra      => { sql => $sql, value => @{ $p->{value} } } });
             die $msg;
         }
+        return \@rows;
     }
     return [];
 }
@@ -302,10 +302,10 @@ sub db_insert {
     # do p/e if the user's asked for the statement handle
 
     $DEBUG && _wm( 1, $DEBUG, "Preparing\n$sql" );
-    my ( $sth );
+    my ( $sth, $rv );
     eval { 
         $sth = $db->prepare( $sql );
-        $sth->execute;
+        $rv = $sth->execute;
     };
     if ( $@ ) {
         my $msg = 'INSERT failed; cannot create new record';
@@ -321,7 +321,7 @@ sub db_insert {
     # or the statement handle, if they've asked for it.
 
     return $sth   if ( $p->{return_sth} );
-    return 1;
+    return $rv;
 }
 
 
@@ -389,10 +389,10 @@ sub db_update {
         /;
     }
     $DEBUG && _wm( 1, $DEBUG, "Prepare/execute\n$sql" );
-    my ( $sth );
+    my ( $sth, $rv );
     eval {
         $sth = $db->prepare( $sql );
-        $sth->execute; 
+        $rv = $sth->execute; 
     };
     if ( $@ ) {
         my $msg = 'UPDATE failed';
@@ -402,7 +402,7 @@ sub db_update {
                             extra      => { sql => $sql } });
         die $msg;
     }
-    return 1;
+    return $rv;
 }
 
 
@@ -442,10 +442,10 @@ sub db_delete {
     }
     $DEBUG && _wm( 1, $DEBUG, "SQL for DELETE:\n$sql" );
     $p->{value} ||= [];
-    my ( $sth );
+    my ( $sth, $rv );
     eval {
         $sth = $db->prepare( $sql );
-        $sth->execute( @{ $p->{value} } );
+        $rv = $sth->execute( @{ $p->{value} } );
     };
     if ( $@ ) { 
         my $msg = 'DELETE failed; cannot remove records';
@@ -455,7 +455,7 @@ sub db_delete {
                             extra      => { sql => $sql, value => @{ $p->{value} } } });
         die $msg;
     }
-    return 1;
+    return $rv;
 }
 
 
@@ -756,8 +756,10 @@ Returns:
 
 =head2 db_insert( \%params )
 
-Create and execute an INSERT statement given the 
-parameters passed in.
+Create and execute an INSERT statement given the parameters passed
+in. Return value is true is insert was successful -- the exact value
+is whatever is returned from the C<execute()> statement handle
+call from your database. (See L<DBI> and your driver docs.)
 
 Parameters:
 
@@ -825,8 +827,16 @@ SQL statements:
 
 =head2 db_update( \%params )
 
-Create and execute an UPDATE statement given the 
-parameters passed in.
+Create and execute an UPDATE statement given the parameters passed
+in. Return value is true is update was successful -- the exact value
+is whatever is returned from the C<execute()> statement handle call
+from your database, which many times is the number of rows affected by
+the update. (See L<DBI> and your driver docs -- in particular, note
+that the return value from an UPDATE can vary depending on the
+database being used as well as the number of records B<actually>
+updated versus those that matched the criteria but were not updated
+because they already matched the value(s). In particular, see the
+discussion in L<DBD::mysql> under 'mysql_client_found_rows'.)
 
 Parameters:
 
@@ -880,7 +890,10 @@ SQL statement (assuming "'" gets quoted as "''"):
 
 =head2 db_delete( \%params )
 
-Removes the record indicated by \%params from the database.
+Removes the record indicated by \%params from the database. Return
+value is true is delete was successful -- the exact value is whatever
+is returned from the C<execute()> statement handle call from your
+database. (See L<DBI>)
 
 Parameters:
 

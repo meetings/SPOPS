@@ -1,13 +1,15 @@
 package SPOPS::Error;
 
-# $Id: Error.pm,v 1.7 2001/07/11 03:52:34 lachoy Exp $
+# $Id: Error.pm,v 1.9 2001/08/27 03:00:28 lachoy Exp $
 
 use strict;
-use SPOPS qw( _w DEBUG );
+
+*_w    = *SPOPS::_w;
+*DEBUG = *SPOPS::DEBUG;
 
 @SPOPS::Error::ISA      = ();
-$SPOPS::Error::VERSION  = '1.7';
-$SPOPS::Error::Revision = substr(q$Revision: 1.7 $, 10);
+$SPOPS::Error::VERSION  = '1.8';
+$SPOPS::Error::Revision = substr(q$Revision: 1.9 $, 10);
 
 $SPOPS::Error::user_msg   = undef;
 $SPOPS::Error::system_msg = undef;

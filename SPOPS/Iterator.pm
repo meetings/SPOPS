@@ -1,14 +1,14 @@
 package SPOPS::Iterator;
 
-# $Id: Iterator.pm,v 1.7 2001/07/19 18:14:32 lachoy Exp $
+# $Id: Iterator.pm,v 1.9 2001/08/22 10:51:45 lachoy Exp $
 
 use strict;
 use SPOPS  qw( DEBUG _w );
 require Exporter;
 
 @SPOPS::Iterator::ISA       = qw( Exporter );
-$SPOPS::Iterator::VERSION   = '1.7';
-$SPOPS::Iterator::Revision  = substr(q$Revision: 1.7 $, 10);
+$SPOPS::Iterator::VERSION   = '1.8';
+$SPOPS::Iterator::Revision  = substr(q$Revision: 1.9 $, 10);
 
 @SPOPS::Iterator::EXPORT_OK   = qw( ITER_IS_DONE ITER_FINISHED );
 
@@ -464,9 +464,10 @@ can be irritating.
 
 B<Relationship calls return iterators>
 
-Relationship calls (for relationships created by L<SPOPS::Configure>
-and/or one of its children) should be modified to optionally return an
-C<SPOPS::Iterator> object. So you could do:
+Relationship calls (for relationships created by
+L<SPOPS::ClassFactory> and/or one of its utilized behaviors) should be
+modified to optionally return an C<SPOPS::Iterator> object. So you
+could do:
 
   my $iter = $user->group({ iterator => 1 });
   while ( my $group = $iter->get_next ) {
