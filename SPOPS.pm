@@ -1,31 +1,47 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 1.49 2001/01/04 05:37:18 cwinters Exp $
+# $Id: SPOPS.pm,v 1.53 2001/02/01 05:54:39 cwinters Exp $
 
 use strict;
 use vars qw( $IDX_CHANGE );
+require Exporter;
 
-use Carp          qw( carp );
-use SPOPS::Tie    qw( IDX_DATA  IDX_CHANGE  IDX_CHECK_FIELDS );
+use SPOPS::Tie    qw( IDX_DATA IDX_CHANGE IDX_CHECK_FIELDS );
 use SPOPS::Secure qw( SEC_LEVEL_WRITE );
 
 $SPOPS::AUTOLOAD = '';
-@SPOPS::ISA      = qw();
-$SPOPS::VERSION  = '0.37';
-$SPOPS::RealVERSION = sprintf("%d.%02d", q$Revision: 1.49 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::ISA       = qw( Exporter );
+@SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
+
+# Identify the SPOPS release version (so that
+#      $ perl -MSPOPS -e 'print SPOPS->VERSION' 
+# gives a right answer.
+
+$SPOPS::VERSION = '0.38';
+
+# Internal use only -- CVS version
+
+$SPOPS::CVS_VERSION = sprintf("%d.%02d", q$Revision: 1.53 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
 # Allow subclasses read-only access to the 
 # index where the data are stored within an object.
+
 sub _idx_data { return IDX_DATA; }
+
+# If a class doesn't define a config method (even tho it always
+# should), return an empty hashref so things run as expected
 
 sub CONFIG              { return {} }
 
 # Language of the object (not used now)
+
 sub lang                { return $_[0]->CONFIG->{lang}               }
 
-# Field hash and list (not just for databases...); plus the# name of the ID field and the timestamp field
+# Field hash and list (not just for databases...); plus the name of
+# the ID field and the timestamp field
+
 sub field               { return $_[0]->CONFIG->{field} || {}        }
 sub field_list          { return $_[0]->CONFIG->{field_list} || []   }
 sub id_field            { return $_[0]->CONFIG->{id_field}           }
@@ -35,11 +51,13 @@ sub no_security         { return $_[0]->CONFIG->{no_security}        }
 
 # All objects are by default cached; set the key 'no_cache'
 # to a true value to *not* cache this object
+
 sub no_cache            { return $_[0]->CONFIG->{no_cache} || 0; }
 
 # Your class should determine how to get to these very important
 # items. This is typically done through the use of a 'stash class',
 # where important per-application information is kept.
+
 sub global_cache        { return undef; }
 sub global_config       { return undef; }
 
@@ -48,8 +66,9 @@ sub global_config       { return undef; }
 # fetch/save/remove will fail; this allows any of a number of rules
 # to short-circuit an operation; see RULESETS below
 #
-# clarification: $_[0] in the following can be *either* a class
-# or an object; $_[1] is the (optional) hashref passed as the only argument
+# clarification: $_[0] in the following can be *either* a class or an
+# object; $_[1] is the (optional) hashref passed as the only argument
+
 sub pre_fetch_action    { return $_[0]->ruleset_process_action( 'pre_fetch_action',   $_[1] ) }
 sub post_fetch_action   { return $_[0]->ruleset_process_action( 'post_fetch_action',  $_[1] ) }
 sub pre_save_action     { return $_[0]->ruleset_process_action( 'pre_save_action',    $_[1] ) }
@@ -59,34 +78,36 @@ sub post_remove_action  { return $_[0]->ruleset_process_action( 'post_remove_act
 
 # Go through all of the subroutines found in a particular
 # class relating to a particular action; 
+
 sub ruleset_process_action {
- my $item   = shift;
- my $action = lc shift;
- my $p      = shift;
+  my ( $item, $action, $p ) = @_;
+  $action = lc $action;
+  _w( 1, "Trying to process $action for", ( ref $item ) ? ref $item : $item, 
+         " type of object" );
 
- my $DBG = DEBUG || $p->{DEBUG};
- warn "(SPOPS/ruleset_process_action): Trying to process $action for ",
-      ( ref $item ) ? ref $item : $item, " type of object\n"               if ( $DBG );
- # Grab the ruleset table for this class and immediately
- # return if the list of rules to apply for this action is empty
- my $rs_table = $item->RULESET;
- return 1 unless ( ref $rs_table->{ $action } eq 'ARRAY' );
- return 1 unless ( scalar @{ $rs_table->{ $action } } );
- warn " (SPOPS/ruleset_process_action): Ruleset exists in class.\n"        if ( $DBG );
+  # Grab the ruleset table for this class and immediately
+  # return if the list of rules to apply for this action is empty
+  
+  my $rs_table = $item->RULESET;
+  return 1 unless ( ref $rs_table->{ $action } eq 'ARRAY' );
+  return 1 unless ( scalar @{ $rs_table->{ $action } } );
+  _w( 1, "Ruleset exists in class." );
 
- # Cycle through the rules -- the only return value can be true or false,
- # and false short-circuits the entire operation
- foreach my $rule_sub ( @{ $rs_table->{ $action } } ) {
-   return undef unless ( $rule_sub->( $item, $p ) );
- }
- warn " (SPOPS/ruleset_process_action): $action processed without error\n" if ( $DBG );
- return 1;
+  # Cycle through the rules -- the only return value can be true or false,
+  # and false short-circuits the entire operation
+  
+  foreach my $rule_sub ( @{ $rs_table->{ $action } } ) {
+    return undef unless ( $rule_sub->( $item, $p ) );
+  }
+  _w( 1, "$action processed without error" );
+  return 1;
 }
 
 sub ruleset_add { return 1; }
 
 # Actions to do before/after retrieving/saving/removing
 # an item from the cache
+
 sub pre_cache_fetch     { return 1; }
 sub post_cache_fetch    { return 1; }
 sub pre_cache_save      { return 1; }
@@ -96,222 +117,240 @@ sub post_cache_remove   { return 1; }
 
 # Define methods for implementors to override to do
 # something in case a fetch / save / remove fails
+
 sub fail_fetch          { return undef; }
 sub fail_save           { return undef; }
 sub fail_remove         { return undef; }
 
 # Actions to check security on an object -- the default access is
 # read/write (which also includes delete)
+
 sub check_security          { return SEC_LEVEL_WRITE; }
 sub check_action_security   { return SEC_LEVEL_WRITE; } 
 sub create_initial_security { return 1;}
 
 # Return either a data hashref or a list with the
 # data hashref and object, depending on context
+
 sub new {
- my $pkg   = shift;
- my $class = ref $pkg || $pkg;
- my $p     = shift;
- my ( %data );
- my $params = {};
- my $fields = $class->field;
- if ( keys %{ $fields } ) {
-   $params->{field} = [ keys %{ $fields } ];
- }
- my $int = tie %data, 'SPOPS::Tie', $class, $params;
- my $self = bless( \%data, $class );
- $self->initialize( $p );
- return $self;
+  my ( $pkg, $p ) = @_;
+  my $class = ref $pkg || $pkg;
+  my ( %data );
+  my $params = {};
+  my $fields = $class->field;
+  if ( keys %{ $fields } ) {
+    $params->{field} = [ keys %{ $fields } ];
+  }
+  my $int = tie %data, 'SPOPS::Tie', $class, $params;
+  my $self = bless( \%data, $class );
+  $self->initialize( $p );
+  return $self;
 }
 
 # Create a new object from an old one, allowing any passed-in
 # values to override the ones from the old object
+
 sub clone {
- my $self = shift;
- my $p    = shift;
- my $new = $self->new; 
- my $id_field = $self->id_field();
- if ( $id_field ) {
-   my $new_id = $p->{ $id_field } || $p->{id};
-   $new->{ $id_field } = $new_id   if ( $new_id );
- }
- while ( my ( $k, $v ) = each %{ $self } ) {
-   next if ( $id_field and $k eq $id_field );
-   $new->{ $k } = $p->{ $k } || $v;
- }
- return $new;
+  my ( $self, $p ) = @_;
+  my $new = $self->new; 
+  my $id_field = $self->id_field();
+  if ( $id_field ) {
+    my $new_id = $p->{ $id_field } || $p->{id};
+    $new->{ $id_field } = $new_id   if ( $new_id );
+  }
+  while ( my ( $k, $v ) = each %{ $self } ) {
+    next if ( $id_field and $k eq $id_field );
+    $new->{ $k } = $p->{ $k } || $v;
+  }
+  return $new;
 }
 
 # Simple initialization: subclasses can override for
 # field validation or whatever.
+
 sub initialize {
- my $self = shift;
- my $p    = shift;
- foreach my $field ( keys %{ $p } ) {
-   $self->{ $field } = $p->{ $field };
- }
+  my ( $self, $p ) = @_;
+  foreach my $field ( keys %{ $p } ) {
+    $self->{ $field } = $p->{ $field };
+  }
 }
 
 # Create routines for subclases to override
+
 sub save   { return undef; }
 sub fetch  { return undef; }
 sub remove { return undef; }
 
 # We should probably deprecate these...
+
 sub get { return $_[0]->{ $_[1] }; }
 sub set { return $_[0]->{ $_[1] } = $_[2]; }
 
 # return a simple hashref of this object's
 # data -- not tied, not as an object
+
 sub data {
- my $self = shift;
- my $data = {};
- while ( my ( $k, $v ) = each %{ $self } ) {
-   $data->{ $k } = $v;
- }
- return $data;
+  my ( $self ) = @_;
+  my $data = {};
+  while ( my ( $k, $v ) = each %{ $self } ) {
+    $data->{ $k } = $v;
+  }
+  return $data;
 }
 
 sub is_checking_fields { return tied( %{ $_[0] } )->{ IDX_CHECK_FIELDS() }; }
 
 sub id {
- my $self   = shift;
- my $new_id = shift;
- return undef if ( ! ref $self );
- my $id_field = $self->id_field;
- warn " (SPOPS/id): ID field is ($id_field) ID is ($new_id)\n"             if ( DEBUG );
-
-{
-  # Setup a new subroutine to take care of this 
-  # in the future (BLOCK is just so we only
-  # set no strict for a limited area)
-  no strict 'refs';
-  my $class = ref( $self );
-  warn " (SPOPS/id): Setting up subroutine in: $class for ->id() call.\n"  if ( DEBUG );
-  *{ $class. '::id' } = sub { return $_[0]->{ $id_field } if ( ! $_[1] ); return $_[0]->{ $id_field } = $_[1]; };
+  my ( $self, $new_id ) = @_;
+  $new_id ||= '';
+  return undef unless ( ref $self );
+  my $id_field = $self->id_field || '';
+  return undef unless ( $id_field );
+  _w( 1, "ID field is ($id_field) ID is ($new_id)" );
+  
+  # Setup a new subroutine to take care of this in the future (BLOCK
+  # is just so we set no strict for a limited area only)
+  {
+    no strict 'refs';
+    my $class = ref( $self );
+    _w( 1, "Setting up subroutine in: $class for ->id() call." );
+    *{ $class. '::id' } = sub { return $_[0]->{ $id_field } if ( ! $_[1] ); return $_[0]->{ $id_field } = $_[1]; };
+  }
+  
+  # Take care of the most common case first, then set the new ID
+  
+  return $self->{ $id_field } unless ( $new_id );
+  return $self->{ $id_field } = $new_id;
 }
- 
- # Take care of the most common case first, then set the new ID
- return $self->{ $id_field }      if ( ! $new_id );
- return $self->{ $id_field } = $new_id;
-}
 
-# This is very primitive, but objects that want
-# something more fancy/complicated can implement
-# it for themselves
+# This is very primitive, but objects that want something more
+# fancy/complicated can implement it for themselves
+
 sub as_string {
- my $self = shift;
- my $msg = '';
- my $fields = $self->CONFIG->{as_string_order} || $self->field_list;
- my $labels = $self->CONFIG->{as_string_label} || { map { $_ => $_ } @{ $fields } };
- foreach my $field ( @{ $fields } ) {
-   $msg .= sprintf( "%-20s: %s\n", $labels->{ $field }, $self->{ $field } );
- }
- return $msg;
+  my ( $self ) = @_;
+  my $msg = '';
+  my $fields = $self->CONFIG->{as_string_order} || $self->field_list;
+  my $labels = $self->CONFIG->{as_string_label} || { map { $_ => $_ } @{ $fields } };
+  foreach my $field ( @{ $fields } ) {
+    $msg .= sprintf( "%-20s: %s\n", $labels->{ $field }, $self->{ $field } );
+  }
+  return $msg;
 }
 
 # Track whether this object has changed
+
 sub changed      { return $_[0]->{ IDX_CHANGE() }; }
 sub has_change   { $_[0]->{ IDX_CHANGE() } = 1;    }
 sub clear_change { $_[0]->{ IDX_CHANGE() } = 0;    }
 
 # returns the timestamp value for this object, if
 # one has been defined
+
 sub timestamp {
- my $self = shift;
- return undef  if ( ! ( ref $self ) );
- if ( my $ts_field = $self->timestamp_field ) {
-   return $self->{ $ts_field };
- }
- return undef; 
+  my ( $self ) = @_;
+  return undef  if ( ! ( ref $self ) );
+  if ( my $ts_field = $self->timestamp_field ) {
+    return $self->{ $ts_field };
+  }
+  return undef; 
 }
 
-# pass in a value for a timestamp to check and 
-# compare it to what is currently in the object
+# pass in a value for a timestamp to check and compare it to what is
+# currently in the object; if there is no timestamp field specified,
+# just return true so everything will continue as normal
+
+
 sub timestamp_compare {
- my $self  = shift;
- my $check = shift;
- if ( my $ts_field = $self->timestamp_field ) {
-   return ( $check eq $self->{ $ts_field } );
- }
-
- # if there is no timestamp field specified, return true so
- # everything will continue as normal
- return 1;
+  my ( $self, $check ) = @_;
+  if ( my $ts_field = $self->timestamp_field ) {
+    return ( $check eq $self->{ $ts_field } );
+  }  
+  return 1;
 }
 
-# Return a title and url (in a hashref) to be used to 
-# make a link, or whatnot.
+# Return a title and url (in a hashref) to be used to make a link, or
+# whatnot.
+
 sub object_description {
- my $self = shift;
- my $title_info = $self->CONFIG->{name};
- my $title = '';
- if ( ref $title_info eq 'CODE' ) {
-   $title = $title_info->( $self );
- }
- elsif ( ! ref $title_info ) {
-   $title = $self->{ $title_info };
- }
- $title ||= 'Cannot find name';
- my $link_info = $self->CONFIG->{display};
- my $url = "$link_info->{url}?" . $self->id_field . '=' . $self->id;
- return { name => $self->CONFIG->{object_name},
-          title => $title, url  => $url };
+  my ( $self ) = @_;
+  my $title_info = $self->CONFIG->{name};
+  my $title = '';
+  if ( ref $title_info eq 'CODE' ) {
+    $title = $title_info->( $self );
+  }
+  elsif ( ! ref $title_info ) {
+    $title = $self->{ $title_info };
+  }
+  $title ||= 'Cannot find name';
+  my $link_info = $self->CONFIG->{display};
+  my $url = "$link_info->{url}?" . $self->id_field . '=' . $self->id;
+  return { name => $self->CONFIG->{object_name},
+           title => $title, url  => $url };
 }
 
 sub AUTOLOAD {
- my $self = shift;
- my $request = $SPOPS::AUTOLOAD;
- $request =~ s/.*://;
-
- # First, give a nice warning and return undef if $self is just a
- # class
- my $class = ref $self;
- unless ( $class ) {
-   carp " (SPOPS): Cannot fill request ($request) from class $self";
-   return undef;
- }
-
- no strict 'refs';
- carp "  (SPOPS): Trying to fulfill $request from $class (ISA: ",
-      join( " // ", @{ $class . '::ISA' } ), ")"                           if ( DEBUG );
- if ( ref $self and $self->is_checking_fields ) {
-   my $fields = $self->field || {};
-   if ( exists $fields->{ $request } ) {
-     carp " (SPOPS): $class to fill  param <<$request>>; returning data."    if ( DEBUG );
-     *{ $class . '::' . $request } = sub { return $_[0]->{ $request } };
-     return $self->{ $request };
-   }
-   elsif ( my $value = $self->{ $request } ) {
-     warn " $request must be a temp or something, returning value.\n"        if ( DEBUG );
-     return $value;
-   }
-   elsif ( $request =~ /^tmp_/ ) {
-     warn " $request is a temp var, but no value saved. Returning undef.\n"  if ( DEBUG );
-     return undef;
-   }
-   elsif ( $request =~ /^_internal/ ) {
-     warn " $request is an internal request, but no value saved. Returning undef.\n"  if ( DEBUG );
-     return undef;
-   }
-   my $error_msg = "Cannot access the method $request via <<$class>>" .
-                   "with the parameters " . join ' ', @_;
-   carp " AUTOLOAD Error: $error_msg\n";
-   return undef;
- }
- carp " (SPOPS): $class is not checking fields, so create sub and return data for <<$request>>"  if ( DEBUG );
- *{ $class . '::' . $request } = sub { return $_[0]->{ $request } };
- return $self->{ $request }; 
+  my ( $item ) = @_;
+  my $request = $SPOPS::AUTOLOAD;
+  $request =~ s/.*://;
+  
+  # First, give a nice warning and return undef if $item is just a
+  # class rather than an object
+  
+  my $class = ref $item;
+  unless ( $class ) {
+    _w( 0, "Cannot fill request ($request) from class $item" );
+    return undef;
+  }
+  
+  no strict 'refs';
+  _w( 1, "Trying to fulfill $request from $class (ISA: ", join( " // ", @{ $class . '::ISA' } ), ")" );
+  if ( ref $item and $item->is_checking_fields ) {
+    my $fields = $item->field || {};
+    if ( exists $fields->{ $request } ) {
+      _w( 1, "$class to fill  param <<$request>>; returning data." );
+      *{ $class . '::' . $request } = sub { return $_[0]->{ $request } };
+      return $item->{ $request };
+    }
+    elsif ( my $value = $item->{ $request } ) {
+      _w( 1, " $request must be a temp or something, returning value." );
+      return $value;
+    }
+    elsif ( $request =~ /^tmp_/ ) {
+      _w( 1, "$request is a temp var, but no value saved. Returning undef." );
+      return undef;
+    }
+    elsif ( $request =~ /^_internal/ ) {
+      _w( 1, " $request is an internal request, but no value saved. Returning undef." );
+      return undef;
+    }
+    _w( 0, "AUTOLOAD Error: Cannot access the method $request via <<$class>>",
+           "with the parameters ", join( ' ', @_ ) );
+    return undef;
+  }
+  _w( 1, "$class is not checking fields, so create sub and return data for <<$request>>" );
+  *{ $class . '::' . $request } = sub { return $_[0]->{ $request } };
+  return $item->{ $request }; 
 }
 
 sub DESTROY {
- my ( $self ) = @_;
- if ( DEBUG ) {
-   carp "Destroying SPOPS object <", ref( $self ), ">\n",
-         "ID: <", $self->id, ">\n",
-         "Time: ", scalar( localtime );
-   warn "\n";
- }
+  my ( $self ) = @_;
+  _w( 1, "Destroying SPOPS object <", ref( $self ), ">\n",
+         "ID: <", $self->id, ">\n", "Time: ", scalar( localtime ) );
+}
+
+sub _w {
+  return unless ( DEBUG >= shift );
+  my ( $pkg, $file, $line ) = caller;
+  my @ci = caller(1);
+  warn "$ci[3] ($line) >> ", join( ' ', @_ ), "\n";
+}
+
+sub _wm {
+  my $lev = shift || '';
+  return unless ( $lev < shift );
+  my ( $pkg, $file, $line ) = caller;
+  my @ci = caller(1);
+  warn "$ci[3] ($line) >> ", join( ' ', @_ ), "\n"; 
 }
 
 1;
@@ -1313,7 +1352,7 @@ Something to think about, anyway.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -1333,6 +1372,6 @@ Christian Lemburg <clemburg@online-club.de> contributed some
 documentation and far too many good ideas to implement
 
 Rusty Foster <rusty@kuro5hin.org> was also influential in the early
- days of this library.
+days of this library.
 
 =cut

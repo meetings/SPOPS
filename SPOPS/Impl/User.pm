@@ -1,13 +1,13 @@
 package SPOPS::User;
 
-# $Id: User.pm,v 1.7 2000/11/18 21:09:05 cwinters Exp $
+# $Id: User.pm,v 1.8 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
 use Carp          qw( carp );
 use SPOPS::Secure qw( :level :scope );
 
 @SPOPS::User::ISA     = qw();
-$SPOPS::User::VERSION = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::User::VERSION = sprintf("%d.%02d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
 $SPOPS::User::C       = {};
 
 $SPOPS::User::crypt_password = undef;
@@ -135,7 +135,7 @@ not.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

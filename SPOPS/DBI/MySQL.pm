@@ -1,29 +1,27 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 1.14 2000/11/18 21:09:05 cwinters Exp $
+# $Id: MySQL.pm,v 1.16 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
+use SPOPS  qw( _w );
 
 @SPOPS::DBI::MySQL::ISA     = ();
-$SPOPS::DBI::MySQL::VERSION = sprintf("%d.%02d", q$Revision: 1.14 $ =~ /(\d+)\.(\d+)/);
-
-use constant DEBUG => 0;
+$SPOPS::DBI::MySQL::VERSION = sprintf("%d.%02d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return 'NOW()' }
 
 sub pre_fetch_id      { return undef }
 
 sub post_fetch_id { 
- my $self = shift;
- my $sth  = shift;
- my $id = $sth->{mysql_insertid};
- warn " (SPOPS/DBI/MySQL): Found inserted ID ($id)\n"                      if ( DEBUG );
- return $id  if ( $id );
+  my ( $self, $sth )  = @_;
+  my $id = $sth->{mysql_insertid};
+  _w( 1, "Found inserted ID ($id)" );
+  return $id  if ( $id );
 
- my $msg = 'Record saved, but ID of record unknown';
- SPOPS::Error->set( { user_msg => $msg, type => 'db',
+  my $msg = 'Record saved, but ID of record unknown';
+  SPOPS::Error->set({ user_msg => $msg, type => 'db',
                       system_msg => "Cannot retrieve just-inserted ID from MySQL table $sth->{mysql_table}->[0]",
-                      method => 'post_fetch_id' } );
+                      method => 'post_fetch_id' });
  die $msg;
 }
 
@@ -66,7 +64,7 @@ L<DBD::mysql>, L<DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -74,6 +72,5 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
 
 =cut

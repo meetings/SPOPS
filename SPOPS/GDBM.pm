@@ -1,207 +1,218 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 1.15 2000/12/01 13:06:17 cwinters Exp $
+# $Id: GDBM.pm,v 1.17 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
-use SPOPS;
+use SPOPS         qw( _w );
 use Carp          qw( carp );
 use Data::Dumper  qw( Dumper );
 use GDBM_File;
 
 @SPOPS::GDBM::ISA       = qw( SPOPS );
-@SPOPS::GDBM::VERSION   = sprintf("%d.%02d", q$Revision: 1.15 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::GDBM::VERSION   = sprintf("%d.%02d", q$Revision: 1.17 $ =~ /(\d+)\.(\d+)/);
 
-use constant DEBUG       => 0;
-use constant DEBUG_FETCH => 0;
-use constant DEBUG_SAVE  => 0;
+# Make this the default for everyone -- they can override it
+# themselves...
 
-# Make this the default for everyone -- they can override it themselves...
 sub class_initialize {
- my $class  = shift;
- my $CONFIG = shift;
- my $C = $class->CONFIG;
- if ( ref $C->{field} eq 'HASH' ) {
-   $C->{field_list}  = [ sort{ $C->{field}->{$a} <=> $C->{field}->{$b} } keys %{ $C->{field} } ];
- }
- $class->_class_initialize( $CONFIG ); # allow subclasses to do their own thing
- return 1;
+  my $class  = shift;
+  my $CONFIG = shift;
+  my $C = $class->CONFIG;
+  if ( ref $C->{field} eq 'HASH' ) {
+    $C->{field_list}  = [ sort{ $C->{field}->{$a} <=> $C->{field}->{$b} } keys %{ $C->{field} } ];
+  }
+  $class->_class_initialize( $CONFIG ); # allow subclasses to do their own thing
+  return 1;
 }
 
 # Dummy for subclasses to override
+
 sub _class_initialize { return 1; }
 
-# Override the default SPOPS initialize call so
-# we can use mixed-case fields
+# Override the default SPOPS initialize call so we can use mixed-case
+# fields
+
 sub initialize {
- my $self = shift;
- my $p    = shift;
- return unless ( ref $p and scalar( keys %{ $p } ) );
- 
- # Set the GDBM filename if it was passed
- if ( $p->{GDBM_FILENAME} ) {
-   $self->{tmp_gdbm_filename} = $p->{GDBM_FILENAME};
-   delete $p->{GDBM_FILENAME};
- }
+  my $self = shift;
+  my $p    = shift;
+  return unless ( ref $p and scalar( keys %{ $p } ) );
+  
+  # Set the GDBM filename if it was passed
+  if ( $p->{GDBM_FILENAME} ) {
+    $self->{tmp_gdbm_filename} = $p->{GDBM_FILENAME};
+    delete $p->{GDBM_FILENAME};
+  }
 
  # We allow the user to substitute id => value instead for the
  # specific fieldname.
- if ( my $id = $p->{id} ) {
-   $p->{ $self->id_field } ||= $id;
-   delete $p->{id};
- }
 
- # Use all lowercase to allow people to 
- # give us fieldnames in mixed case (we are very nice)
- my %data = map { lc $_ => $p->{ $_ } } keys %{ $p };
- foreach my $key ( keys %data ) {
-   $self->{ $key } = $data{ $key };
- }
- return $self;
+  if ( my $id = $p->{id} ) {
+    $p->{ $self->id_field } ||= $id;
+    delete $p->{id};
+  }
+
+ # Use all lowercase to allow people to give us fieldnames in mixed
+ # case (we are very nice)
+
+  my %data = map { lc $_ => $p->{ $_ } } keys %{ $p };
+  foreach my $key ( keys %data ) {
+    $self->{ $key } = $data{ $key };
+  }
+  return $self;
 }
 
 # Override this to get the db handle from somewhere else, if necessary
-sub global_gdbm_tie {
- my $item = shift;
- my $p     = shift;
- return $p->{db}    if ( ref $p->{db} );
 
- $p->{perm} ||= 'read';
- my $gdbm_filename = $p->{filename};
- unless ( $gdbm_filename ) {
-   if ( ref $item ) {
-     $gdbm_filename   = $item->{tmp_gdbm_filename};
-   }
-   if ( $item->CONFIG->{gdbm_info}->{file_fragment} and $p->{directory} ) {
-     warn " (GDBM): Found file fragent and directory\n"                    if ( DEBUG );
-     $gdbm_filename ||= join( '/', $p->{directory}, $item->CONFIG->{gdbm_info}->{file_fragment} );
-   }
-   $gdbm_filename ||= $item->CONFIG->{gdbm_info}->{filename};
-   $gdbm_filename ||= $item->global_config->{gdbm_info}->{filename};
- }
- warn " (GDBM/global_gdbm_tie): Trying file $gdbm_filename to connect\n"   if ( DEBUG );
- unless ( $gdbm_filename ) {
-   die "Insufficient/incorrect information to tie to GDBM file! ($gdbm_filename)\n";
- }
- my $perm = GDBM_File::GDBM_READER;
- $perm    = GDBM_File::GDBM_WRITER  if ( $p->{perm} eq 'write' );
- $perm    = GDBM_File::GDBM_WRCREAT if ( $p->{perm} eq 'create' );
- warn " (GDBM/global_gdbm_tie): Trying to use perm ($perm) to connect\n"   if ( DEBUG );
- my %db = ();
- tie( %db, 'GDBM_File', $gdbm_filename, $perm, 0666 );
- return \%db;
+sub global_gdbm_tie {
+  my $item = shift;
+  my $p     = shift;
+  return $p->{db}    if ( ref $p->{db} );
+  
+  $p->{perm} ||= 'read';
+  my $gdbm_filename = $p->{filename};
+  unless ( $gdbm_filename ) {
+    if ( ref $item ) {
+      $gdbm_filename   = $item->{tmp_gdbm_filename};
+    }
+    if ( $item->CONFIG->{gdbm_info}->{file_fragment} and $p->{directory} ) {
+      _w( 1, "Found file fragent and directory" );
+      $gdbm_filename ||= join( '/', $p->{directory}, $item->CONFIG->{gdbm_info}->{file_fragment} );
+    }
+    $gdbm_filename ||= $item->CONFIG->{gdbm_info}->{filename};
+    $gdbm_filename ||= $item->global_config->{gdbm_info}->{filename};
+  }
+  _w( 1, "Trying file $gdbm_filename to connect" );
+  unless ( $gdbm_filename ) {
+    die "Insufficient/incorrect information to tie to GDBM file! ($gdbm_filename)\n";
+  }
+  my $perm = GDBM_File::GDBM_READER;
+  $perm    = GDBM_File::GDBM_WRITER  if ( $p->{perm} eq 'write' );
+  $perm    = GDBM_File::GDBM_WRCREAT if ( $p->{perm} eq 'create' );
+  _w( 1, "Trying to use perm ($perm) to connect" );
+  my %db = ();
+  tie( %db, 'GDBM_File', $gdbm_filename, $perm, 0666 );
+  return \%db;
 }
 
 # Override the SPOPS method for finding ID values
+
 sub id {
- my $self = shift;
- if ( my $id_field = $self->id_field ) {
-   return $self->{ $id_field };
- }
- return $self->CONFIG->{create_id}->( $self );
+  my $self = shift;
+  if ( my $id_field = $self->id_field ) {
+    return $self->{ $id_field };
+  }
+  return $self->CONFIG->{create_id}->( $self );
 }
 
 sub object_key {
- my $self = shift;
- my $id   = shift;
- $id ||= $self->id  if ( ref $self );
- die "Cannot create object key without object or id!\n"  unless ( $id );
- my $class = ref $self || $self;
- return join '--', $class, $id;
+  my $self = shift;
+  my $id   = shift;
+  $id ||= $self->id  if ( ref $self );
+  die "Cannot create object key without object or id!\n"  unless ( $id );
+  my $class = ref $self || $self;
+  return join '--', $class, $id;
 }
 
 # Given a key, return the data structure from the db file
+
 sub _return_structure_for_key {
- my $class = shift;
- my $key   = shift;
- my $p     = shift;
- my $db    = $class->global_gdbm_tie( $p );
- my $item_info = $db->{ $key };
- return undef unless ( $item_info );
- my $data = undef;
- { 
-   no strict 'vars'; 
-   $data = eval $item_info; 
- }
- die "Cannot rebuild object! Error: $@" if ( $@ );
- return $data;
+  my $class = shift;
+  my $key   = shift;
+  my $p     = shift;
+  my $db    = $class->global_gdbm_tie( $p );
+  my $item_info = $db->{ $key };
+  return undef unless ( $item_info );
+  my $data = undef;
+  { 
+    no strict 'vars'; 
+    $data = eval $item_info; 
+  }
+  die "Cannot rebuild object! Error: $@" if ( $@ );
+  return $data;
 }
 
 # Retreive an object 
+
 sub fetch {
- my $class = shift;
- my $id    = shift;
- my $p     = shift;
- my $data = $p->{data};
- unless ( $data ) {
-   return undef unless ( $id and $id !~ /^tmp/ );
-   return undef unless ( $class->pre_fetch_action( { id => $id } ) );
-   $data = $class->_return_structure_for_key( $class->object_key( $id ), { filename => $p->{filename}, 
-                                                                           directory => $p->{directory} } );
- } 
- my $obj = $class->new( $data );
- $obj->clear_change;
- return undef unless ( $class->post_fetch_action );
- return $obj;
+  my $class = shift;
+  my $id    = shift;
+  my $p     = shift;
+  my $data = $p->{data};
+  unless ( $data ) {
+    return undef unless ( $id and $id !~ /^tmp/ );
+    return undef unless ( $class->pre_fetch_action( { id => $id } ) );
+    $data = $class->_return_structure_for_key( $class->object_key( $id ), 
+                                               { filename => $p->{filename}, 
+                                                 directory => $p->{directory} } );
+  } 
+  my $obj = $class->new( $data );
+  $obj->clear_change;
+  return undef unless ( $class->post_fetch_action );
+  return $obj;
 }
 
 # Return all objects in a particular class
+
 sub fetch_group {
- my $item = shift;
- my $p    = shift;
- my $db = $item->global_gdbm_tie( $p );
- my $class = ref $item || $item;
- warn " (GDBM): Trying to find keys beginning with ($class)\n"             if ( DEBUG > 1 );
- my @object_keys = grep /^$class/, keys %{ $db };
- warn " (GDBM): Keys found in DB: ", join( ", ", keys %{ $db } ), "\n"     if ( DEBUG > 1 );
- my @objects = ();
- foreach my $key ( @object_keys ) {
-   my $data = eval { $class->_return_structure_for_key( $key, { db => $db } ) };
-   next unless ( $data );      
-   push @objects, $class->fetch( undef, { data => $data } );
- } 
- return \@objects;
+  my $item = shift;
+  my $p    = shift;
+  my $db = $item->global_gdbm_tie( $p );
+  my $class = ref $item || $item;
+  _w( 1, "Trying to find keys beginning with ($class)" );
+  my @object_keys = grep /^$class/, keys %{ $db };
+  _w( 2, "Keys found in DB: ", join( ", ", @object_keys ) );
+  my @objects = ();
+  foreach my $key ( @object_keys ) {
+    my $data = eval { $class->_return_structure_for_key( $key, { db => $db } ) };
+    next unless ( $data );      
+    push @objects, $class->fetch( undef, { data => $data } );
+  } 
+  return \@objects;
 }
 
 # Save (either insert or update) an item in the db
+
 sub save {
- my $self = shift;
- my $p    = shift;
- $p->{perm} ||= 'write';
+  my $self = shift;
+  my $p    = shift;
+  $p->{perm} ||= 'write';
+  
+  _w( 1, "Trying to save a <<", ref $self, ">>" );
+  my $id = $self->id;
+  
+  my $is_add = ( $p->{is_add} or ! $id or $id =~ /^tmp/ );
+  unless ( $is_add or $self->changed ) {
+    _w( 1, "This object exists and has not changed. Exiting." );
+    return $id;
+  }
+  return undef unless ( $self->pre_save_action( { is_add => $is_add } ) );
+  
+  # Build the data and dump to string
 
- my $DEBUG = DEBUG_SAVE || $p->{DEBUG};
- warn " (DBI/save): Trying to save a <<", ref $self, ">>\n"                if ( $DEBUG );
- my $id = $self->id;
+  my %data = %{ $self };
+  local $Data::Dumper::Indent = 0;
+  my $obj_string = Data::Dumper->Dump( [ \%data ], [ 'data' ] );
+  
+  # Save to DB
 
- my $is_add = ( $p->{is_add} or ! $id or $id =~ /^tmp/ );
- unless ( $is_add or $self->changed ) {
-   warn " (DBI/save): This object exists and has not changed. Exiting.\n"  if ( $DEBUG );
-   return $id;
- }
- return undef unless ( $self->pre_save_action( { is_add => $is_add } ) );
+  my $obj_index  = $self->object_key;
+  my $db = $self->global_gdbm_tie( $p );
+  $db->{ $obj_index } = $obj_string;
 
- # Build the data and dump to string
- my %data = %{ $self };
- local $Data::Dumper::Indent = 0;
- my $obj_string = Data::Dumper->Dump( [ \%data ], [ 'data' ] );
-
- # Save to DB
- my $obj_index  = $self->object_key;
- my $db = $self->global_gdbm_tie( $p );
- $db->{ $obj_index } = $obj_string;
-
- return undef unless ( $self->post_save_action( { is_add => $is_add } ) );
- $self->clear_change;
- return $self->id;
+  return undef unless ( $self->post_save_action( { is_add => $is_add } ) );
+  $self->clear_change;
+  return $self->id;
 }
 
 # Remove an item from the db
+
 sub remove {
- my $self = shift;
- my $p    = shift;
- my $obj_index  = $self->object_key;
- my $db = $self->global_gdbm_tie( { perm      => 'write',
-                                    %{ $p } } );
- return delete $db->{ $obj_index };
+  my $self = shift;
+  my $p    = shift;
+  my $obj_index  = $self->object_key;
+  my $db = $self->global_gdbm_tie({ perm => 'write',
+                                     %{ $p } });
+  return delete $db->{ $obj_index };
 }
 
 1;
@@ -366,13 +377,17 @@ You can pass normal db parameters.
 
 =head1 SEE ALSO
 
- GDBM software: http://www.fsf.org/gnulist/production/gdbm.html
+GDBM software:
 
- GDBM on Perl/Win32: http://www.roth.net/perl/GDBM/
+http://www.fsf.org/gnulist/production/gdbm.html
+
+GDBM on Perl/Win32: 
+
+http://www.roth.net/perl/GDBM/
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -380,6 +395,5 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
 
 =cut

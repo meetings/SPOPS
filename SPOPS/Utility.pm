@@ -1,13 +1,13 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 1.1 2000/11/18 20:58:50 cwinters Exp $
+# $Id: Utility.pm,v 1.3 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
 use Date::Format  qw( time2str );
 use Date::Calc    ();
 
 @SPOPS::Utility::ISA     = qw();
-$SPOPS::Utility::VERSION = sprintf("%d.%02d", q$Revision: 1.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Utility::VERSION = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
 
 # Return a random code of length $length. If $opt is 'mixed', then the
 # code is filled with both lower- and upper-case charaters.
@@ -15,16 +15,14 @@ $SPOPS::Utility::VERSION = sprintf("%d.%02d", q$Revision: 1.1 $ =~ /(\d+)\.(\d+)
 # Signature: $code = $class->generate_random_code( $length, [ 'mixed' ] );
 
 sub generate_random_code {
- my $class  = shift;
- my $length = shift;
- my $opt    = shift;
- return undef unless ( $length );
- if ( $opt eq 'mixed' ) {
-   return join '', map { ( $_ % 2 == 0 )
-                           ? chr( int( rand(26) ) + 65 )
-                           : chr( int( rand(26) ) + 97 ) } ( 1 .. $length );
- }
- return join '', map { chr( int( rand(26) ) + 65 ) } ( 1 .. $length );
+  my ( $class, $length, $opt ) = @_;
+  return undef unless ( $length );
+  if ( $opt eq 'mixed' ) {
+    return join '', map { ( $_ % 2 == 0 )
+                             ? chr( int( rand(26) ) + 65 )
+                             : chr( int( rand(26) ) + 97 ) } ( 1 .. $length );
+  }
+  return join '', map { chr( int( rand(26) ) + 65 ) } ( 1 .. $length );
 }
 
 # Return a 'crypt'ed version of $text
@@ -32,11 +30,10 @@ sub generate_random_code {
 # Signature: $crypted = $class->crypt_it( $text );
 
 sub crypt_it {
- my $class = shift;
- my $text  = shift;
- return undef unless ( $text );
- my $salt = $class->generate_random_code( 2 );
- return crypt( $text, $salt );
+  my ( $class, $text ) = @_;
+  return undef unless ( $text );
+  my $salt = $class->generate_random_code( 2 );
+  return crypt( $text, $salt );
 }
 
 # Return a { time } (or the current time) formatted with { format }
@@ -45,11 +42,10 @@ sub crypt_it {
 #                                            time => $time_in_seconds } ] );
 
 sub now {
- my $class = shift;
- my $p     = shift;
- $p->{format} ||= '%Y-%m-%d %T';
- $p->{time}   ||= time;
- return time2str( $p->{format}, $p->{time} );
+  my ( $class, $p ) = @_;
+  $p->{format} ||= '%Y-%m-%d %T';
+  $p->{time}   ||= time;
+  return time2str( $p->{format}, $p->{time} );
 }
 
 # Return the current time formatted 'yyyy-mm-dd'
@@ -66,43 +62,44 @@ sub today { return $_[0]->now( { format => '%Y-%m-%e' } ); }
 #                                       end   => DATE_FORMAT } );
 
 sub now_between_dates {
- my $class = shift;
- my $p    = shift;
- return undef unless ( $p->{begin} or $p->{end} ); 
- my @now = Date::Calc::Today();
- my ( $begin_days, $end_days ) = undef;
- my ( $begin_date, $end_date );
+  my ( $class, $p ) = @_;
+  return undef unless ( $p->{begin} or $p->{end} ); 
+  my @now = Date::Calc::Today();
+  my ( $begin_days, $end_days ) = undef;
+  my ( $begin_date, $end_date );
 
- if ( $p->{begin} ) {
-   if ( ref $p->{begin} eq 'ARRAY' ) {
-     $begin_date = $p->{begin};
-   }
-   else {
-     @{ $begin_date } = $p->{begin} =~ /^(\d+)\-(\d+)\-(\d+)/;
-   }
- 
+  if ( $p->{begin} ) {
+    if ( ref $p->{begin} eq 'ARRAY' ) {
+      $begin_date = $p->{begin};
+    }
+    else {
+      @{ $begin_date } = $p->{begin} =~ /^(\d+)\-(\d+)\-(\d+)/;
+    }
+    
    # Good result: 1 (meaning 'begin' is one day before 'now')
-   $begin_days = Date::Calc::Delta_Days( @{ $begin_date }, @now );
-   return undef if ( $begin_days < 0 );
- }
 
- if ( $p->{end} ) {
-   if ( ref $p->{end} eq 'ARRAY' ) {
-     $end_date = $p->{end};
-   }
-   else {
-     @{ $end_date } = $p->{end} =~ /^(\d+)\-(\d+)\-(\d+)/;
-   }
+    $begin_days = Date::Calc::Delta_Days( @{ $begin_date }, @now );
+    return undef if ( $begin_days < 0 );
+  }
 
-   # Good result: 1 (meaning 'now' is one day before begin)
-   $end_days = Date::Calc::Delta_Days( @now, @{ $end_date } );
-   return undef if ( $end_days < 0 );
- }
- return 1 unless ( defined $begin_days and defined $end_days );
+  if ( $p->{end} ) {
+    if ( ref $p->{end} eq 'ARRAY' ) {
+      $end_date = $p->{end};
+    }
+    else {
+      @{ $end_date } = $p->{end} =~ /^(\d+)\-(\d+)\-(\d+)/;
+    }
 
- my $spread_days = Date::Calc::Delta_Days( @{ $begin_date }, @{ $end_date } );
- return undef if ( $end_days - $begin_days > $spread_days );
- return 1;
+    # Good result: 1 (meaning 'now' is one day before begin)
+
+    $end_days = Date::Calc::Delta_Days( @now, @{ $end_date } );
+    return undef if ( $end_days < 0 );
+  }
+  return 1 unless ( defined $begin_days and defined $end_days );
+
+  my $spread_days = Date::Calc::Delta_Days( @{ $begin_date }, @{ $end_date } );
+  return undef if ( $end_days - $begin_days > $spread_days );
+  return 1;
 }
 
 # Pass in \@existing and \@new and get back a hashref with:
@@ -111,37 +108,36 @@ sub now_between_dates {
 #   remove => \@: items not in \@new but in \@existing  
 
 sub list_process {
- my $class = shift;
- my $exist = shift;
- my $new   = shift;
+  my ( $class, $exist, $new ) = @_;
 
- # Create a hash of the existing items
- my %existing = map { $_ => 1 } @{ $exist };
- my ( @k, @a );
+  # Create a hash of the existing items
+  my %existing = map { $_ => 1 } @{ $exist };
+  my ( @k, @a );
 
- # Go through the new items...
- foreach my $new_id ( @{ $new } ) {
+  # Go through the new items...
+  foreach my $new_id ( @{ $new } ) {
+    
+    #... if it's existing, track it as a keeper
+    # and remove it from the existing pile
+    if ( $existing{ $new_id } ) {
+      delete $existing{ $new_id };
+      push @k, $new_id;
+    }
+    
+    # otherwise, track it as an add
+    else {
+      push @a, $new_id;
+    }
+  }
 
-   #... if it's existing, track it as a keeper
-   # and remove it from the existing pile
-   if ( $existing{ $new_id } ) {
-	 delete $existing{ $new_id };
-	 push @k, $new_id;
-   }
-
-   # otherwise, track it as an add
-   else {
-	 push @a, $new_id;
-   }
- }
-
- # now, the only items left in %existing are the ones
- # that were not specified in the new list; therefore,
- # these should be removed
- return { add => \@a, keep => \@k, remove => [ keys %existing ] };
+  # now, the only items left in %existing are the ones
+  # that were not specified in the new list; therefore,
+  # these should be removed
+  return { add => \@a, keep => \@k, remove => [ keys %existing ] };
 }
 
 1;
+
 
 __END__
 
@@ -159,6 +155,12 @@ SPOPS::Utility - Utility methods for SPOPS objects
  # Create an object and run a utility
  my $user = MyApp::User->fetch( $id );
  $user->{crypted_password} = $user->crypt_it( $new_password );
+
+ # Also use them separately
+ use SPOPS::Utility qw();
+
+ my $now = SPOPS::Utility->now;
+ my $random = SPOPS::Utility->generate_random_code( 16 );
 
 =head1 DESCRIPTION
 
@@ -215,17 +217,17 @@ Examples:
  
  # Today is '2000-10-31' in all examples
 
- SPOPS->now_between_days( { begin => '2000-11-01' } );
+ SPOPS::Utility->now_between_days( { begin => '2000-11-01' } );
  ( returns 'undef' )
 
- SPOPS->now_between_days( { end => '1999-10-31' } );
+ SPOPS::Utility->now_between_days( { end => '1999-10-31' } );
  ( returns 'undef' )
 
- SPOPS->now_between_days( { begin => [2000, 10, 1 ] } );
+ SPOPS::Utility->now_between_days( { begin => [2000, 10, 1 ] } );
  ( returns 1 )
 
- SPOPS->now_between_days( { begin => '2000-10-01',
-                            end   => '2001-10-01' } );
+ SPOPS::Utility->now_between_days( { begin => '2000-10-01',
+                                     end   => '2001-10-01' } );
  ( returns 1 )
 
 B<list_process( \@existing, \@new )>
@@ -241,7 +243,7 @@ can probably think of other applications.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -256,7 +258,7 @@ See the website:
 
 Chris Winters <chris@cwinters.com>
 
-Christian Lemburg <lemburg@aixonix.de> made the argument that these
+Christian Lemburg <lemburg@aixonix.de> successfully argued that these
 methods should be removed from SPOPS.pm
 
 =cut

@@ -1,22 +1,21 @@
 package SPOPS::DBI::RandomCode;
 
-# $Id: RandomCode.pm,v 1.13 2000/11/18 21:09:05 cwinters Exp $
+# $Id: RandomCode.pm,v 1.15 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
+use SPOPS  qw( _w );
 
 @SPOPS::DBI::RandomCode::ISA     = ();
-$SPOPS::DBI::RandomCode::VERSION = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
-
-use constant DEBUG => 0;
+$SPOPS::DBI::RandomCode::VERSION = sprintf("%d.%02d", q$Revision: 1.15 $ =~ /(\d+)\.(\d+)/);
 
 my $DEFAULT_WIDTH = 8;
 
 sub pre_fetch_id  { 
- my $class = shift;
- my $width = shift || $class->CONFIG->{id_width} || $DEFAULT_WIDTH;
- my $code =  $class->generate_random_code( $width );
- warn " (SPOPS/DBI/RandomCode): Found inserted ID ($code)\n"               if ( DEBUG );
- return $code; 
+  my ( $class, $width ) = @_;
+  $width ||= $class->CONFIG->{id_width} || $DEFAULT_WIDTH;
+  my $code =  $class->generate_random_code( $width );
+  _w( 1, "Created insert ID ($code)" );
+  return $code; 
 }
 
 sub post_fetch_id { return undef }
@@ -61,7 +60,7 @@ you.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -69,6 +68,5 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
 
 =cut

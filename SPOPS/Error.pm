@@ -1,13 +1,12 @@
 package SPOPS::Error;
 
-# $Id: Error.pm,v 1.12 2000/11/18 21:09:04 cwinters Exp $
+# $Id: Error.pm,v 1.14 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
+use SPOPS qw( _w );
 
 @SPOPS::Error::ISA     = ();
-$SPOPS::Error::VERSION = sprintf("%d.%02d", q$Revision: 1.12 $ =~ /(\d+)\.(\d+)/);
-
-use constant DEBUG => 0;
+$SPOPS::Error::VERSION = sprintf("%d.%02d", q$Revision: 1.14 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::Error::user_msg   = undef;
 $SPOPS::Error::system_msg = undef;
@@ -30,41 +29,44 @@ sub clear {
 }
 
 sub get {
- my $class = shift;
- return { user_msg   => $SPOPS::Error::user_msg,
-          system_msg => $SPOPS::Error::system_msg,
-          type       => $SPOPS::Error::type,
-          package    => $SPOPS::Error::package,
-          filename   => $SPOPS::Error::filename,
-          line       => $SPOPS::Error::line,
-          method     => $SPOPS::Error::method,
-          extra      => $SPOPS::Error::extra };
+  my $class = shift;
+  return { user_msg   => $SPOPS::Error::user_msg,
+           system_msg => $SPOPS::Error::system_msg,
+           type       => $SPOPS::Error::type,
+           package    => $SPOPS::Error::package,
+           filename   => $SPOPS::Error::filename,
+           line       => $SPOPS::Error::line,
+           method     => $SPOPS::Error::method,
+           extra      => $SPOPS::Error::extra };
 }
 
 sub set {
- my $class = shift;
- my $p     = shift;
+  my $class = shift;
+  my $p     = shift;
+  
+  # First clean everything up
 
- # First clean everything up
- $class->clear;
+  $class->clear;
 
  # Then set everything passed in
- {
-  no strict 'refs';
-  foreach my $key ( keys %{ $p } ) {
-    warn " (SPOPS::Error/set): Setting error $key to $p->{ $key }\n"        if ( DEBUG );
-    ${ $class . '::' . $key } = $p->{ $key };
+
+  {
+    no strict 'refs';
+    foreach my $key ( keys %{ $p } ) {
+      _w( 1, "Setting error $key to $p->{ $key }" );
+      ${ $class . '::' . $key } = $p->{ $key };
+    }
   }
- }
 
- # Set the caller information if the user didn't pass anything in
- unless ( $p->{package} and $p->{filename} and $p->{line} ) {
-   ( $SPOPS::Error::package, 
-     $SPOPS::Error::filename, 
-     $SPOPS::Error::line ) = caller;
- }
+  # Set the caller information if the user didn't pass anything in
 
- return $class->get;
+  unless ( $p->{package} and $p->{filename} and $p->{line} ) {
+    ( $SPOPS::Error::package, 
+      $SPOPS::Error::filename, 
+      $SPOPS::Error::line ) = caller;
+  }
+
+  return $class->get;
 }
 
 1;
@@ -109,7 +111,9 @@ shorter.
 
 =over 4
 
-=item B<user_msg> ($)
+=item
+
+B<user_msg> ($)
 
 A generic message that is suitable for showing a user. When telling a
 user something went wrong, you do not want to tell them:
@@ -123,13 +127,17 @@ instead, you want to tell them:
 This variable is identical to the value thrown by the I<die()>
 command, so you do not normally need to refer to it.
 
-=item B<system_msg> ($)
+=item
+
+B<system_msg> ($)
 
 Even though you do not want to show your users details of the error,
 you still need to know them! The variable I<system_msg> gives you
 details regarding the error.
 
-=item B<type> ($)
+=item
+
+B<type> ($)
 
 SPOPS knows about a few types of errors. Some depend on your SPOPS
 implementation (e.g., DBI, dbm, LDAP, etc.). Others can be:
@@ -137,23 +145,33 @@ implementation (e.g., DBI, dbm, LDAP, etc.). Others can be:
  -security: There is a security violation and the action could not be
             completed
 
-=item B<package> ($)
+=item
+
+B<package> ($)
 
 Set to the package from where the error was thrown.
 
-=item B<method> ($)
+=item
+
+B<method> ($)
 
 Set to the method from where the error was thrown.
 
-=item B<filename> ($)
+=item
+
+B<filename> ($)
 
 Set to the filename from where the error was thrown.
 
-=item B<line> ($)
+=item
+
+B<line> ($)
 
 Set to the line number from where the error was thrown.
 
-=item B<extra> (\%)
+=item
+
+B<extra> (\%)
 
 Different SPOPS classes have different information related to the
 current request. For instance, DBI errors will typically fill the
@@ -214,7 +232,7 @@ Whatever floats your boat.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -222,6 +240,5 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
 
 =cut

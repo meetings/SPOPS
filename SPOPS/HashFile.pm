@@ -1,11 +1,11 @@
 package SPOPS::TieFileHash;
 
-# $Id: HashFile.pm,v 1.11 2000/11/18 21:09:05 cwinters Exp $
+# $Id: HashFile.pm,v 1.14 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
 
 @SPOPS::TieFileHash::ISA       = ();
-$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.14 $ =~ /(\d+)\.(\d+)/);
 
 # These are all very standard routines for a tied hash; more info: see
 # 'perldoc Tie::Hash'
@@ -14,77 +14,95 @@ $SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.11 $ =~ /(\d+)
 # 'new' for the permissions, which means it's ok to start out with
 # blank data); store the meta info (permission and filename) in the
 # object, and the 'data' key holds the actual information
-sub TIEHASH {
- my $class = shift;
- my ( $filename, $perm ) = @_;
- $perm ||= 'read';
- die "Valid permissions: read | write | new (Value: $perm)\n" if ( $perm !~ /^(read|write|new)$/ );
- unless ( $filename ) {
-   die "You must pass a filename to use for reading and writing.\n";
- }
- my $file_exists = 0;
- $file_exists++  if ( -f $filename );
- if ( $perm ne 'new' and ! $file_exists ) {
-   die "Cannot create object without existing file or 'new' permission (File: $filename)\n";
- }
- my $data = undef;
- if ( $file_exists ) {
-   open( PD, $filename ) || die "Cannot open ($filename). Reason: $!";
-   local $/ = undef;
-   my $info = <PD>;
-   close( PD );
 
-   # Note that we create the SIG{__WARN__} handler here to trap any
-   # messages that might be sent to STDERR; we want to capture the
-   # message and send it along in a 'die' instead
-   {
-     local $SIG{__WARN__} = sub { return undef };
-     no strict 'vars';
-     $data = eval $info;
-   }
-   die "Error reading in perl code: $@"  if ( $@ );
- }
- else {
-   $data = {};
-   $perm = 'write';
- }
- return bless( { data     => $data,
+sub TIEHASH {
+  my $class = shift;
+  my ( $filename, $perm ) = @_;
+  $perm ||= 'read';
+  die "Valid permissions: read | write | new (Value: $perm)\n" if ( $perm !~ /^(read|write|new)$/ );
+  unless ( $filename ) {
+    die "You must pass a filename to use for reading and writing.\n";
+  }
+  my $file_exists = 0;
+  $file_exists++  if ( -f $filename );
+  if ( $perm ne 'new' and ! $file_exists ) {
+    die "Cannot create object without existing file or 'new' permission (File: $filename)\n";
+  }
+  my $data = undef;
+  if ( $file_exists ) {
+    open( PD, $filename ) || die "Cannot open ($filename). Reason: $!";
+    local $/ = undef;
+    my $info = <PD>;
+    close( PD );
+
+    # Note that we create the SIG{__WARN__} handler here to trap any
+    # messages that might be sent to STDERR; we want to capture the
+    # message and send it along in a 'die' instead
+
+    {
+      local $SIG{__WARN__} = sub { return undef };
+      no strict 'vars';
+      $data = eval $info;
+    }
+    die "Error reading in perl code: $@"  if ( $@ );
+  }
+  else {
+    $data = {};
+    $perm = 'write';
+  }
+  return bless({ data     => $data,
                  filename => $filename,
                  perm     => $perm }, $class );
 }
 
-sub FETCH  { my ( $self, $key ) = @_; return $self->{data}->{ $key }; }
+sub FETCH  { 
+  my ( $self, $key ) = @_;
+  return undef unless $key;
+  return $self->{data}->{ $key }; 
+}
 
-sub STORE  { my ( $self, $key, $value ) = @_; return $self->{data}->{ $key } = $value; }
+sub STORE  { 
+  my ( $self, $key, $value ) = @_; 
+  return undef unless $key; 
+  return $self->{data}->{ $key } = $value; 
+}
 
-sub EXISTS { my ( $self, $key ) = @_;  return exists $self->{data}->{ $key }; }
+sub EXISTS { my ( $self, $key ) = @_;  
+return undef unless $key; 
+return exists $self->{data}->{ $key }; 
+}
 
-sub DELETE { my ( $self, $key ) = @_; return delete $self->{data}->{ $key }; }
+sub DELETE { 
+  my ( $self, $key ) = @_; 
+  return undef unless $key; 
+  return delete $self->{data}->{ $key }; 
+}
 
-# This allows people to do '%{ $obj } = ();' and remove the object;
-# is this too easy to mistakenly do? I don't think so.
+# This allows people to do '%{ $obj } = ();' and remove the object; is
+# this too easy to mistakenly do? I don't think so.
+
 sub CLEAR {
- my ( $self ) = @_;
- die "Cannot remove $self->{filename}; permission set to read-only.\n" if ( $self->{perm} ne 'write' );
- unlink( $self->{filename} ) 
-       || die "Cannot remove file $self->{filename}. Reason: $!";
- $self->{data} = undef;
- $self->{perm} = undef;
+  my ( $self ) = @_;
+  die "Cannot remove $self->{filename}; permission set to read-only.\n" if ( $self->{perm} ne 'write' );
+  unlink( $self->{filename} ) 
+        || die "Cannot remove file $self->{filename}. Reason: $!";
+  $self->{data} = undef;
+  $self->{perm} = undef;
 }
 
 sub FIRSTKEY {
- my ( $self ) = @_;
- keys %{ $self->{data} };
- my $first_key = each %{ $self->{data} };
- return undef unless ( $first_key );
- return $first_key;
+  my ( $self ) = @_;
+  keys %{ $self->{data} };
+  my $first_key = each %{ $self->{data} };
+  return undef unless ( $first_key );
+  return $first_key;
 }
 
 sub NEXTKEY {
- my ( $self ) = @_;
- my $next_key = each %{ $self->{data} };
- return undef unless ( $next_key );
- return $next_key;
+  my ( $self ) = @_;
+  my $next_key = each %{ $self->{data} };
+  return undef unless ( $next_key );
+  return $next_key;
 }
 
 1;
@@ -100,7 +118,7 @@ use SPOPS;
 use Data::Dumper;
 
 @SPOPS::HashFile::ISA       = qw( SPOPS );
-$SPOPS::HashFile::VERSION   = sprintf("%d.%02d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::HashFile::VERSION   = sprintf("%d.%02d", q$Revision: 1.14 $ =~ /(\d+)\.(\d+)/);
 
 # Just grab the tied hash from the package above
 sub new {
@@ -285,7 +303,7 @@ merry way.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

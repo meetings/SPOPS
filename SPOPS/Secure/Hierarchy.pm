@@ -1,18 +1,17 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 1.4 2000/12/21 03:46:12 cwinters Exp $
+# $Id: Hierarchy.pm,v 1.6 2001/01/31 02:30:45 cwinters Exp $
 
 use strict;
 use vars          qw( $ROOT_OBJECT_NAME );
+use SPOPS         qw( _w );
 use SPOPS::Secure qw( :scope :level $EMPTY );
 use Data::Dumper  qw( Dumper );
 require Exporter;
 
-$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Secure::Hierarchy::ISA       = qw( Exporter SPOPS::Secure );
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
-
-use constant DEBUG => 0;
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 
@@ -22,89 +21,87 @@ $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 # hashref of scope_id => level)
 
 sub get_security {
- my $item = shift; 
- my $p    = shift;
+  my ( $item, $p ) = @_;
 
- # Find object info for debugging and for passing to the
- # fetch_by_object method later
+  # Find object info for debugging and for passing to the
+  # fetch_by_object method later
 
- my ( $class, $oid ) = $item->_get_object_info_for_security( $item, $p->{oid} );
- warn " (Hierarchy/get_security): Checking security for $class ($oid)\n"   if ( DEBUG );
+  my ( $class, $oid ) = $item->_get_object_info_for_security( $item, $p->{oid} );
+  _w( 1, "Checking security for $class ($oid)" );
 
- # Punt the request back to our parent if we're getting security
- # explicitly for the ROOT_OBJECT, which generally only happens when
- # we're editing its security
+  # Punt the request back to our parent if we're getting security
+  # explicitly for the ROOT_OBJECT, which generally only happens when
+  # we're editing its security
+  
+  if ( $oid eq $ROOT_OBJECT_NAME ) {
+    _w( 1, "Object ID == ROOT_OBJECT_NAME: punting to parent" );
+    return SUPER->get_security( { %{ $p }, class => $class, oid => $oid } );
+  }
+  
+  unless ( exists $p->{user} and exists $p->{group} ) {
+    ( $p->{user}, $p->{group} ) = $item->get_security_scopes( $p );
+  }
 
- if ( $oid eq $ROOT_OBJECT_NAME ) {
-   warn "(Hierarchy/get_security): Object ID == ROOT_OBJECT_NAME: punting to parent\n" if ( DEBUG );
-   return SUPER->get_security( { %{ $p }, class => $class, oid => $oid } );
- }
- 
- unless ( exists $p->{user} and exists $p->{group} ) {
-   ( $p->{user}, $p->{group} ) = $item->get_security_scopes( $p );
- }
+  # superuser (record with user_id 1) can do anything
+  
+  if ( my $security_info = $item->_check_superuser( $p->{user}, $p->{group} ) ) {
+    _w( 1, "Superuser is logged in" );
+    return $security_info;
+  }
+  
+  my ( $all_levels, $first_level ) = $item->get_hierarchy_levels( $p );
+  _w( 1, "First level with security ($first_level)" );
 
- # superuser (record with user_id 1) can do anything
-
- if ( my $security_info = $item->_check_superuser( $p->{user}, $p->{group} ) ) {
-   warn " (Hierarchy/get_security): Superuser is logged in\n"              if ( DEBUG );
-   return $security_info;
- }
-
- my ( $all_levels, $first_level ) = $item->get_hierarchy_levels( $p );
- warn " (Hierarchy/get_security): First level with security ($first_level)\n" if ( DEBUG );
-
- # Dereference $EMPTY so there's no chance of anyone putting
- # information into the ref and screwing up the package variable...
-
- return $all_levels->{ $first_level } || \%{ $EMPTY }; 
+  # Dereference $EMPTY so there's no chance of anyone putting
+  # information into the ref and screwing up the package variable...
+  
+  return $all_levels->{ $first_level } || \%{ $EMPTY }; 
 }
 
 
 sub get_hierarchy_levels {
- my $item = shift;
- my $p    = shift;
+  my ( $item, $p ) = @_;
 
- # Grab hierarchy config info from the params or from the object
+  # Grab hierarchy config info from the params or from the object
+  
+  my $h_info = $item->_get_hierarchy_parameters({ 
+                               %{ $p }, 
+	   					       hierarchy_value => $p->{oid} });
 
- my $h_info = $item->_get_hierarchy_parameters( { %{ $p }, 
-						  hierarchy_value => $p->{oid} } );
+  # Ensure we have necessary info
 
- # Ensure we have necessary info
+  unless ( $h_info->{hierarchy_value} ) {
+    _w( 0, "No value available to split into hierarchy! Returning ",
+           "empty security." );
+    return ();
+  }
+  unless ( ref $h_info->{hierarchy_manip} eq 'CODE' ) {
+    _w( 0, "Cannot split hierarchy into pieces without either a ",
+           "separator or processing code. Returning empty security." );
+    return ();
+  }
 
- unless ( $h_info->{hierarchy_value} ) {
-   warn " (Hierarchy/get_security): No value available to split into ",
-        "hierarchy! Returning empty security.\n";
-   return ();
- }
- unless ( ref $h_info->{hierarchy_manip} eq 'CODE' ) {
-   warn " (Hierarchy/get_security): Cannot split hierarchy into pieces ",
-        "without either a separator or processing code. Returning empty security.\n";
-   return ();
- }
+  # Now comes the interesting part. Setup a list of the object value
+  # followed by all the parents. Note that we can either use the
+  # default generated list (splitting the value by the separator) or
+  # create a subroutine to do it for us, passing it in via
+  # 'hierarchy_manip' in the toutine arameters or in our object config.
+  
+  my $check_list = $h_info->{hierarchy_manip}->( $h_info->{hierarchy_sep}, 
+                                                 $h_info->{hierarchy_value} );
 
- # Now comes the interesting part. Setup a list of the object value
- # followed by all the parents. Note that we can either use the
- # default generated list (splitting the value by the separator) or
- # create a subroutine to do it for us, passing it in via
- # 'hierarchy_manip' in the toutine arameters or in our object config.
-
- my $check_list = $h_info->{hierarchy_manip}->( $h_info->{hierarchy_sep}, 
-                                                $h_info->{hierarchy_value} );
-
- return $item->_fetch_hierarchy_levels({ %{ $p }, 
+  return $item->_fetch_hierarchy_levels({ %{ $p }, 
 					 check_list => $check_list,
 					 ordered    => 1  });
 }
 
 
 sub create_root_object_security {
- my $item = shift;
- my $p    = shift; 
- my ( $class, $oid ) = $item->_get_object_info_for_security( $p->{class} );
- return $class->set_multiple_security( { oid   => $ROOT_OBJECT_NAME,
-                                         scope => $p->{scope},
-                                         level => $p->{security} } );
+  my ( $item, $p ) = @_;
+  my ( $class, $oid ) = $item->_get_object_info_for_security( $p->{class} );
+  return $class->set_multiple_security( { oid   => $ROOT_OBJECT_NAME,
+                                          scope => $p->{scope},
+                                          level => $p->{security} } );
 }
 
 
@@ -115,66 +112,59 @@ sub create_root_object_security {
 # object and how security is inherited.
 
 sub _fetch_hierarchy_levels {
- my $item = shift;
- my $p    = shift;
+  my ( $item, $p ) = @_;
+  my $class = $p->{class} || ref $item || $item;
+  my $so_class = $p->{security_object_class} || $class->global_security_object_class;
 
- my $class = $p->{class} || ref $item || $item;
- my $so_class = $p->{security_object_class} || $class->global_security_object_class;
+  my $first_found = undef;
+  my $level_track = {};
+  my @ordered     = ();
 
- my $first_found = undef;
- my $level_track = {};
- my @ordered     = ();
+  unless ( $p->{class} ) {
+    ( $p->{class}, $p->{oid} ) = $item->_get_object_info_for_security( $p->{class}, $p->{oid} );
+    _w( 1, "Checking security for $p->{class} ($p->{oid})" );
+  }
+  
+  # Yes, I know, grep in a void context...
 
- unless ( $p->{class} ) {
-   ( $p->{class}, $p->{oid} ) = $item->_get_object_info_for_security( $p->{class}, $p->{oid} );
-   warn " (Hierarchy/get_hierarchy_levels): Checking security for $p->{class} ($p->{oid})\n" if ( DEBUG );
- }
-
- # Yes, I know, grep in a void context...
-
- unless ( grep /^$ROOT_OBJECT_NAME$/, @{ $p->{check_list} } ) {
-   push @{ $p->{check_list} }, $ROOT_OBJECT_NAME;
-   warn " (Hierarchy/get_hierarchy_levels): $ROOT_OBJECT_NAME not found in checklist\n" if ( DEBUG );
- }
-
+  unless ( grep /^$ROOT_OBJECT_NAME$/, @{ $p->{check_list} } ) {
+    push @{ $p->{check_list} }, $ROOT_OBJECT_NAME;
+   _w( 1, "$ROOT_OBJECT_NAME not found in checklist" );
+  }
+  
 SECVALUE:
- foreach my $security_check ( @{ $p->{check_list} } ) {
-   warn " (Hierarchy/hierarchy_levels): Find value for $p->{class} ($security_check)\n" if ( DEBUG );
-   push @ordered, $security_check  if ( $p->{ordered} );
-   my $sec_listing = eval { $so_class->fetch_by_object( 
+  foreach my $security_check ( @{ $p->{check_list} } ) {
+    _w( 1, "Find value for $p->{class} ($security_check)" );
+    push @ordered, $security_check  if ( $p->{ordered} );
+    my $sec_listing = eval { $so_class->fetch_by_object( 
                                  $p->{class}, 
                                  { oid   => $security_check,
                                    user  => $p->{user}, 
-                                   group => $p->{group} } 
-                     )};
-   warn " (Hierarchy/_fetch_hierarchy_levels): Security found for ",
-        "($security_check): ", Dumper( $sec_listing ), "\n";
-   if ( $@ ) {
-     $SPOPS::Error::user_msg = "Cannot retrieve security listing for hierarchy value $security_check";
-     warn " (Hierarchy/get_hierarchy_levels): Error found when checking ($security_check): $@";
-     die $SPOPS::Error::user_msg;
-   }
+                                   group => $p->{group} }) };
+    _w( 1, "Security found for ($security_check):\n", Dumper( $sec_listing ) );
+    if ( $@ ) {
+      $SPOPS::Error::user_msg = "Cannot retrieve security listing for hierarchy value $security_check";
+      _w( 0, "Error found when checking ($security_check): $@" );
+      die $SPOPS::Error::user_msg;
+    }
    
-   $first_found ||= $security_check if ( $sec_listing );
-   $level_track->{ $security_check } = $sec_listing;
- }
+    $first_found ||= $security_check if ( $sec_listing );
+    $level_track->{ $security_check } = $sec_listing;
+  }
 
- # If we don't find a single item that has security, we need to create
- # security for this class's root object.
+  # If we don't find a single item that has security, we need to create
+  # security for this class's root object.
 
- unless ( $first_found ) {
-   warn " (Hierarchy/get_hierarchy_levels): Cannot find ANY security for ",
-        "$p->{class} ($p->{oid}) -- creating root object security\n"       if ( DEBUG );
-   $item->create_root_object_security({ 
-        class => $p->{class},
-        scope => [ SEC_SCOPE_WORLD ],
-        security => {
-            SEC_SCOPE_WORLD() => SEC_LEVEL_NONE
-        } 
-   });   
- }
- return ( $level_track, $first_found ) unless ( $p->{ordered} );
- return ( $level_track, $first_found, \@ordered );
+  unless ( $first_found ) {
+    _w( 1, "Cannot find ANY security for $p->{class} ($p->{oid}) -- ",
+           "creating root object security" );
+    $item->create_root_object_security({ 
+               class    => $p->{class},
+               scope    => [ SEC_SCOPE_WORLD ],
+               security => { SEC_SCOPE_WORLD() => SEC_LEVEL_NONE } });   
+  }
+  return ( $level_track, $first_found ) unless ( $p->{ordered} );
+  return ( $level_track, $first_found, \@ordered );
 }
 
 
@@ -182,42 +172,40 @@ SECVALUE:
 # through a parameter list or from an object and its configuration.
 
 sub _get_hierarchy_parameters {
- my $item = shift;
- my $p    = shift;
+  my ( $item, $p ) = @_;
 
- # Find the hierarchy information -- info passed into the routine via
- # parameters takes precedence, and we only query the object config if
- # we actually have an object.
+  # Find the hierarchy information -- info passed into the routine via
+  # parameters takes precedence, and we only query the object config if
+  # we actually have an object.
 
- my $h_info = {};
- $h_info->{hierarchy_field} = $p->{hierarchy_field};
- $h_info->{hierarchy_sep}   = $p->{hierarchy_separator};
- $h_info->{hierarchy_manip} = $p->{hierarchy_manip};
+  my $h_info = {};
+  $h_info->{hierarchy_field} = $p->{hierarchy_field};
+  $h_info->{hierarchy_sep}   = $p->{hierarchy_separator};
+  $h_info->{hierarchy_manip} = $p->{hierarchy_manip};
+  
+  my $class = $p->{class} || ref $item || $item;
+  my $CONF = eval { $class->CONFIG };
+  if ( ref $CONF ) {
+    $h_info->{hierarchy_field} ||= $CONF->{hierarchy_field};
+    $h_info->{hierarchy_sep}   ||= $CONF->{hierarchy_separator};
+    $h_info->{hierarchy_manip} ||= $CONF->{hierarchy_manip};
+  }
 
- my $class = $p->{class} || ref $item || $item;
- my $CONF = eval { $class->CONFIG };
- if ( ref $CONF ) {
-   $h_info->{hierarchy_field} ||= $CONF->{hierarchy_field};
-   $h_info->{hierarchy_sep}   ||= $CONF->{hierarchy_separator};
-   $h_info->{hierarchy_manip} ||= $CONF->{hierarchy_manip};
- }
+  # Only use the default check_list maker if there is a hierarchy
+  # separator
 
- # Only use the default check_list maker if there is a hierarchy
- # separator
-
- $h_info->{hierarchy_manip} ||= \&_make_check_list  if ( $h_info->{hierarchy_sep} );
-
- # If this is an object, find the hierarchy value from the object
- 
- $h_info->{hierarchy_value} = $p->{hierarchy_value};
- if ( ref $item ) {
-   warn " (Hierarchy/_get_hierarchy_parameters): Getting value from object\n" if ( DEBUG );
-   $h_info->{hierarchy_value} ||= $item->{ $h_info->{hierarchy_field} };
- }
-
- warn " (Hierarchy/_get_hierarchy_parameters): Found parameters: ", 
-      Dumper( $h_info ), "\n"                                              if ( DEBUG );
- return $h_info;
+  $h_info->{hierarchy_manip} ||= \&_make_check_list  if ( $h_info->{hierarchy_sep} );
+  
+  # If this is an object, find the hierarchy value from the object
+  
+  $h_info->{hierarchy_value} = $p->{hierarchy_value};
+  if ( ref $item ) {
+    _w( 1, "Getting value from object" );
+    $h_info->{hierarchy_value} ||= $item->{ $h_info->{hierarchy_field} };
+  }
+  
+  _w( 1, "Found parameters:\n", Dumper( $h_info ) );
+  return $h_info;
 }
 
 
@@ -225,17 +213,17 @@ sub _get_hierarchy_parameters {
 # procedure -- we handle it automatically in ->get_hierarchy_levels()
 
 sub _make_check_list {
- my $hierarchy_sep   = shift;
- my $hierarchy_value = shift;
- my @check_list = ( $hierarchy_value );
- while ( $hierarchy_value ) {
-   $hierarchy_value =~ s|^(.*)$hierarchy_sep.*$|$1|;
-   push @check_list, $hierarchy_value    if ( $hierarchy_value );
- }
- return \@check_list;
+  my ( $hierarchy_sep, $hierarchy_value ) = @_;
+  my @check_list = ( $hierarchy_value );
+  while ( $hierarchy_value ) {
+    $hierarchy_value =~ s|^(.*)$hierarchy_sep.*$|$1|;
+    push @check_list, $hierarchy_value    if ( $hierarchy_value );
+  }
+  return \@check_list;
 }
 
 1;
+
 
 __END__
 
@@ -490,7 +478,7 @@ Christian Lemburg <lemburg@aixonix.de>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,15 +1,17 @@
 package SPOPS::Configure::Ruleset;
 
-# $Id: Ruleset.pm,v 1.8 2000/11/18 21:09:05 cwinters Exp $
+# $Id: Ruleset.pm,v 1.10 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
+use SPOPS qw( _w );
 
 @SPOPS::Configure::Ruleset::ISA     = ();
-$SPOPS::Configure::Ruleset::VERSION = sprintf("%d.%02d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Configure::Ruleset::VERSION = sprintf("%d.%02d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
 # EVAL'ABLE PACKAGE/SUBROUTINES
+
 my $generic_ruleset_template = <<'RULESET';
 
        $%%CLASS%%::RULESET = {};
@@ -18,42 +20,44 @@ my $generic_ruleset_template = <<'RULESET';
 RULESET
 
 sub create_relationship {
- my $class = shift;
- my $info     = shift;
- my $this_class = $info->{class};
- warn " (Ruleset/create_relationship): Parsing alias/class: $this_class\n" if ( DEBUG );
+  my $class = shift;
+  my $info     = shift;
+  my $this_class = $info->{class};
+  _w( 1, "Parsing alias/class: $this_class" );
 
  # Install the variable/subroutine RULESET into the class
- my $ruleset_info = $generic_ruleset_template;
- $ruleset_info =~ s/%%CLASS%%/$this_class/g;
- eval $ruleset_info;
- die " Could not eval ruleset info into $this_class: $@"  if ( $@ );
 
+  my $ruleset_info = $generic_ruleset_template;
+  $ruleset_info =~ s/%%CLASS%%/$this_class/g;
+  eval $ruleset_info;
+  die " Could not eval ruleset info into $this_class: $@"  if ( $@ );
+  
  # Process the rulesets -- note that each ruleset should also 
  # call SUPER::... so all of the sets can be set; we also
  # pass around the hashref resulting from the RULESET call
  # so each subroutine can put its rules directly into the 
  # variable
- 
- # Something to add -- we really must allow a SPOPS class to
- # define its own behaviors; however, if we simply call 'can',
- # we may wind up with the information from a parent.
-   
- # Another idea how to handle this is to simply establish a 
- # policy whereby a class must fill its own ruleset using
- # its _class_initialize procedure. There's an inheritance issue
- # there (what if the _class_initialize is inherited as well?),
- # but we can cross that bridge when we come to it.     
- {
-   no strict 'refs';
-   foreach my $parent_class ( @{ $this_class . '::ISA' } ) {
-     if ( my $rs_sub = $parent_class->can( 'ruleset_add' ) ) {
-       $rs_sub->( $this_class, $this_class->RULESET );
-       warn " (Ruleset/create_relationship): Adding routine from ($parent_class)\n" if ( DEBUG );
-     }
-   }
- }
-return 1;
+  
+  # Something to add -- we really must allow a SPOPS class to
+  # define its own behaviors; however, if we simply call 'can',
+  # we may wind up with the information from a parent.
+  
+  # Another idea how to handle this is to simply establish a 
+  # policy whereby a class must fill its own ruleset using
+  # its _class_initialize procedure. There's an inheritance issue
+  # there (what if the _class_initialize is inherited as well?),
+  # but we can cross that bridge when we come to it.     
+  
+  {
+    no strict 'refs';
+    foreach my $parent_class ( @{ $this_class . '::ISA' } ) {
+      if ( my $rs_sub = $parent_class->can( 'ruleset_add' ) ) {
+        $rs_sub->( $this_class, $this_class->RULESET );
+        _w( 1, "Adding routine from ($parent_class)" );
+      }
+    }
+  }
+  return 1;
 }
 
 1;
@@ -71,6 +75,7 @@ inherited rulesets per class
 
  # Note that this is almost (entirely?) exclusively done
  # from SPOPS::Configure
+
  SPOPS::Configure::Ruleset->create_relationship( $spops_config );
 
 =head1 DESCRIPTION
@@ -105,7 +110,7 @@ access it. Also find all the rules that apply to a particular class
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -113,7 +118,6 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
 
 =cut
 

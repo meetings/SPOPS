@@ -1,6 +1,6 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 1.14 2000/11/18 21:09:05 cwinters Exp $
+# $Id: Tie.pm,v 1.16 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
 use vars qw( $PREFIX_TEMP $PREFIX_INTERNAL );
@@ -9,7 +9,7 @@ use Carp qw( carp );
 require Exporter;
 
 @SPOPS::Tie::ISA       = qw( Exporter );
-@SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 1.14 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP  
                              IDX_CHECK_FIELDS $PREFIX_TEMP $PREFIX_INTERNAL );
 
@@ -21,9 +21,10 @@ use constant IDX_CHECK_FIELDS  => '_CHECK_FIELD_LIST';
 $PREFIX_TEMP       = 'tmp_';
 $PREFIX_INTERNAL   = '_internal';
 
-use constant DEBUG             => 0;
+use constant DEBUG => 0;
 
 # Use this for setting up field lists to check
+
 my %FIELDS = ();
 
 # Tie interface stuff below here; see 'perldoc perltie' for what
@@ -37,103 +38,108 @@ my %FIELDS = ();
 # any temporary data that lives only for the object's lifetime.
 
 sub TIEHASH {
- my $class = shift;
- my ( $base_class, $p ) = @_;
+  my ( $class, $base_class, $p ) = @_;
 
- # If we haven't already stored the fields associated with
- # this class, do so
- my $HAS_FIELD = 0;
- if ( $base_class and ref $p->{field} eq 'ARRAY' and ! $FIELDS{ $base_class } ) {
-   foreach my $key ( @{ $p->{field} } ) {
-	 $FIELDS{ $base_class }->{ lc $key } = 1;
-   }   
-   $HAS_FIELD = 1;
- }
- return bless ( { class              => $base_class, 
+  # If we haven't already stored the fields associated with
+  # this class, do so
+
+  my $HAS_FIELD = 0;
+  if ( $base_class and ref $p->{field} eq 'ARRAY' and ! $FIELDS{ $base_class } ) {
+    foreach my $key ( @{ $p->{field} } ) {
+      $FIELDS{ $base_class }->{ lc $key } = 1;
+    }   
+    $HAS_FIELD = 1;
+  }
+  return bless ({ class              => $base_class, 
                   IDX_TEMP()         => {},
                   IDX_INTERNAL()     => {},
-				  IDX_CHANGE()       => 0, 
-				  IDX_DATA()         => {},
+                  IDX_CHANGE()       => 0, 
+                  IDX_DATA()         => {},
                   IDX_CHECK_FIELDS() => $HAS_FIELD }, $class );
 }
 
 # Just go through each of the possible things that could be
 # set and do the appropriate action.
+
 sub FETCH {
- my ( $self, $key ) = @_;
- warn " tie: Trying to retrieve value for ($key)\n"                        if ( DEBUG );
- return $self->{ IDX_CHANGE() }                if ( $key eq IDX_CHANGE );
- return $self->{ IDX_TEMP() }->{ lc $key }     if ( $key =~ /^$PREFIX_TEMP/ );
- return $self->{ IDX_INTERNAL() }->{ lc $key } if ( $key =~ /^$PREFIX_INTERNAL/ );
- return $self->{ IDX_DATA() }->{ lc $key }     if ( ! $self->{ IDX_CHECK_FIELDS() } or 
-                                                   $FIELDS{ $self->{class} }->{ lc $key } );
- carp "Error retrieving field ($key): it is not a valid field";
- return undef;
+  my ( $self, $key ) = @_;
+  if ( DEBUG ) { warn " tie: Trying to retrieve value for ($key)\n"; }
+  return $self->{ IDX_CHANGE() }                if ( $key eq IDX_CHANGE );
+  return $self->{ IDX_TEMP() }->{ lc $key }     if ( $key =~ /^$PREFIX_TEMP/ );
+  return $self->{ IDX_INTERNAL() }->{ lc $key } if ( $key =~ /^$PREFIX_INTERNAL/ );
+  return $self->{ IDX_DATA() }->{ lc $key }     if ( ! $self->{ IDX_CHECK_FIELDS() } or 
+                                                     $FIELDS{ $self->{class} }->{ lc $key } );
+  carp "Error retrieving field ($key): it is not a valid field";
+  return undef;
 }
 
 # Similar to FETCH, including the blabbing about whether the field is valid
+
 sub STORE {
- my ( $self, $key, $value ) = @_;
- warn " tie: Trying to store in ($key) value ($value)\n"                   if ( DEBUG );
- return $self->{ IDX_CHANGE() } = $value                if ( $key eq IDX_CHANGE );
- return $self->{ IDX_TEMP() }->{ lc $key } = $value     if ( $key =~ /^$PREFIX_TEMP/ );
- return $self->{ IDX_INTERNAL() }->{ lc $key } = $value if ( $key =~ /^$PREFIX_INTERNAL/ );
- if ( ! $self->{ IDX_CHECK_FIELDS() } or 
-      $FIELDS{ $self->{class} }->{ lc $key } ) { 
-   $self->{ IDX_CHANGE() }++;
-   return $self->{ IDX_DATA() }->{ lc $key } = $value;
- }
- carp "Error setting value for field ($key): it is not a valid field";
- return undef;
+  my ( $self, $key, $value ) = @_;
+  if ( DEBUG ) { warn " tie: Trying to store in ($key) value ($value)\n"; }
+  return $self->{ IDX_CHANGE() } = $value                if ( $key eq IDX_CHANGE );
+  return $self->{ IDX_TEMP() }->{ lc $key } = $value     if ( $key =~ /^$PREFIX_TEMP/ );
+  return $self->{ IDX_INTERNAL() }->{ lc $key } = $value if ( $key =~ /^$PREFIX_INTERNAL/ );
+  if ( ! $self->{ IDX_CHECK_FIELDS() } or 
+       $FIELDS{ $self->{class} }->{ lc $key } ) { 
+    $self->{ IDX_CHANGE() }++;
+    return $self->{ IDX_DATA() }->{ lc $key } = $value;
+  }
+  carp "Error setting value for field ($key): it is not a valid field";
+  return undef;
 }
 
 # For EXISTS and DELETE, We can only do these actions on the actual
 # data; use the object methods for the other information.
+
 sub EXISTS {
- my ( $self, $key ) = @_;
- warn " tie: Checking for existence of ($key)\n"                           if ( DEBUG );
- if ( ! $self->{ IDX_CHECK_FIELDS() } or $FIELDS{ $self->{class} }->{ lc $key } ) { 
-   return exists $self->{ IDX_DATA() }->{ lc $key };
- }
- carp "Cannot check existence for field ($key): it is not a valid field";
+  my ( $self, $key ) = @_;
+  if ( DEBUG ) { warn " tie: Checking for existence of ($key)\n"; }
+  if ( ! $self->{ IDX_CHECK_FIELDS() } or $FIELDS{ $self->{class} }->{ lc $key } ) { 
+    return exists $self->{ IDX_DATA() }->{ lc $key };
+  }
+  carp "Cannot check existence for field ($key): it is not a valid field";
 }
 
 sub DELETE {
- my ( $self, $key ) = @_;
- warn " tie: Clearing value for ($key)\n"                                  if ( DEBUG );
- if ( ! $self->{ IDX_CHECK_FIELDS() } or 
-      $FIELDS{ $self->{class} }->{ lc $key } ) { 
-   $self->{ IDX_DATA() }->{ lc $key } = undef;
-   $self->{ IDX_CHANGE() }++;
- }
- carp "Cannot remove data for field ($key): it is not a valid field";
+  my ( $self, $key ) = @_;
+  if ( DEBUG ) { warn " tie: Clearing value for ($key)\n"; }
+  if ( ! $self->{ IDX_CHECK_FIELDS() } or 
+       $FIELDS{ $self->{class} }->{ lc $key } ) { 
+    $self->{ IDX_DATA() }->{ lc $key } = undef;
+    $self->{ IDX_CHANGE() }++;
+  }
+  carp "Cannot remove data for field ($key): it is not a valid field";
 }
 
 # We've disabled the ability to do: $object = {} or %{ $object } = ();
 # nothing bad happens, it's just a no-op
+
 sub CLEAR {
- my ( $self ) = @_;
- carp 'Trying to clear object through hash means failed; use object interface';
+  my ( $self ) = @_;
+  carp 'Trying to clear object through hash means failed; use object interface';
 }
 
 # Note that you only see the data when you cycle through the keys 
 # or even do a Data::Dumper::Dumper( $object ); you do not see
 # the meta-data being tracked.
+
 sub FIRSTKEY {
- my ( $self ) = @_;
- warn " tie: Finding first key in data object\n"                           if ( DEBUG );
- keys %{ $self->{ IDX_DATA() } };
- my $first_key = each %{ $self->{ IDX_DATA() } };
- return undef unless defined $first_key;
- return $first_key;
+  my ( $self ) = @_;
+  if ( DEBUG ) { warn " tie: Finding first key in data object\n"; }
+  keys %{ $self->{ IDX_DATA() } };
+  my $first_key = each %{ $self->{ IDX_DATA() } };
+  return undef unless defined $first_key;
+  return $first_key;
 }
 
 sub NEXTKEY {
- my ( $self ) = @_;
- warn " tie: Finding next key in data object\n"                            if ( DEBUG );
- my $next_key = each %{ $self->{ IDX_DATA() } };
- return undef unless defined $next_key;
- return $next_key;
+  my ( $self ) = @_;
+  if ( DEBUG ) { warn " tie: Finding next key in data object\n"; }
+  my $next_key = each %{ $self->{ IDX_DATA() } };
+  return undef unless defined $next_key;
+  return $next_key;
 }
 
 1;
@@ -291,7 +297,7 @@ L<perltie>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,5 +1,18 @@
 Revision history for Perl extension SPOPS.
 
+0.38  Thu Feb  1 00:54:03 EST 2001
+
+     Modified format of all files in the module to be more
+     readable. Also added to SPOPS.pm exportable methods _w (warn) and
+     _wm (warn multiple) which provides centralized debugging -- just
+     change the DEBUG value in SPOPS.pm to a number (higher for more
+     warnings) and all the packages in the modules will spill the
+     beans.
+
+     Applied patch from Christian Lemburg (lemburg@aixonix.de) to make
+     'parse_into_hash' manipulations work as intended in
+     SPOPS/Configure.pm.
+
 0.37 Wed Jan  3 22:53:46 EST 2001
 
      One small (but important) bugfix: an error in SPOPS::Secure was

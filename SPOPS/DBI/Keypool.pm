@@ -1,50 +1,51 @@
 package SPOPS::DBI::Keypool;
 
-# $Id: Keypool.pm,v 1.14 2000/11/18 21:09:05 cwinters Exp $
+# $Id: Keypool.pm,v 1.16 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
+use SPOPS qw( _w );
 
 @SPOPS::DBI::Keypool::ISA     = ();
-$SPOPS::DBI::Keypool::VERSION = sprintf("%d.%02d", q$Revision: 1.14 $ =~ /(\d+)\.(\d+)/);
-
-use constant DEBUG => 0;
+$SPOPS::DBI::Keypool::VERSION = sprintf("%d.%02d", q$Revision: 1.16 $ =~ /(\d+)\.(\d+)/);
 
 # Ensure only PRE_fetch_id works.
+
 sub post_fetch_id { return undef }
 
 sub pre_fetch_id  {
- my $class = shift;
- my $p     = shift;
- my $db    = $p->{db} || $class->global_db_handle;
+  my ( $class, $p ) = @_;
+  my $db    = $p->{db} || $class->global_db_handle;
 
- my $table = $class->key_table;
- if ( ! $table ) {
-   my $msg   = 'Cannot retrieve ID to insert record';
-   SPOPS::Error->set( { user_msg => $msg, type => 'db',
-                        system_msg => "No table specified using class $class",
-                        method => 'pre_fetch_id', type => 'db' } );
-   die $msg;
- }
-
- my $loc   = $class->global_config->{replication_location};
- if ( ! $loc ) {
-   my $msg   = 'Cannot retrieve ID to insert record';
-   SPOPS::Error->set( { user_msg => $msg, type => 'db',
-                        system_msg => "No location specified using class $class and table $table",
-                        method => 'pre_fetch_id' } );
-   die $msg;
- }
- warn " (Keypool/pre_fetch_id): Getting ID w/ <<$table>> and <<$loc>>\n"   if ( DEBUG );
+  my $table = $class->key_table;
+  unless ( $table ) {
+    my $msg   = 'Cannot retrieve ID to insert record';
+    SPOPS::Error->set( { user_msg => $msg, type => 'db',
+                         system_msg => "No table specified using class $class",
+                         method => 'pre_fetch_id', type => 'db' } );
+    die $msg;
+  }
+  
+  my $loc   = $class->global_config->{replication_location};
+  unless ( $loc ) {
+    my $msg   = 'Cannot retrieve ID to insert record';
+    SPOPS::Error->set( { user_msg => $msg, type => 'db',
+                         system_msg => "No location specified using class $class and table $table",
+                         method => 'pre_fetch_id' } );
+    die $msg;
+  }
+ _w( 1, "Getting ID w/ <<$table>> and <<$loc>>" );
 
  $table = $db->quote( $table );
  $loc   = $db->quote( $loc );
- my $row = eval { $class->db_select( sql => qq(exec new_key $table, $loc), return => 'single' ); };
- if ( $@ ) { 
-   $SPOPS::Error::user_msg = 'Cannot retrieve ID to insert record';
-   die $SPOPS::Error::user_msg;
- }   
- warn " (Keypool/pre_fetch_id): Returned <<$row->[0]>> for ID\n"           if ( DEBUG );
- return $row->[0];
+ my $row = eval { $class->db_select({
+                             sql => qq(exec new_key $table, $loc), 
+                             return => 'single' }) };
+  if ( $@ ) { 
+    $SPOPS::Error::user_msg = 'Cannot retrieve ID to insert record';
+    die $SPOPS::Error::user_msg;
+  }   
+  _w( 1, "Returned <<$row->[0]>> for ID" );
+  return $row->[0];
 }
 
 1;
@@ -95,7 +96,7 @@ without stored procedures...).
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

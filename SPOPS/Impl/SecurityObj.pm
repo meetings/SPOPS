@@ -1,12 +1,12 @@
 package SPOPS::Impl::Security;
 
-# $Id: SecurityObj.pm,v 1.23 2000/12/21 05:29:39 cwinters Exp $
+# $Id: SecurityObj.pm,v 1.24 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
 use SPOPS::Secure qw( :all );
 use Data::Dumper  qw( Dumper );
 
-$SPOPS::Impl::Security::VERSION = sprintf("%d.%02d", q$Revision: 1.23 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Impl::Security::VERSION = sprintf("%d.%02d", q$Revision: 1.24 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -305,7 +305,7 @@ and GROUPs 817, 901, 716.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

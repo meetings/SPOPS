@@ -1,12 +1,13 @@
 package SPOPS::Configure::DBI;
 
-# $Id: DBI.pm,v 1.30 2000/11/18 21:09:05 cwinters Exp $
+# $Id: DBI.pm,v 1.32 2001/01/31 02:30:44 cwinters Exp $
 
 use strict;
+use SPOPS qw( _w );
 use SPOPS::Configure;
 
 @SPOPS::Configure::DBI::ISA     = qw( SPOPS::Configure );
-$SPOPS::Configure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.30 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Configure::DBI::VERSION = sprintf("%d.%02d", q$Revision: 1.32 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -116,44 +117,48 @@ LINKSTO
 # ACTUAL SUBROUTINE
 #
 sub create_relationship {
- my $class = shift;
- my $info  = shift;
-
- # Before we do anything, call our parent
- $class->SUPER::create_relationship( $info );
-
- # Go through each alias defined in the config
- # and process DBI-specific stuff
- my $this_class    = $info->{class};
- my $this_id_field = $info->{id_field};
- my $this_alias    = $info->{main_alias};
-
- # Process the 'links_to' aliases (see pod)
- if ( my $links_to = $info->{links_to} ) { 
-   while ( my ( $linksto_class, $table ) = each %{ $links_to } ) {
-     my $linksto_config   = $linksto_class->CONFIG;
-     my $linksto_alias    = $linksto_config->{main_alias};
-     my $linksto_id_field = $linksto_config->{id_field};
-     warn " (Configure/DBI/create_relationship): Aliasing $linksto_alias, ",
-          "${linksto_alias}_add and ${linksto_alias}_remove in $this_class\n" if ( DEBUG );
-     my $linksto_sub = $generic_linksto;
-     $linksto_sub =~ s/%%ID_FIELD%%/$this_id_field/g;
-     $linksto_sub =~ s/%%CLASS%%/$this_class/g;
-     $linksto_sub =~ s/%%LINKSTO_CLASS%%/$linksto_class/g;
-     $linksto_sub =~ s/%%LINKSTO_ALIAS%%/$linksto_alias/g;
-     $linksto_sub =~ s/%%LINKSTO_ID_FIELD%%/$linksto_id_field/g;
-     $linksto_sub =~ s/%%LINKSTO_TABLE%%/$table/g;
-     warn " (Configure/DBI/create_relationship): Now going to eval the ",
-          "routine:\n$linksto_sub\n"                                       if ( DEBUG > 1 );
-     {
-       local $SIG{__WARN__} = sub { return undef };
-       eval $linksto_sub;
-     }
-     die " (Configure/DBI/create_relationship): Cannot eval links_to ",
-         "routines into $this_class\nError: $@\nRoutines: $linksto_sub"    if ( $@ );
-   }
- }
- return $this_class;
+  my $class = shift;
+  my $info  = shift;
+  
+  # Before we do anything, call our parent
+  
+  $class->SUPER::create_relationship( $info );
+  
+  # Go through each alias defined in the config
+  # and process DBI-specific stuff
+  
+  my $this_class    = $info->{class};
+  my $this_id_field = $info->{id_field};
+  my $this_alias    = $info->{main_alias};
+  
+  # Process the 'links_to' aliases (see pod)
+  
+  if ( my $links_to = $info->{links_to} ) { 
+    while ( my ( $linksto_class, $table ) = each %{ $links_to } ) {
+      my $linksto_config   = $linksto_class->CONFIG;
+      my $linksto_alias    = $linksto_config->{main_alias};
+      my $linksto_id_field = $linksto_config->{id_field};
+      _w( 1, "Aliasing $linksto_alias, ${linksto_alias}_add and ",
+          "${linksto_alias}_remove in $this_class"  );
+      my $linksto_sub = $generic_linksto;
+      $linksto_sub =~ s/%%ID_FIELD%%/$this_id_field/g;
+      $linksto_sub =~ s/%%CLASS%%/$this_class/g;
+      $linksto_sub =~ s/%%LINKSTO_CLASS%%/$linksto_class/g;
+      $linksto_sub =~ s/%%LINKSTO_ALIAS%%/$linksto_alias/g;
+      $linksto_sub =~ s/%%LINKSTO_ID_FIELD%%/$linksto_id_field/g;
+      $linksto_sub =~ s/%%LINKSTO_TABLE%%/$table/g;
+      _w( 2, "Now going to eval the routine:\n$linksto_sub" );
+      {
+        local $SIG{__WARN__} = sub { return undef };
+        eval $linksto_sub;
+      }
+      if ( $@ ) {
+        die " (Configure/DBI/create_relationship): Cannot eval links_to ",
+            "routines into $this_class\nError: $@\nRoutines: $linksto_sub";
+      }
+    }
+  }
+  return $this_class;
 }
 
 1;
@@ -265,7 +270,7 @@ between them.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2000 intes.net, inc.. All rights reserved.
+Copyright (c) 2001 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
@@ -273,6 +278,5 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
 
 =cut
