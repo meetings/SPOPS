@@ -1,5 +1,22 @@
 Revision history for Perl extension SPOPS.
 
+0.78  Wed Jun 11 01:05:57 EDT 2003
+
+Overall:
+
+  * Fix a couple of annoying warnings
+
+Individual:
+
+  * SPOPS.pm:
+
+    - Fix extraneous warnings. (Thanks Ray Z!)
+
+  * SPOPS/Tool/DateConvert.pm:
+
+    - Don't issue warnings when we aren't given a date to convert.
+
+
 0.77  Tue Jun 10 10:17:08 EDT 2003
 
 Overall:

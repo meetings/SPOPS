@@ -182,7 +182,7 @@ objects have. For an object representing a news story this might be
 The scalar can specify either a property (e.g., a field name 'title'
 for a news story) or a method on the object (e.g., a method
 'full_name' which puts together a person's name smartly). If the
-specified method isn't found the title in <object_description()> is
+specified method isn't found the title in C<object_description()> is
 left undefined.
 
 B<NOTE>: Since we allow you to specify a method name the coderef

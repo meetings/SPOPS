@@ -1,6 +1,6 @@
 package SPOPS::Tool::DateConvert;
 
-# $Id: DateConvert.pm,v 1.5 2003/06/09 11:46:13 lachoy Exp $
+# $Id: DateConvert.pm,v 1.6 2003/06/11 00:36:57 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w );
@@ -75,7 +75,17 @@ sub convert_to_string {
 
 sub _create_date_string {
     my ( $self, $date_class, $date_object ) = @_;
-    unless ( $date_object and ref( $date_object ) eq $date_class ) {
+
+    # NULLs are ok...
+
+    unless ( $date_object ) {
+        return undef;
+    }
+
+    # ... but getting something that's not an object when we expect
+    # something is a different matter and deserves a warning
+
+    unless ( ref( $date_object ) eq $date_class ) {
         _w( 0, "Expected date object of type '$date_class' but ",
                "got '", ref( $date_object ), "'; not converting." );
         return undef;

@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.13 2003/06/10 14:15:42 lachoy Exp $
+# $Id: SPOPS.pm,v 3.15 2003/06/11 04:45:55 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -11,13 +11,13 @@ use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.77';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.13 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.78';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.15 $ =~ /(\d+)\.(\d+)/);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
 
-my ( $DEBUG );
+my $DEBUG = 0;
 sub DEBUG                { return $DEBUG }
 sub set_global_debug     { $DEBUG = $_[1] }
 
@@ -329,7 +329,7 @@ sub ruleset_process_action {
     my $rs_table = $item->RULESET;
     unless ( ref $rs_table->{ $action } eq 'ARRAY'
                  and scalar @{ $rs_table->{ $action } } > 0 ) {
-        _w( 2, "No rules to process for [$action]" );
+        DEBUG() && _w( 2, "No rules to process for [$action]" );
         return 1;
     }
     DEBUG() && _w( 1, "Ruleset exists in class." );
