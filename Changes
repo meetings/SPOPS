@@ -1,5 +1,30 @@
 Revision history for Perl extension SPOPS.
 
+0.54  Tue Nov 27 07:42:59 EST 2001
+
+Overall:
+
+   - Fix bug introduced by 0.53 in the clone() method. (Thanks to Ray
+   Zimmerman for spotting.)
+
+Individual:
+
+   * SPOPS.pm:
+
+     - Modify clone() method to behave as previous -- the
+     multifield-specific behavior is now in a separate method
+
+  * SPOPS/ClassFactory/DBI.pm:
+
+     - Generate clone() method for classes using multifield primary
+     keys
+
+  * t/31_dbi_multifield.t:
+
+    - Modify clone save() test (#12) to specify one value of the ID in
+    the clone() call and set the other one afterward.
+
+
 0.53  Sat Nov 24 20:50:32 EST 2001
 
 Overall:

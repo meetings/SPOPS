@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 31_dbi_multifield.t,v 1.2 2001/11/25 01:26:47 lachoy Exp $
+# $Id: 31_dbi_multifield.t,v 1.3 2001/11/26 16:27:19 lachoy Exp $
 
 # Almost exactly the same as 30_dbi.t, but here we're testing whether
 # multiple-field primary keys work ok
@@ -29,11 +29,11 @@ my $SPOPS_CLASS = 'DBIMultiTest';
     my $spops_dbi_driver = check_dbd_compliance( $config, $driver_name, $SPOPS_CLASS );
 
     # Ensure we can get to SPOPS::Initialize
-
+    # TEST: 1
     require_ok( 'SPOPS::Initialize' );
 
     # Create the class using SPOPS::Initialize
-
+    # TEST: 2-3
     my $spops_config = {
         tester => {
            class        => $SPOPS_CLASS,
@@ -60,6 +60,7 @@ my $SPOPS_CLASS = 'DBIMultiTest';
     my $obj_user = 5;
 
     # Create an object
+    # TEST: 4-5
     {
         my $obj = eval { $SPOPS_CLASS->new({ spops_name => 'MyProject',
                                              spops_goop => 'oopie doop',
@@ -78,6 +79,7 @@ my $SPOPS_CLASS = 'DBIMultiTest';
     }
 
     # Fetch an object, then update it
+    # TEST: 6-9
     {
         my $obj = eval { $SPOPS_CLASS->fetch( "$obj_time,$obj_user", { db => $db, skip_cache => 1 } ) };
         ok( ! $@, 'Fetch object (perform)' );
@@ -100,6 +102,7 @@ my $SPOPS_CLASS = 'DBIMultiTest';
     }
 
     # Fetch an object then clone it and save it
+    # TEST: 10-12
     {
         my $obj     = eval { $SPOPS_CLASS->fetch( "$obj_time,$obj_user", { db => $db, skip_cache => 1 } ) };
         my $new_obj = eval { $obj->clone({ spops_name => 'YourProject',
@@ -107,6 +110,7 @@ my $SPOPS_CLASS = 'DBIMultiTest';
                                            spops_time => 1004897257 } ) };
         ok( ! $@, 'Clone object (perform)' );
         ok( $new_obj->{spops_name} ne $obj->{spops_name}, 'Clone object (correct data)');
+        $new_obj->{spops_user} = 12;
 
         eval { $new_obj->save( { is_add => 1, db => $db, skip_cache => 1 } ) };
         ok( ! $@, 'Save object (create, after clone)' );
@@ -117,6 +121,7 @@ my $SPOPS_CLASS = 'DBIMultiTest';
 
     # Create another object, but this time don't define the spops_num
     # field and see if the default comes through
+    # TEST: 13
     {
         my $obj = $SPOPS_CLASS->new({ spops_time => 1004897292,
                                       spops_user => 5,
@@ -127,6 +132,7 @@ my $SPOPS_CLASS = 'DBIMultiTest';
     }
 
     # Fetch the three objects in the db and be sure we got them all
+    # TEST: 14-15
     {
         my $obj_list = eval { $SPOPS_CLASS->fetch_group({ db => $db, skip_cache => 1 } ) };
         ok( ! $@, 'Fetch group' );
@@ -138,12 +144,14 @@ my $SPOPS_CLASS = 'DBIMultiTest';
     }
 
     # Fetch a count of the objects in the database
+    # TEST: 16
     {
         my $obj_count = eval { $SPOPS_CLASS->fetch_count({ db => $db }) };
         ok( $obj_count == 3, 'Fetch count' );
     }
 
     # Create an iterator and run through the objects
+    # TEST: 17-18
     {
         my $iter = eval { $SPOPS_CLASS->fetch_iterator({ db => $db, skip_cache => 1 }) };
         ok( $iter->isa( 'SPOPS::Iterator' ), 'Iterator returned' );

@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 1.13 2001/11/25 01:26:13 lachoy Exp $
+# $Id: DBI.pm,v 1.14 2001/11/26 16:27:19 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
@@ -9,7 +9,7 @@ use SPOPS::ClassFactory qw( OK ERROR DONE );
 
 @SPOPS::ClassFactory::DBI::ISA      = ();
 $SPOPS::ClassFactory::DBI::VERSION  = '1.90';
-$SPOPS::ClassFactory::DBI::Revision = substr(q$Revision: 1.13 $, 10);
+$SPOPS::ClassFactory::DBI::Revision = substr(q$Revision: 1.14 $, 10);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 
@@ -64,6 +64,33 @@ sub conf_multi_field_key_id {
 
 
 my $generic_multifield_etc = <<'MFETC';
+
+    sub %%CLASS%%::clone {
+        my ( $self, $p ) = @_;
+        my $class = $p->{_class} || ref $self;
+        DEBUG() && _w( 1, "Cloning new object of class ($class) from old ",
+                          "object of class (", ref $self, ")" );
+        my %initial_data = ();
+
+        my %id_field = map { $_ => 1 } $class->id_field;
+
+        while ( my ( $k, $v ) = each %{ $self } ) {
+            next unless ( $k );
+            next if ( $id_field{ $k } );
+            $initial_data{ $k } = $p->{ $k } || $v;
+        }
+
+        my $cloned = $class->new({ %initial_data, skip_default_values => 1 });
+        if ( $p->{id} ) {
+            $cloned->id( $p->{id} );
+        }
+        else {
+            foreach my $field ( keys %id_field ) {
+                $cloned->{ $field } = $p->{ $field } if ( $p->{ $field } );
+            }
+        }
+        return $cloned;
+    }
 
     sub %%CLASS%%::id_field {
         return wantarray ? %%ID_FIELD_NAME_LIST%%

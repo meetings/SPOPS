@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 1.4 2001/11/04 17:54:26 lachoy Exp $
+# $Id: 30_dbi.t,v 1.5 2001/11/26 16:27:19 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -100,7 +100,7 @@ my $SPOPS_CLASS = 'DBITest';
     # Fetch an object then clone it and save it
     {
         my $obj     = eval { $SPOPS_CLASS->fetch( 42, { db => $db, skip_cache => 1 } ) };
-        my $new_obj = eval { $obj->clone({ spops_name => 'YourProject', 
+        my $new_obj = eval { $obj->clone({ spops_name => 'YourProject',
                                            spops_goop => 'this n that',
                                            spops_id   => 1792 } ) };
         ok( ! $@, 'Clone object (perform)' );
@@ -116,9 +116,9 @@ my $SPOPS_CLASS = 'DBITest';
     # Create another object, but this time don't define the spops_num
     # field and see if the default comes through
     {
-        my $obj = $SPOPS_CLASS->new({ spops_id   => 1588, 
-                                 spops_goop => 'here we go!', 
-                                 spops_name => 'AnotherProject' });
+        my $obj = $SPOPS_CLASS->new({ spops_id   => 1588,
+                                      spops_goop => 'here we go!',
+                                      spops_name => 'AnotherProject' });
         eval { $obj->save({ is_add => 1, db => $db, skip_cache => 1 }) };
         ok( $obj->{spops_num} == 2, 'Fetch object (correct data with default' );
     }
