@@ -1,6 +1,6 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 1.31 2002/02/22 20:40:28 lachoy Exp $
+# $Id: SQLInterface.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use Data::Dumper qw( Dumper );
@@ -8,9 +8,7 @@ use DBI          ();
 use SPOPS        qw( _w _wm DEBUG );
 use SPOPS::Exception::DBI;
 
-@SPOPS::SQLInterface::ISA      = ();
-$SPOPS::SQLInterface::VERSION  = '1.90';
-$SPOPS::SQLInterface::Revision = substr(q$Revision: 1.31 $, 10);
+$SPOPS::SQLInterface::VERSION = substr(q$Revision: 2.0 $, 10);
 
 use constant DEBUG_SELECT     => 0;
 use constant DEBUG_INSERT     => 0;

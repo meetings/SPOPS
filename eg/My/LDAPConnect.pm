@@ -1,6 +1,6 @@
 package My::LDAPConnect;
 
-# $Id: LDAPConnect.pm,v 1.3 2002/01/08 04:31:53 lachoy Exp $
+# $Id: LDAPConnect.pm,v 2.0 2002/03/19 04:00:06 lachoy Exp $
 
 # Simple LDAP connection manager -- change %DATASOURCE as needed for testing
 

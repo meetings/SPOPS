@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: fetch_doodads.pl,v 1.1 2001/10/15 04:23:18 lachoy Exp $
+# $Id: fetch_doodads.pl,v 2.0 2002/03/19 04:00:06 lachoy Exp $
 
 use strict;
 

@@ -1,9 +1,11 @@
 package SPOPS::Export::DBI::Data;
 
-# $Id: Data.pm,v 1.2 2002/01/02 02:37:02 lachoy Exp $
+# $Id: Data.pm,v 2.0 2002/03/19 04:00:02 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export::Object );
+
+$SPOPS::Export::DBI::Data::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 sub create_header {
     my ( $self, $fields ) = @_;
@@ -39,13 +41,21 @@ L<SPOPS::Import::DBI::Data|SPOPS::Import::DBI::Data>.
 
 =head1 METHODS
 
+B<create_header( \@fields )>
+
+Same as the parent, but add the table name in the header.
+
 =head1 BUGS
+
+None known.
 
 =head1 TO DO
 
 Nothing known.
 
 =head1 SEE ALSO
+
+L<SPOPS::Import::DBI::Data|SPOPS::Import::DBI::Data>
 
 =head1 COPYRIGHT
 
@@ -59,6 +69,3 @@ it under the same terms as Perl itself.
 Chris Winters <chris@cwinters.com>
 
 =cut
-
-
-1;

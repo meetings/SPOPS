@@ -1,9 +1,11 @@
 package SPOPS::Export::Object;
 
-# $Id: Object.pm,v 1.7 2002/01/02 02:37:03 lachoy Exp $
+# $Id: Object.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export );
+
+$SPOPS::Export::Object::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 sub create_header {
     my ( $self, $fields ) = @_;

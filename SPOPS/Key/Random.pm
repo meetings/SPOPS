@@ -1,12 +1,12 @@
 package SPOPS::Key::Random;
 
-# $Id: Random.pm,v 1.16 2002/02/23 05:35:54 lachoy Exp $
+# $Id: Random.pm,v 2.0 2002/03/19 04:00:03 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 use SPOPS::Utility;
 
-$SPOPS::Key::Random::VERSION  = substr(q$Revision: 1.16 $, 10);
+$SPOPS::Key::Random::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 use constant DEFAULT_ID_WIDTH => 8;
 

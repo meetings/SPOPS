@@ -1,13 +1,11 @@
 package SPOPS::Key::DBI::Sequence;
 
-# $Id: Sequence.pm,v 1.14 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Sequence.pm,v 2.0 2002/03/19 04:00:03 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
-@SPOPS::Key::DBI::Sequence::ISA      = ();
-$SPOPS::Key::DBI::Sequence::VERSION  = '1.90';
-$SPOPS::Key::DBI::Sequence::Revision = substr(q$Revision: 1.14 $, 10);
+$SPOPS::Key::DBI::Sequence::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 # Default SELECT statement to use to retrieve the sequence -- you can
 # override this in your config or in the parameters passed to

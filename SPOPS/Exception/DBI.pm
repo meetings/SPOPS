@@ -1,9 +1,11 @@
 package SPOPS::Exception::DBI;
 
-# $Id: DBI.pm,v 1.3 2002/01/08 02:44:11 lachoy Exp $
+# $Id: DBI.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
+
+$SPOPS::Exception::DBI::VERSION   = substr(q$Revision: 2.0 $, 10);
 
 my @FIELDS = qw( sql bound_value action );
 SPOPS::Exception::DBI->mk_accessors( @FIELDS );

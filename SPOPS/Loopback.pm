@@ -1,12 +1,11 @@
 package SPOPS::Loopback;
 
-# $Id: Loopback.pm,v 1.2 2002/01/02 02:37:04 lachoy Exp $
+# $Id: Loopback.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
 
 use strict;
-use SPOPS;
+use base qw( SPOPS );
 
-@SPOPS::Loopback::ISA      = qw( SPOPS );
-$SPOPS::Loopback::VERSION  = substr(q$Revision: 1.2 $, 10);
+$SPOPS::Loopback::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 
 sub fetch {

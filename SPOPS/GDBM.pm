@@ -1,15 +1,15 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 1.17 2002/01/08 04:31:53 lachoy Exp $
+# $Id: GDBM.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
 
 use strict;
+use base  qw( SPOPS );
+
 use Data::Dumper  qw( Dumper );
 use GDBM_File;
 use SPOPS         qw( _w DEBUG );
 
-@SPOPS::GDBM::ISA      = qw( SPOPS );
-$SPOPS::GDBM::VERSION  = '1.90';
-$SPOPS::GDBM::Revision = substr(q$Revision: 1.17 $, 10);
+$SPOPS::GDBM::VERSION = substr(q$Revision: 2.0 $, 10);
 
 # Make this the default for everyone -- they can override it
 # themselves...

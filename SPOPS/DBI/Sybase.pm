@@ -1,13 +1,11 @@
 package SPOPS::DBI::Sybase;
 
-# $Id: Sybase.pm,v 1.11 2002/01/02 02:37:03 lachoy Exp $
+# $Id: Sybase.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use SPOPS::Key::DBI::Identity;
 
-@SPOPS::DBI::Sybase::ISA      = ();
-$SPOPS::DBI::Sybase::VERSION  = '1.90';
-$SPOPS::DBI::Sybase::Revision = substr(q$Revision: 1.11 $, 10);
+$SPOPS::DBI::Sybase::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 sub sql_quote {
     my ( $class, $value, $type, $db ) = @_;

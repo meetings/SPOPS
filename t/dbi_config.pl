@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: dbi_config.pl,v 1.6 2002/03/14 13:35:01 lachoy Exp $
+# $Id: dbi_config.pl,v 2.0 2002/03/19 04:00:07 lachoy Exp $
 
 use strict;
 use DBI;

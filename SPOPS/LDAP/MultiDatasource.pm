@@ -1,14 +1,14 @@
 package SPOPS::LDAP::MultiDatasource;
 
-# $Id: MultiDatasource.pm,v 1.11 2002/01/08 02:43:53 lachoy Exp $
+# $Id: MultiDatasource.pm,v 2.0 2002/03/19 04:00:03 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::LDAP );
+
 use SPOPS qw( DEBUG _w );
 use SPOPS::Exception::LDAP;
 
-$SPOPS::LDAP::MultiDatasource::VERSION   = '1.90';
-$SPOPS::LDAP::MultiDatasource::Revision  = substr(q$Revision: 1.11 $, 10);
+$SPOPS::LDAP::MultiDatasource::VERSION = substr(q$Revision: 2.0 $, 10);
 
 use constant DEFAULT_CONNECT_KEY => 'main';
 

@@ -1,13 +1,11 @@
 package SPOPS::Configure::Ruleset;
 
-# $Id: Ruleset.pm,v 1.14 2002/01/02 02:37:03 lachoy Exp $
+# $Id: Ruleset.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
-@SPOPS::Configure::Ruleset::ISA      = ();
-$SPOPS::Configure::Ruleset::VERSION  = '1.90';
-$SPOPS::Configure::Ruleset::Revision = substr(q$Revision: 1.14 $, 10);
+$SPOPS::Configure::Ruleset::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 sub create_relationship {
     die "SPOPS::Configure::Ruleset is deprecated -- please see the docs for SPOPS::ClassFactory.\n";

@@ -1,6 +1,6 @@
 package My::DBI::DatasourceConfigure;
 
-# $Id: DatasourceConfigure.pm,v 1.2 2002/01/08 02:32:03 lachoy Exp $
+# $Id: DatasourceConfigure.pm,v 2.0 2002/03/19 04:00:07 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );

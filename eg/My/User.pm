@@ -1,12 +1,12 @@
 package My::User;
 
-# $Id: User.pm,v 1.12 2002/02/23 18:30:14 lachoy Exp $
+# $Id: User.pm,v 2.0 2002/03/19 04:00:07 lachoy Exp $
 
 use strict;
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::User::VERSION = sprintf("%d.%02d", q$Revision: 1.12 $ =~ /(\d+)\.(\d+)/);
+$My::User::VERSION = sprintf("%d.%02d", q$Revision: 2.0 $ =~ /(\d+)\.(\d+)/);
 $My::User::crypt_password = undef;
 
 sub _base_config {

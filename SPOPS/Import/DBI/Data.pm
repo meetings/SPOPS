@@ -1,11 +1,13 @@
 package SPOPS::Import::DBI::Data;
 
-# $Id: Data.pm,v 1.3 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Data.pm,v 2.0 2002/03/19 04:00:02 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
 use SPOPS::Exception;
 use SPOPS::SQLInterface;
+
+$SPOPS::Import::DBI::Data::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 my @FIELDS = qw( table fields db );
 SPOPS::Import::DBI::Data->mk_accessors( @FIELDS );

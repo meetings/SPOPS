@@ -1,6 +1,6 @@
 package My::UTFConvert;
 
-# $Id: UTFConvert.pm,v 1.2 2002/01/02 02:37:02 lachoy Exp $
+# $Id: UTFConvert.pm,v 2.0 2002/03/19 04:00:07 lachoy Exp $
 
 # WARNING: This currently only works in 5.6.0 and earlier versions of
 # Perl. It will barf with a syntax error on later versions.

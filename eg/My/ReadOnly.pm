@@ -1,6 +1,6 @@
 package My::ReadOnly;
 
-# $Id: ReadOnly.pm,v 1.1 2001/11/09 04:36:49 lachoy Exp $
+# $Id: ReadOnly.pm,v 2.0 2002/03/19 04:00:06 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );

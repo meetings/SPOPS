@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: fetch_all.pl,v 1.1 2002/02/23 05:40:04 lachoy Exp $
+# $Id: fetch_all.pl,v 2.0 2002/03/19 04:00:06 lachoy Exp $
 
 # Fetch all objects in the database
 

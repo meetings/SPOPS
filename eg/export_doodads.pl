@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: export_doodads.pl,v 1.4 2001/12/31 05:33:38 lachoy Exp $
+# $Id: export_doodads.pl,v 2.0 2002/03/19 04:00:06 lachoy Exp $
 
 # To use this, first edit My/Common.pm with your database information
 # and then run (mysql example)

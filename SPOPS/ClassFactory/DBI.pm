@@ -1,15 +1,12 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 1.17 2002/03/14 13:39:58 lachoy Exp $
+# $Id: DBI.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-
-@SPOPS::ClassFactory::DBI::ISA      = ();
-$SPOPS::ClassFactory::DBI::VERSION  = '1.90';
-$SPOPS::ClassFactory::DBI::Revision = substr(q$Revision: 1.17 $, 10);
+$SPOPS::ClassFactory::DBI::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 

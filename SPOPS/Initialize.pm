@@ -1,13 +1,12 @@
 package SPOPS::Initialize;
 
-# $Id: Initialize.pm,v 1.15 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Initialize.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
 
 use strict;
 use SPOPS        qw( _w DEBUG );
 use SPOPS::ClassFactory;
 
-$SPOPS::Initialize::VERSION   = '1.90';
-$SPOPS::Initialize::Revision  = substr(q$Revision: 1.15 $, 10);
+$SPOPS::Initialize::VERSION = substr(q$Revision: 2.0 $, 10);
 
 # Main interface -- take the information read in from 'read_config()'
 # and create SPOPS classes, then initialize them

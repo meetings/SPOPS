@@ -1,15 +1,15 @@
 package SPOPS::Iterator::LDAP;
 
-# $Id: LDAP.pm,v 1.10 2002/01/14 02:52:17 lachoy Exp $
+# $Id: LDAP.pm,v 2.0 2002/03/19 04:00:03 lachoy Exp $
 
 use strict;
+use base  qw( SPOPS::Iterator );
+
 use SPOPS           qw( _w DEBUG );
 use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 use SPOPS::Secure   qw( :level );
 
-@SPOPS::Iterator::LDAP::ISA = qw( SPOPS::Iterator );
-$SPOPS::Iterator::LDAP::VERSION  = '1.90';
-$SPOPS::Iterator::LDAP::Revision = substr(q$Revision: 1.10 $, 10);
+$SPOPS::Iterator::LDAP::VERSION = substr(q$Revision: 2.0 $, 10);
 
 # Keys with _LDAP at the beginning are specific to this implementation;
 # keys without _LDAP at the begining are used in all iterators.

@@ -1,13 +1,11 @@
 package SPOPS::Key::DBI::HandleField;
 
-# $Id: HandleField.pm,v 1.15 2002/01/08 04:31:53 lachoy Exp $
+# $Id: HandleField.pm,v 2.0 2002/03/19 04:00:03 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
-@SPOPS::Key::DBI::HandleField::ISA      = ();
-$SPOPS::Key::DBI::HandleField::VERSION  = '1.90';
-$SPOPS::Key::DBI::HandleField::Revision = substr(q$Revision: 1.15 $, 10);
+$SPOPS::Key::DBI::HandleField::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 # Ensure only POST_fetch_id used
 

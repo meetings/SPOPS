@@ -1,14 +1,12 @@
 package SPOPS::ClassFactory::LDAP;
 
-# $Id: LDAP.pm,v 1.20 2002/01/08 04:31:53 lachoy Exp $
+# $Id: LDAP.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-@SPOPS::ClassFactory::LDAP::ISA      = ();
-$SPOPS::ClassFactory::LDAP::VERSION  = '1.90';
-$SPOPS::ClassFactory::LDAP::Revision = substr(q$Revision: 1.20 $, 10);
+$SPOPS::ClassFactory::LDAP::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 
 ########################################

@@ -1,6 +1,6 @@
 package My::DiscoverField;
 
-# $Id: DiscoverField.pm,v 1.6 2002/02/22 20:40:07 lachoy Exp $
+# $Id: DiscoverField.pm,v 2.0 2002/03/19 04:00:06 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );

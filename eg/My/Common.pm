@@ -1,6 +1,6 @@
 package My::Common;
 
-# $Id: Common.pm,v 1.7 2002/02/23 05:42:55 lachoy Exp $
+# $Id: Common.pm,v 2.0 2002/03/19 04:00:06 lachoy Exp $
 
 # Common routines for the My:: classes.
 

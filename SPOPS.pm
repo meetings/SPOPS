@@ -1,10 +1,11 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 1.66 2002/03/14 13:40:53 lachoy Exp $
+# $Id: SPOPS.pm,v 2.1 2002/03/19 04:52:09 lachoy Exp $
 
 use strict;
+use base  qw( Exporter Storable );
+
 use Data::Dumper    qw( Dumper );
-require Exporter;
 use SPOPS::Exception;
 use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
@@ -12,10 +13,9 @@ use SPOPS::Utility  qw();
 use Storable        qw( store retrieve nstore );
 
 $SPOPS::AUTOLOAD  = '';
-@SPOPS::ISA       = qw( Exporter Storable );
 @SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
-$SPOPS::VERSION   = '0.58';
-$SPOPS::Revision  = substr(q$Revision: 1.66 $, 10);
+$SPOPS::VERSION   = '0.59';
+$SPOPS::Revision  = substr(q$Revision: 2.1 $, 10);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant

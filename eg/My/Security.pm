@@ -1,6 +1,6 @@
 package My::Security;
 
-# $Id: Security.pm,v 1.13 2002/02/23 18:30:14 lachoy Exp $
+# $Id: Security.pm,v 2.0 2002/03/19 04:00:06 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -8,7 +8,7 @@ use SPOPS         qw( DEBUG );
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::Security::VERSION = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
+$My::Security::VERSION = sprintf("%d.%02d", q$Revision: 2.0 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 

@@ -1,11 +1,11 @@
 package SPOPS::DBI::Pg;
 
-# $Id: Pg.pm,v 1.18 2002/02/22 20:32:48 lachoy Exp $
+# $Id: Pg.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
-$SPOPS::DBI::Pg::VERSION  = substr(q$Revision: 1.18 $, 10);
+$SPOPS::DBI::Pg::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 use constant PG_SEQUENCE_NEXT    => "NEXTVAL( '%s' )";
 use constant PG_SEQUENCE_CURRENT => "SELECT CURRVAL( '%s' )";

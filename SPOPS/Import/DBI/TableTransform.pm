@@ -1,12 +1,12 @@
 package SPOPS::Import::DBI::TableTransform;
 
-# $Id: TableTransform.pm,v 1.4 2002/02/23 04:15:40 lachoy Exp $
+# $Id: TableTransform.pm,v 2.0 2002/03/19 04:00:02 lachoy Exp $
 
 use strict;
 use base qw( Class::Factory );
 use SPOPS::Exception;
 
-$SPOPS::Import::DBI::TableTransform::VERSION  = sprintf("%d.%02d", q$Revision: 1.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 my %INCLUDED   = ();
 sub get_factory_map  { return \%INCLUDED }

@@ -1,6 +1,6 @@
 package SPOPS::Exception;
 
-# $Id: Exception.pm,v 1.6 2002/03/14 13:39:09 lachoy Exp $
+# $Id: Exception.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Exporter );
@@ -8,7 +8,7 @@ use overload '""' => \&stringify;
 use Devel::StackTrace;
 use SPOPS::Error;
 
-$SPOPS::Exception::VERSION   = substr(q$Revision: 1.6 $, 10);
+$SPOPS::Exception::VERSION   = substr(q$Revision: 2.0 $, 10);
 @SPOPS::Exception::EXPORT_OK = qw( spops_error );
 
 use constant DEBUG => 0;

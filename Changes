@@ -1,5 +1,16 @@
 Revision history for Perl extension SPOPS.
 
+0.59  Mon Mar 18 23:33:06 EST 2002
+
+Overall:
+
+   * Fix module versions to eliminate conflicts with CPAN --
+     everything has been upgraded in CVS to a version 2.0 so we can
+     start from a known good version and have no danger of
+     retrograding. Thanks to Merlyn <merlyn@stonehenge.com> for the
+     friendly notice.
+
+
 0.58  Thu Mar 14 09:03:35 EST 2002
 
 Overall:

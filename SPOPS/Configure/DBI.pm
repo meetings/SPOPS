@@ -1,13 +1,12 @@
 package SPOPS::Configure::DBI;
 
-# $Id: DBI.pm,v 1.17 2002/01/02 02:37:03 lachoy Exp $
+# $Id: DBI.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use SPOPS::Configure;
 
 @SPOPS::Configure::DBI::ISA      = qw( SPOPS::Configure );
-$SPOPS::Configure::DBI::VERSION  = '1.90';
-$SPOPS::Configure::DBI::Revision = substr(q$Revision: 1.17 $, 10);
+$SPOPS::Configure::DBI::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 1;
 

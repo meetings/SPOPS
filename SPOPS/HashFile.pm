@@ -1,14 +1,12 @@
 package SPOPS::HashFile;
 
-# $Id: HashFile.pm,v 1.17 2002/01/08 04:31:53 lachoy Exp $
+# $Id: HashFile.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
 
 use strict;
+use base  qw( SPOPS );
 use Data::Dumper;
-use SPOPS;
 
-@SPOPS::HashFile::ISA       = qw( SPOPS );
-$SPOPS::HashFile::VERSION   = '1.90';
-$SPOPS::HashFile::Revision  = substr(q$Revision: 1.17 $, 10);
+$SPOPS::HashFile::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 # Just grab the tied hash from the SPOPS::TieFileHash
 
@@ -130,8 +128,7 @@ package SPOPS::TieFileHash;
 use strict;
 use File::Copy qw( cp );
 
-@SPOPS::TieFileHash::ISA       = ();
-$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.17 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::TieFileHash::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 # These are all very standard routines for a tied hash; more info: see
 # 'perldoc Tie::Hash'

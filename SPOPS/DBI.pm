@@ -1,19 +1,19 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 1.68 2002/03/14 13:39:58 lachoy Exp $
+# $Id: DBI.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
 
 use strict;
+use base  qw( SPOPS SPOPS::SQLInterface );
+
 use Data::Dumper  qw( Dumper );
 use DBI           ();
 use SPOPS         qw( _wm _w DEBUG );
 use SPOPS::Exception::DBI;
 use SPOPS::Iterator::DBI;
 use SPOPS::Secure qw( :level );
-use SPOPS::SQLInterface;
 use SPOPS::Tie    qw( $PREFIX_INTERNAL );
 
-@SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
-$SPOPS::DBI::VERSION   = substr(q$Revision: 1.68 $, 10);
+$SPOPS::DBI::VERSION = substr(q$Revision: 2.0 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 

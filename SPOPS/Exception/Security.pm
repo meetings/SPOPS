@@ -1,10 +1,12 @@
 package SPOPS::Exception::Security;
 
-# $Id: Security.pm,v 1.4 2002/01/08 02:44:11 lachoy Exp $
+# $Id: Security.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
 use SPOPS::Secure qw( :verbose :level );
+
+$SPOPS::Exception::Security::VERSION   = substr(q$Revision: 2.0 $, 10);
 
 my @FIELDS = qw( security_required security_found );
 SPOPS::Exception::Security->mk_accessors( @FIELDS );

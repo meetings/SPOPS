@@ -1,6 +1,6 @@
 package My::DBI::FindDefaults;
 
-# $Id: FindDefaults.pm,v 1.3 2002/01/07 13:00:14 lachoy Exp $
+# $Id: FindDefaults.pm,v 2.0 2002/03/19 04:00:07 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );

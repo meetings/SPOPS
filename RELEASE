@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.59 Mon Mar 18 23:33:06 EST 2002
+
+  * Fix module versions so we don't confuse CPAN
+
+
 0.58 Thu Mar 14 09:03:35 EST 2002
 
   * Fix id_clause() to work with DBD drivers that don't use the type
@@ -108,4 +113,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 1.16 2002/03/14 13:39:58 lachoy Exp $
+$Id: RELEASE,v 2.1 2002/03/19 04:52:09 lachoy Exp $

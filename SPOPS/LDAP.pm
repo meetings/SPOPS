@@ -1,8 +1,9 @@
 package SPOPS::LDAP;
 
-# $Id: LDAP.pm,v 1.34 2002/01/08 02:43:53 lachoy Exp $
+# $Id: LDAP.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
 
 use strict;
+use base qw( SPOPS );
 use Data::Dumper     qw( Dumper );
 use Net::LDAP        qw();
 use Net::LDAP::Entry qw();
@@ -11,9 +12,7 @@ use SPOPS            qw( DEBUG _w );
 use SPOPS::Exception::LDAP;
 use SPOPS::Secure    qw( :level );
 
-@SPOPS::LDAP::ISA       = qw( SPOPS );
-$SPOPS::LDAP::VERSION   = '1.90';
-$SPOPS::LDAP::Revision  = substr(q$Revision: 1.34 $, 10);
+$SPOPS::LDAP::VERSION   = substr(q$Revision: 2.0 $, 10);
 
 
 ########################################

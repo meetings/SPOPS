@@ -1,11 +1,11 @@
 package SPOPS::DBI::Oracle;
 
-# $Id: Oracle.pm,v 1.1 2002/02/22 20:32:34 lachoy Exp $
+# $Id: Oracle.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use SPOPS::Utility;
 
-$SPOPS::DBI::Oracle::VERSION  = substr(q$Revision: 1.1 $, 10);
+$SPOPS::DBI::Oracle::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 sub sql_quote {
     my ( $class, $value, $type, $db ) = @_;

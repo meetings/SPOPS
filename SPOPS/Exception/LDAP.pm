@@ -1,9 +1,11 @@
 package SPOPS::Exception::LDAP;
 
-# $Id: LDAP.pm,v 1.3 2002/01/08 02:44:11 lachoy Exp $
+# $Id: LDAP.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
+
+$SPOPS::Exception::LDAP::VERSION   = substr(q$Revision: 2.0 $, 10);
 
 my @FIELDS = qw( code action filter error_text error_name );
 SPOPS::Exception::LDAP->mk_accessors( @FIELDS );

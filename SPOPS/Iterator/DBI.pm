@@ -1,15 +1,15 @@
 package SPOPS::Iterator::DBI;
 
-# $Id: DBI.pm,v 1.11 2002/01/14 02:52:18 lachoy Exp $
+# $Id: DBI.pm,v 2.0 2002/03/19 04:00:03 lachoy Exp $
 
 use strict;
+use base  qw( SPOPS::Iterator );
+
 use SPOPS           qw( _w DEBUG );
 use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 use SPOPS::Secure   qw( :level );
 
-@SPOPS::Iterator::DBI::ISA      = qw( SPOPS::Iterator );
-$SPOPS::Iterator::DBI::VERSION  = '1.90';
-$SPOPS::Iterator::DBI::Revision = substr(q$Revision: 1.11 $, 10);
+$SPOPS::Iterator::DBI::VERSION = substr(q$Revision: 2.0 $, 10);
 
 # Keys with _DBI at the beginning are specific to this implementation;
 # keys without _DBI at the begining are used in all iterators.

@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: config.pl,v 1.2 2001/07/20 02:31:26 lachoy Exp $
+# $Id: config.pl,v 2.0 2002/03/19 04:00:07 lachoy Exp $
 
 # Simple script used by the various tests to read the config
 # file. Usually we just use as:

@@ -1,12 +1,10 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 1.16 2002/01/02 02:37:04 lachoy Exp $
+# $Id: Utility.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 
-@SPOPS::Utility::ISA      = qw();
-$SPOPS::Utility::VERSION  = '1.90';
-$SPOPS::Utility::Revision = substr(q$Revision: 1.16 $, 10);
+$SPOPS::Utility::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 
 # Return a random code of length $length. If $opt is 'mixed', then the

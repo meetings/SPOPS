@@ -1,9 +1,11 @@
 package SPOPS::Export::SQL;
 
-# $Id: SQL.pm,v 1.6 2002/01/08 04:31:53 lachoy Exp $
+# $Id: SQL.pm,v 2.0 2002/03/19 04:00:02 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export );
+
+$SPOPS::Export::SQL::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 use constant DEFAULT_RECORD_DELIMETER => ';';
 

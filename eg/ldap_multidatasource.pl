@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: ldap_multidatasource.pl,v 1.1 2001/10/23 14:25:31 lachoy Exp $
+# $Id: ldap_multidatasource.pl,v 2.0 2002/03/19 04:00:06 lachoy Exp $
 
 # ldap_multidatasource.pl
 #   This is an example of how you can setup multiple datasources. You

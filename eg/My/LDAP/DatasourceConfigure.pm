@@ -1,6 +1,6 @@
 package My::LDAP::DatasourceConfigure;
 
-# $Id: DatasourceConfigure.pm,v 1.2 2002/01/08 02:45:29 lachoy Exp $
+# $Id: DatasourceConfigure.pm,v 2.0 2002/03/19 04:00:07 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );

@@ -1,6 +1,6 @@
 package SPOPS::DBI::SQLite;
 
-# $Id: SQLite.pm,v 1.3 2002/02/23 18:31:06 lachoy Exp $
+# $Id: SQLite.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
 
@@ -8,7 +8,7 @@ use DBI qw( SQL_VARCHAR );
 use SPOPS  qw( _w DEBUG );
 use SPOPS::Utility;
 
-$SPOPS::DBI::SQLite::VERSION = substr(q$Revision: 1.3 $, 10);
+$SPOPS::DBI::SQLite::VERSION = substr(q$Revision: 2.0 $, 10);
 
 sub sql_current_date  { return SPOPS::Utility->now }
 

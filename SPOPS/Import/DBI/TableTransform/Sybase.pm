@@ -1,11 +1,11 @@
 package SPOPS::Import::DBI::TableTransform::Sybase;
 
-# $Id: Sybase.pm,v 1.3 2002/02/23 01:00:25 lachoy Exp $
+# $Id: Sybase.pm,v 2.0 2002/03/19 04:00:02 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import::DBI::TableTransform );
 
-$SPOPS::Import::DBI::TableTransform::Sybase::VERSION  = sprintf("%d.%02d", q$Revision: 1.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::Sybase::VERSION  = substr(q$Revision: 2.0 $, 10);
 
 sub increment {
     my ( $self, $sql ) = @_;

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: datasource_configure.pl,v 1.1 2002/01/07 12:59:08 lachoy Exp $
+# $Id: datasource_configure.pl,v 2.0 2002/03/19 04:00:06 lachoy Exp $
 
 use strict;
 use SPOPS::Initialize;

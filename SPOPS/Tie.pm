@@ -1,19 +1,18 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 1.21 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Tie.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
 
 use strict;
-use vars         qw( $PREFIX_TEMP $PREFIX_INTERNAL );
+use base  qw( Exporter );
+use vars  qw( $PREFIX_TEMP $PREFIX_INTERNAL );
+
 use Carp         qw( carp );
 use Data::Dumper qw( Dumper );
-require Exporter;
 
-@SPOPS::Tie::ISA       = qw( Exporter );
 @SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_INTERNAL IDX_TEMP  
                              IDX_CHECK_FIELDS IDX_LAZY_LOADED
                              $PREFIX_TEMP $PREFIX_INTERNAL );
-$SPOPS::Tie::VERSION   = '1.90';
-$SPOPS::Tie::Revision  = substr(q$Revision: 1.21 $, 10);
+$SPOPS::Tie::VERSION   = substr(q$Revision: 2.0 $, 10);
 
 use constant IDX_DATA          => '_dat';
 use constant IDX_CHANGE        => '_chg';

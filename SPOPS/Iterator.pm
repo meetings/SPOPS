@@ -1,16 +1,13 @@
 package SPOPS::Iterator;
 
-# $Id: Iterator.pm,v 1.14 2002/01/08 04:31:53 lachoy Exp $
+# $Id: Iterator.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
 
 use strict;
-use SPOPS  qw( DEBUG _w );
-require Exporter;
+use base  qw( Exporter );
+use SPOPS qw( DEBUG _w );
 
-@SPOPS::Iterator::ISA       = qw( Exporter );
-$SPOPS::Iterator::VERSION   = '1.90';
-$SPOPS::Iterator::Revision  = substr(q$Revision: 1.14 $, 10);
-
-@SPOPS::Iterator::EXPORT_OK   = qw( ITER_IS_DONE ITER_FINISHED );
+$SPOPS::Iterator::VERSION   = substr(q$Revision: 2.0 $, 10);
+@SPOPS::Iterator::EXPORT_OK = qw( ITER_IS_DONE ITER_FINISHED );
 
 use constant ITER_POSITION      => '_position';
 use constant ITER_NEXT_POSITION => '_count';

@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 05_exception.t,v 1.4 2002/01/17 15:41:32 lachoy Exp $
+# $Id: 05_exception.t,v 2.0 2002/03/19 04:00:07 lachoy Exp $
 
 use strict;
 use Test::More  tests => 58;

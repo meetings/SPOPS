@@ -1,13 +1,11 @@
 package SPOPS::Configure;
 
-# $Id: Configure.pm,v 1.20 2002/01/02 02:37:04 lachoy Exp $
+# $Id: Configure.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
 
 use strict;
 use SPOPS::ClassFactory;
 
-@SPOPS::Configure::ISA       = ();
-$SPOPS::Configure::VERSION   = '1.90';
-$SPOPS::Configure::Revision  = substr(q$Revision: 1.20 $, 10);
+$SPOPS::Configure::VERSION   = substr(q$Revision: 2.0 $, 10);
 
 sub process_config {
     my ( $class, $p ) = @_;

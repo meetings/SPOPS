@@ -1,17 +1,16 @@
 package SPOPS::ClassFactory;
 
-# $Id: ClassFactory.pm,v 1.24 2002/01/08 04:31:53 lachoy Exp $
+# $Id: ClassFactory.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
 
 use strict;
+use base  qw( Exporter );
+
 use Class::ISA;
 use Data::Dumper  qw( Dumper );
 use SPOPS         qw( _w DEBUG );
 use SPOPS::Exception;
-require Exporter;
 
-@SPOPS::ClassFactory::ISA       = qw( Exporter );
-$SPOPS::ClassFactory::VERSION   = '1.90';
-$SPOPS::ClassFactory::Revision  = substr(q$Revision: 1.24 $, 10);
+$SPOPS::ClassFactory::VERSION   = substr(q$Revision: 2.0 $, 10);
 @SPOPS::ClassFactory::EXPORT_OK = qw( OK DONE NOTIFY ERROR RESTART
                                       FACTORY_METHOD RULESET_METHOD );
 

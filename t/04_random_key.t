@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 04_random_key.t,v 1.2 2002/02/23 06:05:04 lachoy Exp $
+# $Id: 04_random_key.t,v 2.0 2002/03/19 04:00:07 lachoy Exp $
 
 use strict;
 use Test::More tests => 6;
