@@ -31,7 +31,7 @@ groups. (You can, of course, turn off security if you want.)
 
 It's also unique in that for most objects, you will not need to write
 any code. It's true! A fairly simple configuration file is all you
-need which you can then feed to SPOPS and have a class for you object
+need which you can then feed to SPOPS and have a class for your object
 ready to go, right out of thin air.
 
 The configuration you specify not only lists the properties of the
@@ -171,6 +171,10 @@ DBI issues
  perldoc SPOPS::DBI::Randomcode
  perldoc SPOPS::DBI::Keypool
 
+Utilities that might be useful:
+
+ perldoc SPOPS::Utility
+
 More information about how data are stored in an object
 
  perldoc SPOPS::Tie
@@ -191,7 +195,7 @@ CONTACT
 
 Direct all questions, comments, etc. to:
 
- Chris Winters (cwinters@intes.net)
+ Chris Winters <chris@cwinters.com>
 
 Also check out the SPOPS section of the OpenInteract website for
 up-to-date versions, support information, party hat designs, etc.
@@ -209,3 +213,5 @@ it under the terms of the Perl Artistic License or the GNU General
 Public License as published by the Free Software Foundation; either
 version 2 of the License (see 'COPYING'), or (at your option) any
 later version.
+
+$Id: README,v 1.4 2000/11/18 21:05:04 cwinters Exp $

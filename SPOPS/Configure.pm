@@ -1,6 +1,6 @@
 package SPOPS::Configure;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Configure.pm,v 1.33 2000/11/02 23:49:29 cwinters Exp $
+# $Id: Configure.pm,v 1.34 2000/11/18 21:09:04 cwinters Exp $
 
 use strict;
 use SPOPS::Error;
@@ -8,7 +8,7 @@ use SPOPS::Configure::Ruleset;
 use Data::Dumper  qw( Dumper );
 
 @SPOPS::Configure::ISA       = ();
-$SPOPS::Configure::VERSION   = sprintf("%d.%02d", q$Revision: 1.33 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Configure::VERSION   = sprintf("%d.%02d", q$Revision: 1.34 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -682,6 +682,6 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <cwinters@intes.net>
+Chris Winters  <chris@cwinters.com>
 
 =cut

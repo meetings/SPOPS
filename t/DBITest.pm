@@ -1,6 +1,6 @@
 package DBITest;
 
-# $Header: /usr/local/cvsdocs/SPOPS/t/DBITest.pm,v 1.2 2000/09/15 17:32:11 cwinters Exp $
+# $Id: DBITest.pm,v 1.3 2000/11/18 21:09:05 cwinters Exp $
 
 use strict;
 use SPOPS::DBI;

@@ -1,6 +1,6 @@
 package SPOPS::GDBM;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/GDBM.pm,v 1.13 2000/11/03 17:16:43 cwinters Exp $
+# $Id: GDBM.pm,v 1.15 2000/12/01 13:06:17 cwinters Exp $
 
 use strict;
 use SPOPS;
@@ -9,7 +9,7 @@ use Data::Dumper  qw( Dumper );
 use GDBM_File;
 
 @SPOPS::GDBM::ISA       = qw( SPOPS );
-@SPOPS::GDBM::VERSION   = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::GDBM::VERSION   = sprintf("%d.%02d", q$Revision: 1.15 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG       => 0;
 use constant DEBUG_FETCH => 0;
@@ -63,6 +63,8 @@ sub initialize {
 sub global_gdbm_tie {
  my $item = shift;
  my $p     = shift;
+ return $p->{db}    if ( ref $p->{db} );
+
  $p->{perm} ||= 'read';
  my $gdbm_filename = $p->{filename};
  unless ( $gdbm_filename ) {
@@ -70,7 +72,8 @@ sub global_gdbm_tie {
      $gdbm_filename   = $item->{tmp_gdbm_filename};
    }
    if ( $item->CONFIG->{gdbm_info}->{file_fragment} and $p->{directory} ) {
-     $gdbm_filename ||= join( '/', $item->CONFIG->{gdbm_info}->{file_fragment}, $p->{directory} );
+     warn " (GDBM): Found file fragent and directory\n"                    if ( DEBUG );
+     $gdbm_filename ||= join( '/', $p->{directory}, $item->CONFIG->{gdbm_info}->{file_fragment} );
    }
    $gdbm_filename ||= $item->CONFIG->{gdbm_info}->{filename};
    $gdbm_filename ||= $item->global_config->{gdbm_info}->{filename};
@@ -82,9 +85,9 @@ sub global_gdbm_tie {
  my $perm = GDBM_File::GDBM_READER;
  $perm    = GDBM_File::GDBM_WRITER  if ( $p->{perm} eq 'write' );
  $perm    = GDBM_File::GDBM_WRCREAT if ( $p->{perm} eq 'create' );
- warn " (GDBM/global_gdbm_tie): Trying to use perm $perm to connect\n"     if ( DEBUG );
+ warn " (GDBM/global_gdbm_tie): Trying to use perm ($perm) to connect\n"   if ( DEBUG );
  my %db = ();
- tie( %db, 'GDBM_File', $gdbm_filename, $perm, 0660 );
+ tie( %db, 'GDBM_File', $gdbm_filename, $perm, 0666 );
  return \%db;
 }
 
@@ -111,7 +114,7 @@ sub _return_structure_for_key {
  my $class = shift;
  my $key   = shift;
  my $p     = shift;
- my $db    = $p->{db} || $class->global_gdbm_tie( $p );
+ my $db    = $class->global_gdbm_tie( $p );
  my $item_info = $db->{ $key };
  return undef unless ( $item_info );
  my $data = undef;
@@ -132,7 +135,8 @@ sub fetch {
  unless ( $data ) {
    return undef unless ( $id and $id !~ /^tmp/ );
    return undef unless ( $class->pre_fetch_action( { id => $id } ) );
-   $data = $class->_return_structure_for_key( $class->object_key( $id ), { filename => $p->{filename} } );
+   $data = $class->_return_structure_for_key( $class->object_key( $id ), { filename => $p->{filename}, 
+                                                                           directory => $p->{directory} } );
  } 
  my $obj = $class->new( $data );
  $obj->clear_change;
@@ -144,9 +148,11 @@ sub fetch {
 sub fetch_group {
  my $item = shift;
  my $p    = shift;
- my $db = $p->{db} || $item->global_gdbm_tie( { filename => $p->{filename} } );
+ my $db = $item->global_gdbm_tie( $p );
  my $class = ref $item || $item;
+ warn " (GDBM): Trying to find keys beginning with ($class)\n"             if ( DEBUG > 1 );
  my @object_keys = grep /^$class/, keys %{ $db };
+ warn " (GDBM): Keys found in DB: ", join( ", ", keys %{ $db } ), "\n"     if ( DEBUG > 1 );
  my @objects = ();
  foreach my $key ( @object_keys ) {
    my $data = eval { $class->_return_structure_for_key( $key, { db => $db } ) };
@@ -180,7 +186,7 @@ sub save {
 
  # Save to DB
  my $obj_index  = $self->object_key;
- my $db = $p->{db} || $self->global_gdbm_tie( { perm => $p->{perm}, filename => $p->{filename} } );
+ my $db = $self->global_gdbm_tie( $p );
  $db->{ $obj_index } = $obj_string;
 
  return undef unless ( $self->post_save_action( { is_add => $is_add } ) );
@@ -193,7 +199,8 @@ sub remove {
  my $self = shift;
  my $p    = shift;
  my $obj_index  = $self->object_key;
- my $db = $p->{db} || $self->global_gdbm_tie( { perm => 'write', filename => $p->{filename} } );
+ my $db = $self->global_gdbm_tie( { perm      => 'write',
+                                    %{ $p } } );
  return delete $db->{ $obj_index };
 }
 
@@ -372,7 +379,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <cwinters@intes.net>
+Chris Winters  <chris@cwinters.com>
 
 
 =cut

@@ -1,11 +1,11 @@
 package SPOPS::Error;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Error.pm,v 1.11 2000/10/27 04:05:45 cwinters Exp $
+# $Id: Error.pm,v 1.12 2000/11/18 21:09:04 cwinters Exp $
 
 use strict;
 
 @SPOPS::Error::ISA     = ();
-$SPOPS::Error::VERSION = sprintf("%d.%02d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Error::VERSION = sprintf("%d.%02d", q$Revision: 1.12 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -221,7 +221,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <cwinters@intes.net>
+Chris Winters  <chris@cwinters.com>
 
 
 =cut

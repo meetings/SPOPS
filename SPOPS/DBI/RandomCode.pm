@@ -1,11 +1,11 @@
 package SPOPS::DBI::RandomCode;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/DBI/RandomCode.pm,v 1.12 2000/10/27 04:05:45 cwinters Exp $
+# $Id: RandomCode.pm,v 1.13 2000/11/18 21:09:05 cwinters Exp $
 
 use strict;
 
 @SPOPS::DBI::RandomCode::ISA     = ();
-$SPOPS::DBI::RandomCode::VERSION = sprintf("%d.%02d", q$Revision: 1.12 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::RandomCode::VERSION = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -68,7 +68,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <cwinters@intes.net>
+Chris Winters  <chris@cwinters.com>
 
 
 =cut

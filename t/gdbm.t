@@ -1,4 +1,4 @@
-# $Header: /usr/local/cvsdocs/SPOPS/t/gdbm.t,v 1.5 2000/09/15 17:52:50 cwinters Exp $
+# $Id: gdbm.t,v 1.6 2000/11/18 21:09:05 cwinters Exp $
 
 do "t/config.pl";
 my $config = _read_config_file();

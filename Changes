@@ -1,5 +1,64 @@
 Revision history for Perl extension SPOPS.
 
+0.37 Wed Jan  3 22:53:46 EST 2001
+
+     One small (but important) bugfix: an error in SPOPS::Secure was
+     using an object as a classname and instead of putting
+     'NS::MyObject' into the 'class' column of the 'sys_security'
+     table, it put something like 'NS::MyObject=HASH(0x8b7bb12)'.
+
+0.36 Dec 20
+
+     SMALL API CHANGE: the return value from the 'fetch_by_object'
+     method in the security object class is now undef if there are no
+     security objects found and a hashref of security information if
+     there are security objects found. Unless you've been subclassing
+     SPOPS::Secure (or doing other funky stuff with it) you won't have
+     to worry about this.
+
+     Add the option to pass in a 'security_object_class' to any method
+     that neeeds it.
+
+     SPOPS/Secure/Hierarchy.pm has now been tested and works with some
+     simple cases. More work is needed to make the whole parsing thing
+     more flexible (e.g., if you pass a URL you want to only parse
+     everything after the hostname:port). Added lots of documentation
+     to this as well.
+
+     Updated SPOPS/Impl/SecurityObj.pm sample security object with
+     updates from OpenInteract usage. We don't require the thing being
+     protected to be an SPOPS object -- you can protect (and check
+     on) anything now, as long as you have a consistent categorical
+     identifier and a unique identifier for each thing.
+
+0.35 Nov 18
+
+     Added SPOPS/Secure/Hierarchy.pm for finding security in a
+     parent-child relationship, like filesystems. This involved
+     exploding out some functionality from the 'get_security()' method
+     in SPOPS/Secure.pm so we could create an effective subclass. This
+     new security checking style (with the hierarchy) hasn't been
+     tested yet, but it's pretty straightforward and should work ok.
+
+     Moved certain functions out of SPOPS.pm and into new file
+     'SPOPS/Utility.pm' -- these are ones not really related to data
+     persistence but just helpful utilities.
+
+     NOTE: If you're updating to this version you need to put
+     'SPOPS::Utility' in your class 'isa' so that you can use the
+     methods now(), now_between_dates(), crypt_it(),
+     generate_random_code() and list_process().
+
+     COMPATIBILITY WARNING: Renamed the 'fetch_by_obj' method in the
+     security object (used in SPOPS/Secure.pm) to
+     'fetch_by_object'. This WILL NOT affect you if you're
+     just using the interface for SPOPS::Secure. (If you don't know
+     what that means, then you don't need to worry about it :)
+
+     (minor note) Changed all instances of RCS keyword '$Header' to
+     '$Id' and modified my email from chris@cwinters.com to
+     chris@cwinters.com.
+
 0.34 Nov 10
 
      Switched some silly documentation stuff in all the files. Changed

@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/DBI.pm,v 1.57 2000/10/27 04:05:45 cwinters Exp $
+# $Id: DBI.pm,v 1.58 2000/11/18 21:09:04 cwinters Exp $
 
 use strict;
 use SPOPS;
@@ -11,7 +11,7 @@ use DBI           ();
 use Data::Dumper  qw( Dumper );
 
 @SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
-@SPOPS::DBI::VERSION   = sprintf("%d.%02d", q$Revision: 1.57 $ =~ /(\d+)\.(\d+)/);
+@SPOPS::DBI::VERSION   = sprintf("%d.%02d", q$Revision: 1.58 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -934,7 +934,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <cwinters@intes.net>
+Chris Winters  <chris@cwinters.com>
 
 
 =cut

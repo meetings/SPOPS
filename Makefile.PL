@@ -1,3 +1,5 @@
+# $Id: Makefile.PL,v 1.11 2000/11/18 21:06:28 cwinters Exp $
+
 use ExtUtils::MakeMaker;
 
 # Ask the user for testing configuration information; save it in a
@@ -81,6 +83,8 @@ sub _set_sybase_env {
                                 $ENV{DBI_USER} );
      $dbi_password = _get_response( "Please enter the password for user ($dbi_user)\n", $ENV{DBI_PASSWORD} );
      print "\n";
+     print "Please note: you might want to remove the file \n",
+           "'$config_file' after the tests have run.\n\n";
    }
  }
 
@@ -99,17 +103,12 @@ DBI_DONE:
  }
  print "\n";
 
- # The final question
  my $write_config = 'y';
  if ( $dbi_test eq 'n' and $gdbm_test eq 'n' ) {
    print "Only the HashFile test will be run.\n";
    $write_config = 'n';
  }
- else {
-   $remove_config = _get_response( "One last question: should I remove the file with thisconfiguration\n" .
-                                   "information or leave it for future generations? (Y/n; Y = remove)\n",
-                                   'Y' );
- }
+
  if ( $write_config eq 'y' ) {
    open( CONF, "> $config_file" ) || die "Cannot open $config_file for writing! Error: $!";
    print CONF <<CONFIG;
@@ -119,7 +118,6 @@ DBI_dsn:      $dbi_dsn
 DBI_user:     $dbi_user
 DBI_password: $dbi_password
 GDBM_test:    $gdbm_test
-remove:       $remove_config
 $EXTRA_INFO
 CONFIG
  }
@@ -129,8 +127,9 @@ CONFIG
 WriteMakefile(
     'NAME'	=> 'SPOPS',
     'VERSION_FROM' => 'VERSION',
-    'AUTHOR' => 'Chris Winters (cwinters@intes.net)',
+    'AUTHOR' => 'Chris Winters <chris@cwinter.com>',
     'ABSTRACT' => 'Data abstraction layer used for object persistence and security',
-    'PREREQ_PM' => { 'Date::Format' => 0,
-                     'Data::Dumper' => 0 },
+    'PREREQ_PM' => { 'Date::Format' => 2.09,
+                     'Data::Dumper' => 0,
+                     'Date::Calc'   => 4.3 },
 );

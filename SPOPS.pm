@@ -1,26 +1,18 @@
 package SPOPS;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS.pm,v 1.46 2000/11/10 02:43:49 cwinters Exp $
+# $Id: SPOPS.pm,v 1.49 2001/01/04 05:37:18 cwinters Exp $
 
 use strict;
 use vars qw( $IDX_CHANGE );
 
-require Exporter;
-
 use Carp          qw( carp );
 use SPOPS::Tie    qw( IDX_DATA  IDX_CHANGE  IDX_CHECK_FIELDS );
 use SPOPS::Secure qw( SEC_LEVEL_WRITE );
-use Date::Format  qw( time2str );
 
 $SPOPS::AUTOLOAD = '';
-@SPOPS::ISA      = qw( Exporter );
-$SPOPS::VERSION  = '0.34';
-$SPOPS::RealVERSION = sprintf("%d.%02d", q$Revision: 1.46 $ =~ /(\d+)\.(\d+)/);
-
-@SPOPS::EXPORT_OK   = qw( now today generate_random_code crypt_it );
-%SPOPS::EXPORT_TAGS = (
- utils    => [ qw/ now today generate_random_code crypt_it / ], 
-);
+@SPOPS::ISA      = qw();
+$SPOPS::VERSION  = '0.37';
+$SPOPS::RealVERSION = sprintf("%d.%02d", q$Revision: 1.49 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -265,110 +257,6 @@ sub object_description {
  my $url = "$link_info->{url}?" . $self->id_field . '=' . $self->id;
  return { name => $self->CONFIG->{object_name},
           title => $title, url  => $url };
-}
-
-sub generate_random_code {
- my $self   = shift;
- my $length = shift;
- my $opt    = shift;
- return undef if ( ! $length );
- return join '', map { chr( int( rand(26) ) + 65 ) } ( 1 .. $length )  if ( $opt ne 'mixed' );
- return join '', map { ( $_ % 2 == 0 )
-                         ? chr( int( rand(26) ) + 65 )
-                         : chr( int( rand(26) ) + 97 ) } ( 1 .. $length );
-}
-
-sub crypt_it {
- my $class = shift;
- my $text  = shift;
- return undef if ( ! $text );
- my $salt = $class->generate_random_code( 2 );
- return crypt( $text, $salt );
-}
-
-sub now {
- my $class = shift;
- my $p     = shift;
- $p->{format} ||= '%Y-%m-%d %T';
- $p->{time}   ||= time;
- return time2str( $p->{format}, $p->{time} );
-}
-
-sub today { return $_[0]->now( { format => '%Y-%m-%e' } ); }
-
-sub now_between_dates {
- my $self = shift;
- my $p    = shift;
- return undef unless ( $p->{begin} or $p->{end} ); 
- my @now = Date::Calc::Today();
- my ( $begin_days, $end_days ) = undef;
- my ( $begin_date, $end_date );
-
- if ( $p->{begin} ) {
-   if ( ref $p->{begin} eq 'ARRAY' ) {
-     $begin_date = $p->{begin};
-   }
-   else {
-     @{ $begin_date } = $p->{begin} =~ /^(\d+)\-(\d+)\-(\d+)/;
-   }
- 
-   # Good result: 1 (meaning 'begin' is one day before 'now')
-   $begin_days = Date::Calc::Delta_Days( @{ $begin_date }, @now );
-   return undef if ( $begin_days < 0 );
- }
-
- if ( $p->{end} ) {
-   if ( ref $p->{end} eq 'ARRAY' ) {
-     $end_date = $p->{end};
-   }
-   else {
-     @{ $end_date } = $p->{end} =~ /^(\d+)\-(\d+)\-(\d+)/;
-   }
-
-   # Good result: 1 (meaning 'now' is one day before begin)
-   $end_days = Date::Calc::Delta_Days( @now, @{ $end_date } );
-   return undef if ( $end_days < 0 );
- }
- return 1 unless ( defined $begin_days and defined $end_days );
-
- my $spread_days = Date::Calc::Delta_Days( @{ $begin_date }, @{ $end_date } );
- return undef if ( $end_days - $begin_days > $spread_days );
- return 1;
-}
-
-# Pass in \@existing and \@new and get back a hashref:
-#   add    => \@: items in \@new but not in \@existing,
-#   keep   => \@: items in \@new and in \@existing,
-#   remove => \@: items not in \@new but in \@existing  
-sub list_process {
- my $class = shift;
- my $exist = shift;
- my $new   = shift;
-
- # Create a hash of the existing items
- my %existing = map { $_ => 1 } @{ $exist };
- my ( @k, @a );
-
- # Go through the new items...
- foreach my $new_id ( @{ $new } ) {
-
-   #... if it's existing, track it as a keeper
-   # and remove it from the existing pile
-   if ( $existing{ $new_id } ) {
-	 delete $existing{ $new_id };
-	 push @k, $new_id;
-   }
-
-   # otherwise, track it as an add
-   else {
-	 push @a, $new_id;
-   }
- }
-
- # now, the only items left in %existing are the ones
- # that were not specified in the new list; therefore,
- # these should be removed
- return { add => \@a, keep => \@k, remove => [ keys %existing ] };
 }
 
 sub AUTOLOAD {
@@ -751,13 +639,10 @@ You can control what happens to the object when it gets written to its
 persistent form, or when it is deleted, or fetched from its storage
 form, by implementing a simple API: fetch(), save(), remove().
 
-
-
      -------------         save, remove         -----------------
     |Runtime State|     ------------------->   |Persistency State|
      -------------      <------------------     -----------------
                               fetch
-
 
 Around the fetch(), save(), and remove() calls, you can execute helper
 functions (pre_fetch(), post_fetch(), pre_save(), post_save(),
@@ -770,9 +655,6 @@ short-circuited (that is, a failing method bombs out of the
 action). More information on this is in L<Data Manipulation Callbacks:
 Rulesets> below.
 
-
-
-=cut
 =head1 API
 
 The following includes methods within SPOPS and those that need to be
@@ -1096,11 +978,7 @@ Subclasses can define their own where appropriate.
 
 These objects are tied together by just a few things:
 
-=over 4
-
-=item 1
-
-global_config
+B<global_config>
 
 A few items sprinkled throughout the SPOPS hierarchy need information
 provided in a configuration file. See L<SPOPS::Configure> for more
@@ -1109,9 +987,7 @@ some of the nifty tricks you can do with it.
 
 Returns: a hashref of configuration information.
 
-=item 2
-
-global_cache
+B<global_cache>
 
 A caching object. If you have 
 
@@ -1133,10 +1009,8 @@ into the cache.
 This is a fairly simple interface which leaves implementation pretty
 much wide open.
 
-=back
-
-Note that subclasses (such as L<SPOPS::DBI>) may also have items that
-must be accessible to all children.
+Note that subclasses may also have items that must be accessible to
+all children -- see L<SPOPS::DBI> and the C<global_db_handle> method.
 
 =head1 DATA MANIPULATION CALLBACKS: RULESETS
 
@@ -1370,74 +1244,6 @@ object:
  title
    Title of this particular object (e.g., 'Man bites dog, film at 11')
 
-B<generate_random_code( $length )>
-
-Generates a random code of $length length consisting of upper-case
-characters in the english alphabet.
-
-B<crypt_it( $text )>
-
-Returns a crypt()ed version of $text. If $text not passed
-in, returns undef.
-
-B<now( \% )>
-
-Return the current time, formatted: yyyy-mm-dd hh:mm:ss. Since we use
-the L<Date::Format> module (which in turn uses standard strftime
-formatting strings), you can pass in a format for the date/time to fit
-your needs.
-
-Parameters:
-
- format
-   strftime format
-
- time
-   return of time command (or manipulation thereof)
-
-B<today()>
-
-Return a date (yyyy-mm-dd) for today.
-
-B<now_between_dates( { begin => ([y,m,d]|'yyyy-mm-dd'), end => $dateinfo } );
-
-Where $dateinfo is either a simple scalar ('yyyy-mm-dd') or an
-arrayref ([yyyy,mm,dd]).
-
-Note that you can also just pass one of the dates and the check will
-still perform ok.
-
-Returns 1 if 'now' is between the two dates (inclusive), undef
-otherwise.
-
-Examples:
- 
- # Today is '2000-10-31' in all examples
-
- SPOPS->now_between_days( { begin => '2000-11-01' } );
- ( returns 'undef' )
-
- SPOPS->now_between_days( { end => '1999-10-31' } );
- ( returns 'undef' )
-
- SPOPS->now_between_days( { begin => [2000, 10, 1 ] } );
- ( returns 1 )
-
- SPOPS->now_between_days( { begin => '2000-10-01',
-                            end   => '2001-10-01' } );
- ( returns 1 )
-
-B<list_process( \@existing, \@new )>
-
-Returns: hashref with three keys, each with an arrayref as the value:
-
- keep:   items found in both \@existing and \@new
- add:    items found in \@new but not \@existing
- remove: items found in \@existing but not \@new
-
-Mainly used for determining one-to-many relationship changes, but you
-can probably think of other applications.
-
 =head1 ERROR HANDLING
 
 (See L<SPOPS::Error> for now -- more later!)
@@ -1521,14 +1327,12 @@ Find out more about SPOPS -- current versions, updates, rants, ideas
 
 =head1 AUTHORS
 
-Chris Winters <cwinters@intes.net>
+Chris Winters <chris@cwinters.com>
 
 Christian Lemburg <clemburg@online-club.de> contributed some
 documentation and far too many good ideas to implement
 
 Rusty Foster <rusty@kuro5hin.org> was also influential in the early
  days of this library.
-
-
 
 =cut

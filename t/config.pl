@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Header: /usr/local/cvsdocs/SPOPS/t/config.pl,v 1.4 2000/09/15 17:52:50 cwinters Exp $
+# $Id: config.pl,v 1.5 2000/11/18 21:09:05 cwinters Exp $
 
 my $CONFIG_FILE = 'spops_test.conf';
 

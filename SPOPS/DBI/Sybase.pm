@@ -1,11 +1,11 @@
 package SPOPS::DBI::Sybase;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/DBI/Sybase.pm,v 1.13 2000/10/27 04:05:45 cwinters Exp $
+# $Id: Sybase.pm,v 1.14 2000/11/18 21:09:05 cwinters Exp $
 
 use strict;
 
 @SPOPS::DBI::Sybase::ISA     = ();
-$SPOPS::DBI::Sybase::VERSION = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Sybase::VERSION = sprintf("%d.%02d", q$Revision: 1.14 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -23,10 +23,11 @@ sub pre_fetch_id  { return undef }
 sub post_fetch_id { 
  my $self = shift;
  my $sth  = shift; 
+ my $p    = shift;
  return unless ( $self->CONFIG->{syb_identity} );
  $sth->finish;
 
- my $db  = $self->global_db_handle;
+ my $db  = $self->global_db_handle || $p->{db};
  my $sql = 'SELECT @@IDENTITY';
  eval {
    $sth = $db->prepare( $sql );
@@ -110,7 +111,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <cwinters@intes.net>
+Chris Winters  <chris@cwinters.com>
 
 
 =cut

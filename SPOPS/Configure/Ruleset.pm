@@ -1,11 +1,11 @@
 package SPOPS::Configure::Ruleset;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/Configure/Ruleset.pm,v 1.7 2000/10/27 04:05:45 cwinters Exp $
+# $Id: Ruleset.pm,v 1.8 2000/11/18 21:09:05 cwinters Exp $
 
 use strict;
 
 @SPOPS::Configure::Ruleset::ISA     = ();
-$SPOPS::Configure::Ruleset::VERSION = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Configure::Ruleset::VERSION = sprintf("%d.%02d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -112,7 +112,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <cwinters@intes.net>
+Chris Winters  <chris@cwinters.com>
 
 
 =cut

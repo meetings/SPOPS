@@ -8,6 +8,7 @@ SPOPS.pm
 SPOPS/Error.pm
 SPOPS/Tie.pm
 SPOPS/Secure.pm
+SPOPS/Secure/Hierarchy.pm
 SPOPS/GDBM.pm
 SPOPS/HashFile.pm
 SPOPS/SQLInterface.pm
@@ -21,6 +22,7 @@ SPOPS/Configure/DBI.pm
 SPOPS/Configure/Ruleset.pm
 SPOPS/Impl/SecurityObj.pm
 SPOPS/Impl/User.pm
+SPOPS/Utility.pm
 conf/server.perl
 t/hash_file.t
 t/hash_file_test.perl

@@ -1,6 +1,6 @@
 package GDBMTest;;
 
-# $Header: /usr/local/cvsdocs/SPOPS/t/GDBMTest.pm,v 1.1 2000/09/14 21:53:36 cwinters Exp $
+# $Id: GDBMTest.pm,v 1.2 2000/11/18 21:09:05 cwinters Exp $
 
 use strict;
 use SPOPS::GDBM;

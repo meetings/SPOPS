@@ -1,11 +1,11 @@
 package SPOPS::TieFileHash;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/HashFile.pm,v 1.10 2000/10/27 04:05:45 cwinters Exp $
+# $Id: HashFile.pm,v 1.11 2000/11/18 21:09:05 cwinters Exp $
 
 use strict;
 
 @SPOPS::TieFileHash::ISA       = ();
-$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
 
 # These are all very standard routines for a tied hash; more info: see
 # 'perldoc Tie::Hash'
@@ -100,7 +100,7 @@ use SPOPS;
 use Data::Dumper;
 
 @SPOPS::HashFile::ISA       = qw( SPOPS );
-$SPOPS::HashFile::VERSION   = sprintf("%d.%02d", q$Revision: 1.10 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::HashFile::VERSION   = sprintf("%d.%02d", q$Revision: 1.11 $ =~ /(\d+)\.(\d+)/);
 
 # Just grab the tied hash from the package above
 sub new {
@@ -292,7 +292,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters  <cwinters@intes.net>
+Chris Winters  <chris@cwinters.com>
 
 
 =cut

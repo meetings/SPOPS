@@ -55,7 +55,7 @@ $data = {
                                  'theme' => 4,
                                  'group' => 2
                                },
-          'admin_email' => 'cwinters@intes.net',
+          'admin_email' => 'chris@cwinters.com',
           'conductor' => {
                            'main' => {
                                        'method' => 'handler',

@@ -1,4 +1,4 @@
-# $Header: /usr/local/cvsdocs/SPOPS/t/dbi.t,v 1.7 2000/09/27 15:55:00 cwinters Exp $
+# $Id: dbi.t,v 1.8 2000/11/18 21:09:05 cwinters Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add

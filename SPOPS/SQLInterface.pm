@@ -1,6 +1,6 @@
 package SPOPS::SQLInterface;
 
-# $Header: /usr/local/cvsdocs/SPOPS/SPOPS/SQLInterface.pm,v 1.32 2000/10/27 12:49:27 cwinters Exp $
+# $Id: SQLInterface.pm,v 1.33 2000/11/18 21:09:05 cwinters Exp $
 
 use strict;
 use Carp         qw( carp );
@@ -8,7 +8,7 @@ use Data::Dumper qw( Dumper );
 use DBI          ();
 
 @SPOPS::SQLInterface::ISA     = ();
-$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 1.32 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 1.33 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG            => 0;
 use constant DEBUG_SELECT     => 0;
@@ -879,7 +879,7 @@ it under the same terms as Perl itself.
 
 =head1 AUTHORS
 
-Chris Winters <cwinters@intes.net>
+Chris Winters <chris@cwinters.com>
 
 Rusty Foster <rusty@kuro5hin.org> was also influential in the early
 days of this library.
