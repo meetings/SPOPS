@@ -1,0 +1,211 @@
+SPOPS: Simple Perl Object Persistence with Security
+
+QUICK INSTALL NOTE
+====================
+
+Installing via the CPAN shell is always a good thing, otherwise just
+do the standard:
+
+ perl Makefile.PL
+ make 
+ make test
+ make install
+
+Note that the first step will ask you a few questions that determine
+which tests are run.
+
+Also, there is a 'Bundle' for SPOPS. If you're using the CPAN shell,
+just do:
+
+ perl -MCPAN -e 'install Bundle::SPOPS'
+
+Easy!
+
+WHAT IS IT?
+====================
+
+SPOPS is a robust and powerful module that allows you to serialize
+objects. It is unique in that it also allows you to apply security to
+these objects using a fairly simple but powerful scheme of users and
+groups. (You can, of course, turn off security if you want.)
+
+It's also unique in that for most objects, you will not need to write
+any code. It's true! A fairly simple configuration file is all you
+need which you can then feed to SPOPS and have a class for you object
+ready to go, right out of thin air.
+
+The configuration you specify not only lists the properties of the
+object and possibly some information about where its data should be
+stored, but can also describe the relationship an object might have
+with another object (or objects).
+
+One great benefit is that you can retrofit SPOPS to existing data. If
+you don't use any of the metadata layers or security, you can simply
+describe your data in a configuration file, process the configuration
+and start making (and processing) objects! If you want to add security
+to these objects later, it's easy!
+
+
+SHOW ME THE CODE!
+====================
+
+Here's a sample session. In it, we have a simple configuration file
+which names the table in our database and the fields in the table,
+along with the primary key field. We process the config, then create a
+new object with our just-created class.
+
+(Note that this code is copied directly from the file
+'eg/fatbomb_dbi.pl'. See it for more details or to run it yourself.)
+
+ my $spops = {
+      fatbomb => {
+        class        => 'My::ObjectClass',
+        isa          => [ qw/ SPOPS::DBI::MySQL SPOPS::DBI / ],
+        field        => [ qw/ fatbomb_id calories cost name servings / ],
+        base_table   => 'fatbomb',
+        id_field     => 'fatbomb_id',
+        skip_undef   => [ qw/ servings / ],
+        sql_defaults => [ qw/ servings / ],
+      },
+ };
+ 
+ SPOPS::Configure::DBI->process_config( { config      => $spops,
+                                          require_isa => 1 } );
+ My::ObjectClass->class_initialize;
+ 
+ my $object = My::ObjectClass->new;
+ $object->{calories} = 1500;
+ $object->{cost}     = '$3.50';
+ $object->{name}     = "Super Deluxe Jumbo Big Mac";
+ my $fb_id = eval { $object->save( { db => $db } ) };
+ if ( $@ ) {
+    my $ei = SPOPS::Error->get;
+    die "Error found! ($@) Error information: ", Dumper( $ei ), "\n";
+ }
+ print "Object saved ok!\n",
+       "Object ID: $fb_id\n",
+       "Servings:  $object->{servings}\n";
+
+We can strip out the 'skip_undef' and 'sql_defaults' items in the
+configuration and we'd have the bare minimum configuration for a
+SPOPS::DBI object.
+
+
+APPLICATION-SPECIFICITY 
+====================
+
+Up to now, this library has been tied relatively closely to the
+OpenInteract project (www.openinteract.org, or check out the CPAN
+module OpenInteract). However, it should be able to stand on its own
+two feet -- we've used it like this without any problem. But there
+might be a few assumptions lurking around the code somewhere. If you
+spot something that looks totally out of place or appears to have no
+real purpose, let us know!
+
+
+HOW DO I SAY IT?
+====================
+
+It's usually pronounced so it rhymes with 'mess mops', although you're
+free to make up your own.
+
+
+DO YOU HAVE A LIBRARY FOR <insert name here>?
+========================
+
+Maybe. Near-future development will include:
+
+ LDAP (using Net::LDAP by default, but you'll be able to plug in other
+ drivers like Mozilla::LDAP)
+
+ Sybase Adaptive Server Enterprise (using DBD::Sybase -- tested briefly)
+
+ Sybase Adaptive Server Anywhere (using DBD::ASAny -- tested briefly)
+
+ Oracle (using DBD::Oracle)
+
+ DB2 (using DBD::DB2)
+
+ Postgres (using DBD::Pg)
+
+ Interbase (using DBD::Interbase)
+
+ MS SQL Server (using DBD::ODBC, FreeTDS?)
+
+ CORBA (likely using CORBA::ORBit in the beginning)
+
+Have something else you want implemented? Let us know! We might be
+able to do it ourselves, or we might be able to help you out.
+
+
+WHERE CAN I LEARN MORE?
+====================
+
+If you want to learn more about how to use SPOPS, read the
+documentation! It's quite substantial, and we're always working on
+it. Here are some guidelines:
+
+Overview and examples
+
+ perldoc SPOPS
+
+Configuration
+
+ perldoc SPOPS::Configure
+ perldoc SPOPS::Configure::DBI
+
+Error handling
+
+ perldoc SPOPS::Error
+
+Security
+
+ perldoc SPOPS::Security
+
+DBI issues
+
+ perldoc SPOPS::DBI
+ perldoc SPOPS::SQLInterface
+ perldoc SPOPS::DBI::MySQL
+ perldoc SPOPS::DBI::Sybase
+ perldoc SPOPS::DBI::Randomcode
+ perldoc SPOPS::DBI::Keypool
+
+More information about how data are stored in an object
+
+ perldoc SPOPS::Tie
+
+
+IDEAS? SUGGESTIONS? PATCHES?
+========================
+
+Send them in! We welcome patches and try to keep on top of new
+developments (such as new DBD drivers) as much as possible.
+
+We currently do not have a mailing list setup, but this will change
+shortly.
+
+
+CONTACT
+========================
+
+Direct all questions, comments, etc. to:
+
+ Chris Winters (cwinters@intes.net)
+
+Also check out the SPOPS section of the OpenInteract website for
+up-to-date versions, support information, party hat designs, etc.
+ 
+ http://www.openinteract.org/SPOPS/
+
+
+COPYRIGHT AND DISCLAIMER
+========================
+
+SPOPS is Copyright (c) 2000 by intes.net, inc. All rights reserved.
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the Perl Artistic License or the GNU General
+Public License as published by the Free Software Foundation; either
+version 2 of the License (see 'COPYING'), or (at your option) any
+later version.

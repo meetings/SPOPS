@@ -1,0 +1,341 @@
+Revision history for Perl extension SPOPS.
+
+0.33 Oct 16
+
+     Added lots of documentation to individual files; transition to
+     'use constant' for debugging values (much gets optimized away at
+     compiletime). Ensure we're passing the database handle around in
+     all necessary operations using SPOPS/DBI.pm,
+     SPOPS/Configure/DBI.pm and SPOPS/SQLInterface.pm; added some
+     abstract methods in SPOPS.pm (such as CONFIG) so if subclasses do
+     not define them we don't get an error (duh). Add a new feature to
+     SPOPS/Configure.pm: define a list of fieldnames in your config
+     under the 'fetch_by' key and the system will create a subroutine
+     for you to retrieve objects by data contained in that
+     field. Updated the README file with some helpful installation
+     tips, including a pointer to the bundle file. Also modified most
+     (all?) places where we 'eval' code into existence to use a
+     localized $SIG{__WARN__} handler to throw out any messages passed
+     to STDERR so we can rely on our own error reporting
+
+0.32 Sep 27
+
+     Added lots of documentation (including a 'README' file) and made
+     lots of changes to the configuration classes (SPOPS/Configure.pm
+     and SPOPS/Configure/DBI.pm; SPOPS/Configure/Ruleset.pm was
+     changed little) -- goal was to make it easier for some (but not
+     all) of the methods to be run, if necessary.and modified the
+     'create_initial_security' method of SPOPS/Secure.pm to have the
+     'code' method of generating initial security be responsible for
+     *all* the scopes. Also documented that method.
+
+     Added the 'no_security' configuration setting so that a class can
+     decide not to use security even if 'SPOPS::Secure' is in its
+     'isa'.
+
+     Added a couple of examples into the 'eg/' directory.
+
+0.31 Sep 26
+
+     Removed the html encoding/decoding stuff from SPOPS.pm. Cleaned
+     up the initial_security stuff in SPOPS/Secure.pm -- better
+     comments with examples, better flow, etc. -- cleaned up the
+     documentation (formatting), and added a couple of TO DO items.
+
+     Added the necessary information to license SPOPS under the
+     Artistic/GPL licenses. Woo-hoo!
+
+0.30 Sep 15
+
+     More tests, now for DBI. These are pretty simple and don't go
+     into security, but they should actually be quite useful to see if
+     the database (or rather, the DBD driver) supports the DBI
+     name/type inspection. I suspect that most 'modern' databases do
+     (or maybe that's just a hope). Also modified Makefile.PL to
+     collect information for testing. 
+
+     The hope, was of course, immediately dashed. Current versions of 
+     DBD::ASAny (Sybase Adaptive Server Anywhere) do not support
+     $sth->{TYPE}. So the planned modifications happened sooner than
+     expected. If your database does not support dynamic type
+     inspection, you can give simple type names in your configuration
+     ('int', 'num', 'char', etc.) and SPOPS will translate them to the
+     DBI types for you.
+
+0.29 Sep 14
+
+     Added the second implementation for storing SPOPS objects:
+     SPOPS/GDBM.pm. Tested with Interact::Package objects and so far
+     it's working well. Note that we don't deal with security or cache
+     checking yet -- I don't think those will be implemented until we
+     actually need them. (XP rubs off...). Also added the third
+     implementation for storing SPOPS objects: SPOPS/HashFile.pm. Use
+     it for reading in a perl hashref dumped (via Data::Dumper) to a
+     file. This simply reads in the file and provides key/value access
+     for any values you want to access and store. This implementation
+     actually uses its own tiehash implementation (packaged in the
+     same file) rather than SPOPS/Tie.pm. The XP stuff is definitely
+     rubbing off, because I'm starting to test everything. (Gasp!)
+     Added the t/ directory for testing and a testing suite for both
+     SPOPS/GDBM.pm and for SPOPS/HashFile.pm. DBI tests are going to
+     be a little more difficult...
+
+0.28 Sep 11
+
+     Added the 'object_description' method to SPOPS.pm, since we
+     really do not have a generic way to query an object for a general
+     description, including a URL where we can get more information, a
+     name (general descriptive class of object) and a title
+     (information about a specific object). Modify SPOPS/Configure.pm
+     so we do not have to specify every single configuration key
+     needed for the class -- just those that we have to massage in
+     some way (e.g., an arrayref into a hashref) and let the rest just
+     get assigned. Let calls to $dbi_obj->save skip the logging and
+     security phases if they want. Also modify SPOPS/Configure.pm so
+     that we now create every class on the fly and read in the
+     subroutines if the configuration states that there is code behind
+     the class.
+
+0.27 Aug 28
+
+     Moved all the ruleset initialization configuration actions to
+     SPOPS/Configure/Ruleset.pm. This involved moving the package
+     variable and accessor from SPOPS/Configure.pm and moving the
+     ruleset constructors from SPOPS/Configure/DBI.pm. Added
+     documentation about rulesets into SPOPS.pm; we should probably
+     take a lot of that general documentation and put it in its own
+     pod. Modified the '$item_remove' eval'd subroutine in
+     SPOPS/Configure/DBI.pm to use linking tables by default; it
+     should also work with one-to-many relationships that do not use
+     linking tables, but we might need to create a different set of
+     eval'd subroutines for such relationships. This probably doesn't
+     deserve its own 'version', but we need to get this out for
+     something :)
+
+0.26 Aug 16
+
+      Minor changes to reflect that we never need to call a
+      global_error_class, and that the cache return has been named to
+      'global_cache' from 'global_cache_class'; also ducmented what
+      exactly the cache needs to do. Minor shifting around in
+      SPOPS/Configure.pm and SPOPS/Configure/DBI.pm as we modified
+      configuration stuff in OpenInteract. Modified SPOPS/Tie.pm to
+      track 'internal' variables -- first use will be for SPOPS/DBI.pm
+      methods to be able to validate data, particularly for 'Grouped'
+      objects. Split up 'save()' in SPOPS/DBI.pm into internal methods
+      '_save_insert()' and '_save_update()' to make it more
+      understandable.
+
+      Moved the 'check_action_security()' method from SPOPS/Secure.pm
+      to SPOPS/DBI.pm and put additional functionality in. Now we
+      simply pass an object and a required level -- do not wrap it in
+      an eval{} and it will throw any necessary errors for you. Added
+      the default 'check_security' method to SPOPS.pm so
+      non-SPOPS::Secure classes will inherit the 'everything goes'
+      security.
+
+      Finally, added some cool functionality to ensure that pre/post
+      actions actually mean something. At initialization time, we
+      scour the parents of a SPOPS object class for rules to execute
+      during these phases. These rules can be simple or complex, and
+      they must be exclusive of one another and execute in any order.
+
+      This will allow us to do interesting things with layers of
+      meta-information on top of objects. For example, any class
+      inheriting from 'SPOPS::Searchable' will submit its information
+      to a separate class, which processes it and adds/modifies a
+      full-text search engine. Cool stuff :)
+
+0.25 Aug 2
+
+      Fixed a long-dormant buglet: this entire time, the
+      SPOPS/DBI/save method was trying to retrieve the just-set values
+      of fields with DEFAULT settings from the database so the object
+      could be in sync at all times; turns out that we didn't tell
+      SQLInterface to return a single row so we were assigning a
+      stringified arrayref (eg: ARRAY(0xADFE21)) to the first value
+      and nothing to the others...  Good thing caching isn't activated
+      yet :)
+
+0.24 Jul 26
+
+      Fixed some typos in SPOPS/Configure/DBI.pm in the eval'd
+      routines (including one where we were fetching the linked
+      objects but not returning them -- duh!); changed how
+      SPOPS/Error.pm gets the caller information. Added the ability of
+      SPOPS/Configure.pm to put any coderefs where they
+      belong. Modified SPOPS/DBI.pm to take the old ID to update by in
+      the save() method, so you can update the primary key field and
+      still refer to the old ID.
+
+0.23 Jul 15
+
+      Radically changed how errors are thrown. Every error generated
+      by SPOPS now sets the package variables user_msg, system_msg,
+      type and (optionally) extra in the brand new module,
+      SPOPS::Error. It then dies with the simple scalar user_msg,
+      which is what the caller catches. The caller is then responsible
+      for retrieving as much information as it needs from the
+      SPOPS::Error package. The main reason we're doing this is to
+      eliminate problems arising from overriding the CORE::die
+      function in perl. Also added some documentation to lots of
+      modules. Added the module SPOPS/Impl/User.pm as an example of
+      what a SPOPS user object looks like and should do.
+
+0.22  Jul 14
+
+      Modified a couple items in SPOPS/DBI.pm: the fetch_group()
+      method can now take multiple tables and do a join but still
+      return a group of objects that match the criteria. To do this we
+      also changed the id_clause() method to fully-qualify ID fields
+      unless otherwise told. Also changed the alias subroutine in
+      SPOPS/Configure/DBI.pm created for links_to relationships to
+      *not* qualify the ID field, since we frequently use link tables
+      to accomplish this. Also flipped some items around in the has_a
+      alias created in SPOPS/Configure.pm. And in a minor item, change
+      the die {} idiom to use a preceding "if ( $@ )" clause rather
+      than a trailing one, since the latter is too difficult to pick
+      out easily. Modify the SPOPS/Configure/DBI.pm _add and _remove
+      aliases to take either a single ID or an arrayref of IDs.
+
+0.21  Jun 27
+
+      Updated to put all internal dependencies (like @ISA) into
+      explicit 'use' statements rather than depend on mod_perl or
+      something else loading everything else up for us. Modified
+      SPOPS/Configure/DBI.pm to wrap the fetch() call for a links_to
+      relationship in an eval {} so we don't catch any errors thrown
+      with die up top. SPOPS/generate_random_code can now return
+      mixed-case codes. Also changed SPOPS/DBI.pm to return undef if a
+      particular record simply isn't found -- for some reason, I
+      thought this had been in there since the beginning.
+
+0.20  Jun 18
+
+       Paper bag fix in SPOPS/Secure.pm made by renaming a hash. <blush>
+
+0.19  Jun 18
+
+       Added and reworked a ton of documentation to SPOPS/DBI.pm; also
+       added a super-easy and super-cool feature to its fetch()
+       method: every time you ask for an object, the system will also
+       give its security level to you, free of charge. Just look in
+       the {tmp_security_level} property. Made a tiny change to
+       SPOPS/Impl/SecurityObj.pm to ensure that users not logged in do
+       not automatically belong to all existing groups :) Put
+       modification into SPOPS/DBI/fetch and fetch_group to allow
+       method calls to skip security checks to get around a
+       chicken-and-egg problem with logging in as the superuser. (Only
+       the superuser object can see the superuser object, so how are
+       we going to fetch the object to login before we've logged in
+       yet? :)
+
+0.18  Jun 14
+
+       Modified how errors are handled within all SPOPS modules. This
+       forced changes throughout a number of modules, but particularly
+       SPOPS/DBI.pm, SPOPS/Secure.pm and SPOPS/SQLInterface.pm. Added
+       documentation to SPOPS/Tie.pm and modified it to use Carp::carp
+       when something tries to access/modify a property that is not in
+       the field list. Modified other modules to use Carp::carp when
+       reporting nonfatal errors that require some modification from
+       the method call. Also modified SPOPS/Tie.pm to take an arrayref
+       (versus a hashref) argument for the list of fields it will
+       accept.
+
+0.17  Jun 13
+
+       Modified all parameters to be passed as hashrefs rather than
+       hashes. Passing-by-hashref was implemented in more recent
+       modules (such as SPOPS/Secure.pm), but was not retrofitted to
+       older modules. Finally bit the bullet and did this. More
+       testing for object security stuff -- nothing amiss so
+       far. Added some configuration options for as_string method to
+       make the output look a little nicer and modified SPOPS/AUTOLOAD
+       (again) to not warn with an error if it cannot find a value for
+       a 'tmp_' variable. Modified the SPOPS/clone() method to force
+       the ID field of the new object to be blank.
+
+0.16  Jun 9
+
+       Fixed SPOPS/Configure.pm to have the alias of the 'has_a'
+       subroutine created to match the type of object it 'has' only if
+       the ID field is exactly the same; fixed dumb mistake in
+       SPOPS/Secure.pm that wasn't differentiating properly between a
+       class and an object in ->create_initial_security; made a fairly
+       simple patch to SPOPS/Tie.pm which allows you to store
+       temporary attributes for the life of the object -- when the
+       object is DESTROYed, there go the attribs, and they're not
+       saved when the object is cached. Very useful for tracking
+       access rights on a per-object basis. We also had to make a
+       change to SPOPS/AUTOLOAD so we could call the temporary key as
+       a subroutine reference (Template Toolkit does this, somewhat
+       annoyingly...). Also tested out object security stuff -- works
+       pretty well.
+
+0.15  Jun 8
+
+        Modified the SQL-generation in SPOPS/Impl/SecurityObj.pm to
+        properly fetch WORLD-only requests; if there is no user object
+        existing and $class->check_security; is called, we want to
+        return only the WORLD permissions (SPOPS/Secure.pm); modified
+        the API for object security checking so that only one method
+        is called (SPOPS/Secure/check_action_security) and the action
+        is passed as the first argument; created the
+        SPOPS/Secure/create_initial_security method that allows us to
+        initialize an object with security information. Tested
+        check_action_security and fixed related API boo-boos in
+        SPOPS/DBI.pm. Individual object as well as class-based
+        security now seems to be working well, although more testing
+        is certainly required :)
+        
+0.14  Jun 7
+
+        Allow user to pass information to fetch() method (via both fetch()
+        and fetch_group() that overrides configuration for the field_alter
+        key (refresher: allows you to set a format on a returned value
+        from the database, such as DATE_FORMAT( mydate, '%b %e' )); massive
+        changes to SPOPS/Secure.pm to allow it to work with class-only and data
+        object security transparently (not a lot of testing yet,
+        however); SPOPS/Impl/SecurityObj.pm also had some changes to
+        enable it to work with classes
+
+0.13  Jun 5
+
+        Added SPOPS/Impl/SecurityObj.pm to the distribution as a DBI-based
+        SPOPS object representing security; added methods and documentation
+        to SPOPS/Secure.pm; modified SPOPS/Configure.pm to allow multiple
+        aliases per type in the 'has_a' descriptor.
+
+0.12  May 29
+
+        Added list_process() method to SPOPS.pm and added the related
+        methods to SPOPS::Configure::DBI %alias_to%_remove and 
+        %alias_to%_add, which allow us to link together objects without
+        actually modifying the objects. For instance, if the alias 
+        'group' has defined: links_to => [ 'user' ] the methods would
+        be named 'user_add' and 'user_remove' and would add or remove
+        one or more users to the group. Also modified all the errors
+        thrown in SQLInterface to have the proper type and at least
+        some semblance of informative messages.
+
+0.11  May 24 
+
+        Paper bag fix in SPOPS::Tie (changes weren't being tracked and
+        therefore updates not saved); paper bag fix in SPOPS::Configure::DBI
+        (bad definition for eval'd subroutine created *evil* bug of
+        super-rapid memory consumption); added data() method to SPOPS.pm;
+        routine created in SPOPS::Configure and eval'd for has_a now
+        only tries a fetch if the ID value exists
+
+0.10  May 17 
+
+        Polishing; things basically work
+
+0.01  May 12
+
+	    Original version - much of the packages were brought in from elsewhere,
+        but a lot of work is needed to extricate them from their
+        previous application and to make everything work together and
+        feel cohesive.
+
