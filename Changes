@@ -1,5 +1,57 @@
 Revision history for Perl extension SPOPS.
 
+0.79  Sun Sep  7 22:45:07 EDT 2003
+
+Individual:
+
+  * eg/(lots):
+
+    - Examples were broken since we added global_current_user|group()
+    to SPOPS::Secure; thanks to Christian Hansen <ch@ngmedia.com> for
+    pointing out the error.
+
+  * SPOPS.pm:
+
+    - Made call to global_cache() sync up with what docs say. Thanks
+    to Christian Hansen.
+
+    - Allow 'display.url_edit' key to be defined in class
+    configuration and be used in the output of 'object_description()'
+
+  * SPOPS/DBI.pm:
+
+    - When executing a post-insert fetch (for defaults, etc) ensure
+    that the list of fields to fetch doesn't include any empty/undef
+    fields.
+
+  * SPOPS/DBI/(Oracle|Sybase).pm:
+
+    - Changed global_db_handle() (deprecated) to
+    global_datasource_handle. Thanks to Christian Hansen.
+
+  * SPOPS/Import/DBI/TableTransform/Pg.pm:
+
+    - Don't use 'SERIAL' anymore and specify why in the POD.
+    
+  * SPOPS/Key/DBI/HandleField.pm:
+  
+    - Wrap the value retrieval in an eval {} so we don't bomb.
+
+  * SPOPS/Secure.pm:
+
+    - Fix error in warning text, thanks to Andrew Hurst
+    <hurst9@llnl.gov>.
+
+  * SPOPS/SQLInterface.pm:
+
+    - Apply patch from Raj Chandran <rc264@cornell.edu> that avoids
+    reading type information if the SQL is already provided.
+
+  * SPOPS/Tool/DateConvert.pm:
+
+    - Small doc fix and update
+
+
 0.78  Wed Jun 11 01:05:57 EDT 2003
 
 Overall:

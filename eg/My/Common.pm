@@ -1,13 +1,9 @@
 package My::Common;
 
-# $Id: Common.pm,v 3.0 2002/08/28 01:16:32 lachoy Exp $
-
-# Common routines for the My:: classes.
+# $Id: Common.pm,v 3.1 2003/07/15 12:19:47 lachoy Exp $
 
 use strict;
-use DBI;
 use SPOPS::DBI;
-use SPOPS::Utility;
 
 # CHANGE
 #
@@ -23,8 +19,8 @@ use SPOPS::Utility;
 my $SPOPS_DB = 'SPOPS::DBI::SQLite';
 eval "require $SPOPS_DB";
 
-@My::Common::ISA = ( 'SPOPS::Utility', $SPOPS_DB, 'SPOPS::DBI' );
-$My::Common::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+@My::Common::ISA = ( $SPOPS_DB, 'SPOPS::DBI' );
+$My::Common::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 # CHANGE
 #
@@ -33,38 +29,5 @@ $My::Common::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 use constant DBI_DSN      => 'DBI:SQLite:dbname=sqlite_test';
 use constant DBI_USER     => '';
 use constant DBI_PASSWORD => '';
-
-my ( $DB, $USER, $GROUP );
-
-sub set_user {
-    my ( $class, $user ) = @_;
-    unless ( $class->global_group_current ) {
-        $class->set_group( $user->group );
-    }
-    return $USER = $user;
-}
-
-sub set_group {
-    my ( $class, $group ) = @_;
-    return $GROUP = $group;
-}
-
-
-# You can change who the superuser is by modifying this ID
-
-sub get_superuser_id  { return 1 }
-sub get_supergroup_id { return 1 }
-
-sub global_security_object_class { return 'My::Security' }
-sub global_user_current          { return $USER          }
-sub global_group_current         { return $GROUP         }
-
-sub global_datasource_handle {
-    return $DB if ( $DB );
-    $DB = DBI->connect( DBI_DSN, DBI_USER, DBI_PASSWORD,
-                        { RaiseError => 1, PrintError => 0, AutoCommit => 1 });
-    unless ( $DB ) { SPOPS::Exception->throw( "Cannot connect to DB: $DBI::errstr" ) }
-    return $DB;
-}
 
 1;

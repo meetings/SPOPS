@@ -1,6 +1,6 @@
 package My::Security;
 
-# $Id: Security.pm,v 3.1 2002/09/13 13:05:57 lachoy Exp $
+# $Id: Security.pm,v 3.2 2003/07/15 12:19:47 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -8,13 +8,13 @@ use SPOPS         qw( DEBUG );
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::Security::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$My::Security::VERSION = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 sub _base_config {
     my $config = {
        'security' => {
            class        => 'My::Security',
-           isa          => [ 'SPOPS::Secure::DBI', 'My::Common' ],
+           isa          => [ 'My::CommonResources', 'SPOPS::Secure::DBI', 'My::Common' ],
            rules_from   => [ 'SPOPS::Tool::DBI::DiscoverField' ],
            field_discover => 'yes',
            field        => [],

@@ -3,7 +3,13 @@
 use strict;
 use DBI;
 
-my $dbh = DBI->connect( 'DBI:SQLite:sqlite_test',
+my $DB_FILE = 'sqlite_test';
+if ( -f $DB_FILE ) {
+    warn "Removing old database file...\n";
+    unlink( $DB_FILE );
+}
+
+my $dbh = DBI->connect( "DBI:SQLite:$DB_FILE",
                         '', '', { AutoCommit => 1 } )
                     || die "Cannot connect: $DBI::errstr";
 $dbh->{RaiseError} = 1;

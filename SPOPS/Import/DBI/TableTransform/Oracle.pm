@@ -1,11 +1,11 @@
 package SPOPS::Import::DBI::TableTransform::Oracle;
 
-# $Id: Oracle.pm,v 3.2 2003/01/07 03:23:53 lachoy Exp $
+# $Id: Oracle.pm,v 3.3 2003/08/12 03:40:55 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import::DBI::TableTransform );
 
-$SPOPS::Import::DBI::TableTransform::Oracle::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::Oracle::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 sub increment {
     my ( $self, $sql ) = @_;
@@ -43,7 +43,7 @@ SPOPS::Import::DBI::TableTransform::Oracle - Table transformations for Oracle
  my $transformer = SPOPS::Import::DBI::TableTransform->new( 'oracle' );
  $transformer->increment( \$table );
  print $table;
-
+ 
  # Output:
  # CREATE TABLE blah ( id INT NOT NULL primary key,
  #                     name varchar(50) )

@@ -1,15 +1,15 @@
 package SPOPS::Import::DBI::TableTransform::Pg;
 
-# $Id: Pg.pm,v 3.2 2003/01/07 03:23:53 lachoy Exp $
+# $Id: Pg.pm,v 3.3 2003/07/16 13:23:15 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import::DBI::TableTransform );
 
-$SPOPS::Import::DBI::TableTransform::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 sub increment {
     my ( $self, $sql ) = @_;
-    $$sql =~ s/%%INCREMENT%%/SERIAL/g;
+    $$sql =~ s/%%INCREMENT%%/INT/g;
 }
 
 sub increment_type {
@@ -40,9 +40,9 @@ SPOPS::Import::DBI::TableTransform::Pg - Table transformations for PostgreSQL
  my $transformer = SPOPS::Import::DBI::TableTransform->new( 'pg' );
  $transformer->increment( \$table );
  print $table;
-
+ 
  # Output:
- # CREATE TABLE blah ( id SERIAL primary key,
+ # CREATE TABLE blah ( id INT primary key,
  #                     name varchar(50) )
 
 =head1 DESCRIPTION
@@ -54,7 +54,11 @@ field types.
 
 B<increment>
 
-Returns 'SERIAL'
+Returns 'INT NOT NULL' -- relying on the sequence autocreated by
+'SERIAL' can get you into trouble since long table names get
+truncated. Just create your own sequence and specify it in the
+'sequence_name' key of your object config (see
+L<SPOPS::DBI::Pg|SPOPS::DBI::Pg>).
 
 B<increment_type>
 

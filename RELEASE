@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.79  Sun Sep  7 22:45:07 EDT 2003
+
+ * Number of small fixes
+
+
 0.78  Wed Jun 11 01:05:57 EDT 2003
 
  * Fix a couple of annoying warnings
@@ -232,4 +237,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 3.13 2003/06/11 04:45:55 lachoy Exp $
+$Id: RELEASE,v 3.14 2003/09/08 01:59:53 lachoy Exp $

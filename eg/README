@@ -54,15 +54,19 @@ How to use these:
 
  $ perl export_doodads.pl
 
- (10) Import some data from an SPOPS-portable format:
+ (10) Export the data to an XML format:
+
+ $ perl export_doodads.pl xml
+
+ (11) Import some data from an SPOPS-portable format:
 
  $ perl import_doodads.pl
 
- (11) Dump it back out to see what happened:
+ (12) Dump it back out to see what happened:
 
  $ perl export_doodads.pl
 
- (12) Clear out the tables and do it all again, playing around with the
+ (13) Clear out the tables and do it all again, playing around with the
  different scripts and classes.
 
  $ mysql--user=test --password=dingdong test < users_groups_clear.sql
@@ -131,6 +135,11 @@ Object classes:
      few values here so the objects know what database they are
      connecting to and how they'll connect.
 
+ My/CommonResources.pm
+
+     - holds the shared database connection, current user/group. You
+     don't need to edit anything here.
+
  My/Doodad.pm
 
      - sample dummy object
@@ -148,4 +157,4 @@ Object classes:
      - sample user object
 
 ========================================
-$Id: README,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+$Id: README,v 3.1 2003/07/15 12:18:17 lachoy Exp $

@@ -1,6 +1,6 @@
 package SPOPS::DBI::TypeInfo;
 
-# $Id: TypeInfo.pm,v 1.4 2003/01/03 05:12:50 lachoy Exp $
+# $Id: TypeInfo.pm,v 1.5 2003/08/12 03:40:17 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor );
@@ -146,10 +146,16 @@ sub fetch_types {
         spops_dbi_error $@, { sql => $sql, action => 'execute' };
     }
 
-    my $fields = $sth->{NAME};
-    my $types  = $sth->{TYPE};
-    for ( my $i = 0; $i < scalar @{ $fields }; $i++ ) {
-        $self->add_type( $fields->[ $i ],  $types->[ $i ] );
+    eval {
+        my $fields = $sth->{NAME};
+        my $types  = $sth->{TYPE};
+        for ( my $i = 0; $i < scalar @{ $fields }; $i++ ) {
+            $self->add_type( $fields->[ $i ],  $types->[ $i ] );
+        }
+    };
+    if ( $@ ) {
+        spops_error "Cannot retrieve name/type info for ",
+                    $self->table, ": $@";
     }
     $sth->finish;
     return $self;

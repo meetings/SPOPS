@@ -1,11 +1,11 @@
 package SPOPS::Key::DBI::HandleField;
 
-# $Id: HandleField.pm,v 3.2 2003/01/02 06:00:22 lachoy Exp $
+# $Id: HandleField.pm,v 3.3 2003/08/13 19:18:17 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
-$SPOPS::Key::DBI::HandleField::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Key::DBI::HandleField::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 # Ensure only POST_fetch_id used
 
@@ -19,8 +19,9 @@ sub post_fetch_id {
     unless ( $field ) {
         SPOPS::Exception->throw( 'Cannot retrieve ID since handle field is unknown' );
     }
-
-    my $id = $p->{statement}->{ $field } || $p->{db}->{ $field };
+    my ( $id );
+    $id   = eval { $p->{db}->{ $field } };
+    $id ||= eval { $p->{statement}->{ $field } };
     DEBUG() && _w( 1, "Found inserted ID ($id)" );
     unless ( $id ) {
         SPOPS::Exception->throw( "Cannot find ID value in $field" );

@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.11 2003/05/10 19:27:32 lachoy Exp $
+# $Id: DBI.pm,v 3.12 2003/08/12 03:38:10 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -14,7 +14,7 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.11 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.12 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -815,7 +815,7 @@ sub _save_insert {
 
         delete $fill_in_uniq{ $self->id_field };
 
-        my @fill_in_fields = sort keys %fill_in_uniq;
+        my @fill_in_fields = grep { $_ } sort keys %fill_in_uniq;
         if ( scalar @fill_in_fields ) {
             $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Fetching defaults for fields ",
                               join( ' // ', @fill_in_fields ), " after insert." );

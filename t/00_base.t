@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 00_base.t,v 3.1 2002/09/11 14:44:20 lachoy Exp $
+# $Id: 00_base.t,v 3.3 2003/09/08 01:51:42 lachoy Exp $
 
 use strict;
 use lib qw( t/ );

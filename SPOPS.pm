@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.15 2003/06/11 04:45:55 lachoy Exp $
+# $Id: SPOPS.pm,v 3.18 2003/09/08 01:56:48 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -11,8 +11,8 @@ use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.78';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.15 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.79';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.18 $ =~ /(\d+)\.(\d+)/);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -319,9 +319,10 @@ sub ruleset_process_action {
     my ( $item, $action, $p ) = @_;
     #die "This method is no longer used. Please see SPOPS::Manual::ObjectRules.\n";
 
+    my $class = ref $item || $item;
+
     $action = lc $action;
-    DEBUG() && _w( 1, "Trying to process $action for a",
-                      ( ref $item ) ? ref $item : $item, "type of object" );
+    DEBUG() && _w( 1, "Trying to process $action for a '$class' object" );
 
     # Grab the ruleset table for this class and immediately
     # return if the list of rules to apply for this action is empty
@@ -341,7 +342,7 @@ sub ruleset_process_action {
     foreach my $rule_sub ( @{ $rs_table->{ $action } } ) {
         $count_rules++;
         unless ( $rule_sub->( $item, $p ) ) {
-            _w( 0, "Rule [$count_rules] of [$action] failed" );
+            DEBUG() && _w( 0, "Rule $count_rules of '$action' for class '$class' failed" );
             return undef;
         }
     }
@@ -467,6 +468,11 @@ sub object_description {
     my ( $url, $url_edit );
     if ( $link_info->{url} ) {
         $url       = "$link_info->{url}?" . $id_field . '=' . $oid;
+    }
+    if ( $link_info->{url_edit} ) {
+        $url_edit  = "$link_info->{url_edit}?" . $id_field . '=' . $oid;
+    }
+    else {
         $url_edit  = "$link_info->{url}?edit=1;" . $id_field . '=' . $oid;
     }
     return { class     => ref $self,
@@ -552,8 +558,9 @@ sub get_cached_object {
 
     # If we can retrieve an item from the cache, then create a new object
     # and assign the values from the cache to it.
-
-    if ( my $item_data = $class->global_cache->get({ class => $class, id => $p->{id} }) ) {
+    my $item_data = $class->global_cache->get({ class     => $class,
+                                                object_id => $p->{id} });
+    if ( $item_data ) {
         DEBUG() && _w( 1, "Retrieving from cache..." );
         return $class->new( $item_data );
     }
@@ -1309,6 +1316,23 @@ might not necessarily work due to security reasons.
 
 =back
 
+You control what's used in the 'display' class configuration
+variable. In it you can have the keys 'url', which should be the basis
+for a URL to display the object and optionally 'url_edit', the basis
+for a URL to display the object in editable form. A query string with
+'id_field=ID' will be appended to both, and if 'url_edit' is not
+specified we create it by adding a 'edit=1' to the 'url' query
+string.
+
+So with:
+
+ display => {
+   url      => '/Foo/display/',
+   url_edit => '/Foo/display_form',
+ }
+
+You cou
+
 The defaults put together by SPOPS by reading your configuration file
 might not be sufficiently dynamic for your object. In that case, just
 override the method and substitute your own. For instance, the
@@ -1626,9 +1650,16 @@ L<SPOPS::Utility|SPOPS::Utility>
 
 =item *
 
-Rusty Foster E<lt>rusty@kuro5hin.orgE<gt> -- was influential in the early (!)
-days of this library and offered up an implementation for 'limit'
-functionality in L<SPOPS::DBI|SPOPS::DBI>
+Raj Chandran E<lt>rc264@cornell.eduE<gt> submitted a patch to make
+some L<SPOPS::SQLInterface|SPOPS::SQLInterface> methods work as
+advertised.
+
+=item *
+
+Rusty Foster E<lt>rusty@kuro5hin.orgE<gt> -- was influential (and not
+always in good ways) in the early days of this library and offered up
+an implementation for 'limit' functionality in
+L<SPOPS::DBI|SPOPS::DBI>
 
 =item *
 

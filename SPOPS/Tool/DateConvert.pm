@@ -1,6 +1,6 @@
 package SPOPS::Tool::DateConvert;
 
-# $Id: DateConvert.pm,v 1.6 2003/06/11 00:36:57 lachoy Exp $
+# $Id: DateConvert.pm,v 1.8 2003/07/08 12:10:16 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w );
@@ -142,7 +142,7 @@ SPOPS::Tool::DateConvert - Convert dates to objects to/from your datastore
 
 =head1 SYNOPSIS
 
- # Load information with read-only rule
+ # Class configuration with date convertion rule and metadata
  
  my $spops = {
     class               => 'This::Class',
@@ -165,6 +165,14 @@ SPOPS::Tool::DateConvert - Convert dates to objects to/from your datastore
  
  print "Birthday occurred on day ", $item->{birthtime}->strftime( '%j' ),
        "which was a ", $item->{birthtime}->strftime( '%A' ), "\n";
+ 
+ # When creating a new object, just set the correct type of object as
+ # the field value
+ 
+ my $newborn = This::Class->new({ email     => 'foo@bar.com',
+                                  language  => 'en',
+                                  birthtime => Time::Piece->new });
+ $newborn->save;
 
 =head1 DESCRIPTION
 
@@ -188,12 +196,18 @@ Class for date object to be instantiated. Supported classes are:
 
 =over 4
 
-=item * L<DateTime|DateTime> (along with supporting parse class
+=item *
+
+L<DateTime|DateTime> (along with supporting parse class
 L<DateTime::Format::Strptime|DateTime::Format::Strptime>)
 
-=item * L<Time::Piece|Time::Piece>
+=item *
 
-=item * L<Class::Date|Class::Date>.
+L<Time::Piece|Time::Piece>
+
+=item *
+
+L<Class::Date|Class::Date>.
 
 =back
 

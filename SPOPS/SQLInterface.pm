@@ -1,6 +1,6 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 3.4 2003/01/03 05:11:19 lachoy Exp $
+# $Id: SQLInterface.pm,v 3.5 2003/09/08 01:58:39 lachoy Exp $
 
 use strict;
 use Data::Dumper          qw( Dumper );
@@ -10,7 +10,7 @@ use SPOPS::DBI::TypeInfo;
 use SPOPS::Exception      qw( spops_error );
 use SPOPS::Exception::DBI qw( spops_dbi_error );
 
-$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 my ( $DEBUG_SELECT, $DEBUG_INSERT, $DEBUG_UPDATE, $DEBUG_DELETE );
 sub DEBUG_SELECT     { return $DEBUG_SELECT }
@@ -218,18 +218,20 @@ sub db_insert {
         spops_error 'Cannot continue with no SQL, values or table name';
     }
 
-    # Find the types for all fields in this table (we don't have to use
-    # them all...); let any errors trickle up
-
-    my $type_info = $class->db_discover_types(
-                                   $p->{table},
-                                   { dbi_type_info => $p->{dbi_type_info},
-                                     db            => $db });
     my $sql = $p->{sql};
 
     # If we weren't given SQL, build it.
 
     unless ( $sql ) {
+
+        # Find the types for all fields in this table (we don't have
+        # to use them all...); let any errors trickle up
+
+        my $type_info = $class->db_discover_types(
+                                   $p->{table},
+                                   { dbi_type_info => $p->{dbi_type_info},
+                                     db            => $db });
+
         my ( $fields, $values );
 
         # Be sure these are at least empty hashrefs, otherwise we
@@ -315,16 +317,17 @@ sub db_update {
     }
     my $sql = $p->{sql};
 
-    # Find the types for all fields in this table (we don't have to use
-    # them all...); let the error trickle up
-
-    my $type_info = $class->db_discover_types( $p->{table},
-                                               { dbi_type_info => $p->{dbi_type_info},
-                                                 db            => $db } );
-
     # Build the SQL
 
     unless ( $sql ) {
+
+        # Find the types for all fields in this table (we don't have
+        # to use them all...); let the error trickle up
+
+        my $type_info = $class->db_discover_types(
+                                       $p->{table},
+                                       { dbi_type_info => $p->{dbi_type_info},
+                                         db            => $db } );
         my ( @update );
         my @values = ();
 

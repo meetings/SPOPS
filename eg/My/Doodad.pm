@@ -1,18 +1,18 @@
 package My::Doodad;
 
-# $Id: Doodad.pm,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: Doodad.pm,v 3.1 2003/07/15 12:19:47 lachoy Exp $
 
 use strict;
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::Doodad::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$My::Doodad::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 sub _base_config {
    my $config = {
          doodad => {
              class        => 'My::Doodad',
-             isa          => [ 'SPOPS::Secure', 'My::Common' ],
+             isa          => [ 'My::CommonResources', 'SPOPS::Secure', 'My::Common' ],
              rules_from   => [ 'SPOPS::Tool::DBI::DiscoverField' ],
              field_discover => 'yes',
              field        => [],
@@ -58,7 +58,7 @@ sub config_class {
 sub ruleset_factory {
     my ( $class, $ruleset ) = @_;
     push @{ $ruleset->{pre_save_action} }, \&set_creator;
-    warn "Added 'set_creator' to $class\n";
+    $SPOPS::DEBUG && warn "Added 'set_creator' to $class\n";
     return __PACKAGE__;
 }
 

@@ -1,10 +1,10 @@
 package My::Group;
 
-# $Id: Group.pm,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: Group.pm,v 3.1 2003/07/15 12:19:47 lachoy Exp $
 
 use strict;
 
-$My::Group::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$My::Group::VERSION = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 my $USER_CLASS = 'My::User';
 
@@ -12,7 +12,7 @@ sub _base_config {
     my $config = {
        'group' => {
            class        => 'My::Group',
-           isa          => [ 'SPOPS::Secure', 'My::Common' ],
+           isa          => [ 'My::CommonResources', 'SPOPS::Secure', 'My::Common' ],
            rules_from   => [ 'SPOPS::Tool::DBI::DiscoverField' ],
            field_discover => 'yes',
            field        => [],

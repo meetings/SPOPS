@@ -1,13 +1,13 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 3.7 2003/05/10 19:25:29 lachoy Exp $
+# $Id: Secure.pm,v 3.8 2003/08/12 03:39:33 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
 use vars  qw( $EMPTY );
 use Data::Dumper qw( Dumper );
 
-$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.7 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.8 $ =~ /(\d+)\.(\d+)/);
 
 # Stuff for security constants and exporting
 
@@ -657,7 +657,7 @@ ITEM:
 sub remove_item_security {
     my ( $item, $p ) = @_;
     if ( $p->{scope} ne SEC_SCOPE_WORLD and $p->{scope_id} == 1 ) {
-        _w( 0, "Will not remove security with scope $p->{scope} ($p>{scope_id}) - admin." );
+        _w( 0, "Will not remove security with scope $p->{scope} ($p->{scope_id}) - admin." );
         return undef;
     }
 

@@ -1,6 +1,6 @@
 package SPOPS::Exception;
 
-# $Id: Exception.pm,v 3.3 2003/02/21 05:44:59 lachoy Exp $
+# $Id: Exception.pm,v 3.4 2003/08/12 03:39:17 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Exporter );
@@ -8,7 +8,7 @@ use overload '""' => \&stringify;
 use Devel::StackTrace;
 use SPOPS::Error;
 
-$SPOPS::Exception::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Exception::VERSION   = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Exception::EXPORT_OK = qw( spops_error );
 
 use constant DEBUG => 0;
@@ -124,8 +124,6 @@ sub fill_error_variables {
 
 __END__
 
-=pod
-
 =head1 NAME
 
 SPOPS::Exception - Base class for exceptions in SPOPS
@@ -238,20 +236,30 @@ object. Before calling C<die> we first do the following:
 
 =over 4
 
-=item 1. Check C<\%params> for any parameters matching fieldnames
-returned by C<get_fields()>, and if found set the field in the object
-to the parameter.
+=item 1.
 
-=item 2. Fill the object with the relevant calling information:
-C<package>, C<filename>, C<line>, C<method>.
+Check C<\%params> for any parameters matching fieldnames returned by
+C<get_fields()>, and if found set the field in the object to the
+parameter.
 
-=item 3. Set the C<trace> property of the object to a
+=item 2.
+
+Fill the object with the relevant calling information: C<package>,
+C<filename>, C<line>, C<method>.
+
+=item 3.
+
+Set the C<trace> property of the object to a
 L<Devel::StackTrace|Devel::StackTrace> object.
 
-=item 4. Call C<initialize()> so that subclasses can do any object
+=item 4.
+
+Call C<initialize()> so that subclasses can do any object
 initialization/tracking they need to do. (See L<SUBCLASSING> below.)
 
-=item 5. Track the object in our internal stack.
+=item 5.
+
+Track the object in our internal stack.
 
 =back
 
@@ -404,5 +412,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters E<lt>chris@cwinters.comE<gt>
-
-=cut

@@ -1,15 +1,15 @@
 package SPOPS::DBI::Sybase;
 
-# $Id: Sybase.pm,v 3.3 2003/01/02 06:00:23 lachoy Exp $
+# $Id: Sybase.pm,v 3.4 2003/08/12 03:40:40 lachoy Exp $
 
 use strict;
 use SPOPS::Key::DBI::Identity;
 
-$SPOPS::DBI::Sybase::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Sybase::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_quote {
     my ( $class, $value, $type, $db ) = @_;
-    $db ||= $class->global_db_handle;
+    $db ||= $class->global_datasource_handle;
     return $db->quote( $value, $type );
 }
 

@@ -1,15 +1,15 @@
 package SPOPS::DBI::Oracle;
 
-# $Id: Oracle.pm,v 3.2 2003/01/02 06:00:24 lachoy Exp $
+# $Id: Oracle.pm,v 3.3 2003/08/12 03:40:40 lachoy Exp $
 
 use strict;
 use SPOPS::Utility;
 
-$SPOPS::DBI::Oracle::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Oracle::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_quote {
     my ( $class, $value, $type, $db ) = @_;
-    $db ||= $class->global_db_handle;
+    $db ||= $class->global_datasource_handle;
     return $db->quote( $value, $type );
 }
 
