@@ -1,11 +1,11 @@
 package SPOPS::Import::DBI::TableTransform::InterBase;
 
-# $Id: InterBase.pm,v 1.1 2002/04/27 19:06:26 lachoy Exp $
+# $Id: InterBase.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import::DBI::TableTransform );
 
-$SPOPS::Import::DBI::TableTransform::InterBase::VERSION  = substr(q$Revision: 1.1 $, 10);
+$SPOPS::Import::DBI::TableTransform::InterBase::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 sub increment {
     my ( $self, $sql ) = @_;

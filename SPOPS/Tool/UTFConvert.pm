@@ -1,6 +1,6 @@
 package SPOPS::Tool::UTFConvert;
 
-# $Id: UTFConvert.pm,v 1.1 2002/04/26 15:37:15 lachoy Exp $
+# $Id: UTFConvert.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
 
 # ***************WARNING***************
 # This currently only works in 5.6.0 and earlier versions of Perl. It
@@ -9,6 +9,8 @@ package SPOPS::Tool::UTFConvert;
 use strict;
 use utf8;
 use SPOPS qw( _w DEBUG );
+
+$SPOPS::Tool::UTFConvert::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 sub ruleset_factory {
     my ( $class, $ruleset ) = @_;
@@ -43,8 +45,6 @@ sub to_utf {
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -115,5 +115,3 @@ it under the same terms as Perl itself.
 Chris Winters <chris@cwinters.com>
 
 Andreas Nolte <andreas.nolte@bertelsmann.de>
-
-=cut

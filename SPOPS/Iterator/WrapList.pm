@@ -1,6 +1,6 @@
 package SPOPS::Iterator::WrapList;
 
-# $Id: WrapList.pm,v 2.0 2002/03/19 04:00:03 lachoy Exp $
+# $Id: WrapList.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Iterator );
@@ -8,7 +8,7 @@ use base  qw( SPOPS::Iterator );
 use SPOPS           qw( DEBUG _w );
 use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 
-$SPOPS::Iterator::WrapList::VERSION   = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Iterator::WrapList::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 sub initialize {
     my ( $self, $p ) = @_;

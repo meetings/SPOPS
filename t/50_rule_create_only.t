@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 50_rule_create_only.t,v 1.2 2002/08/21 18:14:08 lachoy Exp $
+# $Id: 50_rule_create_only.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 use strict;
 use lib qw( t/ );

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: stock_user_group.pl,v 2.1 2002/04/30 03:59:23 lachoy Exp $
+# $Id: stock_user_group.pl,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 # stock_user_group.pl
 #

@@ -1,12 +1,12 @@
 package SPOPS::Iterator;
 
-# $Id: Iterator.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
+# $Id: Iterator.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
 use SPOPS qw( DEBUG _w );
 
-$SPOPS::Iterator::VERSION   = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Iterator::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Iterator::EXPORT_OK = qw( ITER_IS_DONE ITER_FINISHED );
 
 use constant ITER_POSITION      => '_position';

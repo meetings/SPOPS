@@ -1,6 +1,6 @@
 package SampleRuleset;
 
-# $Id: SampleRuleset.pm,v 1.3 2002/08/21 14:36:01 lachoy Exp $
+# $Id: SampleRuleset.pm,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 use strict;
 

@@ -1,11 +1,11 @@
 package SPOPS::Import::DBI::TableTransform::Pg;
 
-# $Id: Pg.pm,v 2.0 2002/03/19 04:00:02 lachoy Exp $
+# $Id: Pg.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import::DBI::TableTransform );
 
-$SPOPS::Import::DBI::TableTransform::Pg::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Import::DBI::TableTransform::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 sub increment {
     my ( $self, $sql ) = @_;

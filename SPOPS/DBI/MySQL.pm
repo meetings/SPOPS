@@ -1,13 +1,13 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 2.1 2002/05/06 16:12:48 lachoy Exp $
+# $Id: MySQL.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK NOTIFY );
 use SPOPS::Key::DBI::HandleField;
 
-$SPOPS::DBI::MySQL::VERSION  = substr(q$Revision: 2.1 $, 10);
+$SPOPS::DBI::MySQL::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return 'NOW()' }
 

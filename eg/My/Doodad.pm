@@ -1,12 +1,12 @@
 package My::Doodad;
 
-# $Id: Doodad.pm,v 2.1 2002/04/26 15:35:22 lachoy Exp $
+# $Id: Doodad.pm,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 use strict;
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::Doodad::VERSION = sprintf("%d.%02d", q$Revision: 2.1 $ =~ /(\d+)\.(\d+)/);
+$My::Doodad::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 sub _base_config {
    my $config = {

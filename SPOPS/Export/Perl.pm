@@ -1,12 +1,12 @@
 package SPOPS::Export::Perl;
 
-# $Id: Perl.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: Perl.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export );
 use Data::Dumper qw( Dumper );
 
-$SPOPS::Export::Perl::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Export::Perl::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 my @track = ();
 

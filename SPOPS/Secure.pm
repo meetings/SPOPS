@@ -1,6 +1,6 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: Secure.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -8,7 +8,7 @@ use vars  qw( $EMPTY );
 
 use Data::Dumper qw( Dumper );
 
-$SPOPS::Secure::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 # Stuff for security constants and exporting
 

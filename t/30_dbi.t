@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 2.10 2002/08/21 18:12:56 lachoy Exp $
+# $Id: 30_dbi.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add

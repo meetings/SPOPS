@@ -1,10 +1,12 @@
 package SPOPS::Tool::DBI::FindDefaults;
 
-# $Id: FindDefaults.pm,v 1.2 2002/08/21 18:11:42 lachoy Exp $
+# $Id: FindDefaults.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
 use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
+
+$SPOPS::Tool::DBI::FindDefaults::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;

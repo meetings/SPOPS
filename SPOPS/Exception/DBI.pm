@@ -1,11 +1,11 @@
 package SPOPS::Exception::DBI;
 
-# $Id: DBI.pm,v 2.1 2002/04/29 12:51:19 lachoy Exp $
+# $Id: DBI.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
 
-$SPOPS::Exception::DBI::VERSION   = substr(q$Revision: 2.1 $, 10);
+$SPOPS::Exception::DBI::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Exception::DBI::EXPORT_OK = qw( spops_dbi_error );
 
 my @FIELDS = qw( sql bound_value action );

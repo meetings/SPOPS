@@ -1,11 +1,13 @@
 package My::LDAPConnect;
 
-# $Id: LDAPConnect.pm,v 2.0 2002/03/19 04:00:06 lachoy Exp $
+# $Id: LDAPConnect.pm,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 # Simple LDAP connection manager -- change %DATASOURCE as needed for testing
 
 use strict;
 use Carp qw( cluck );
+
+$My::LDAPConnect::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 my %HANDLES = ();
 

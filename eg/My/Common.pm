@@ -1,6 +1,6 @@
 package My::Common;
 
-# $Id: Common.pm,v 2.1 2002/04/30 04:00:17 lachoy Exp $
+# $Id: Common.pm,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 # Common routines for the My:: classes.
 
@@ -24,6 +24,7 @@ my $SPOPS_DB = 'SPOPS::DBI::SQLite';
 eval "require $SPOPS_DB";
 
 @My::Common::ISA = ( 'SPOPS::Utility', $SPOPS_DB, 'SPOPS::DBI' );
+$My::Common::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 # CHANGE
 #

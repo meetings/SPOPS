@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 31_dbi_multifield.t,v 2.4 2002/08/21 18:13:20 lachoy Exp $
+# $Id: 31_dbi_multifield.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 # Almost exactly the same as 30_dbi.t, but here we're testing whether
 # multiple-field primary keys work ok

@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 2.4 2002/08/21 18:11:01 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
-$SPOPS::ClassFactory::DefaultBehavior::VERSION   = substr(q$Revision: 2.4 $, 10);
+$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 my @PARSE_INTO_HASH = qw( field no_insert no_update skip_undef multivalue );
 

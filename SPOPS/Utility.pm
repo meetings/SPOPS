@@ -1,11 +1,11 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 2.2 2002/08/26 12:33:01 lachoy Exp $
+# $Id: Utility.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use SPOPS qw( DEBUG _w );
 
-$SPOPS::Utility::VERSION  = substr(q$Revision: 2.2 $, 10);
+$SPOPS::Utility::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 
 # initialize limit tracking vars -- the limit passed in can be:
@@ -14,8 +14,8 @@ $SPOPS::Utility::VERSION  = substr(q$Revision: 2.2 $, 10);
 
 sub determine_limit {
     my ( $class, $limit ) = @_;
-    return ( 0, 0 ) unless ( $limit );
-    my ( $offset, $max );
+    my ( $offset, $max ) = ( 0, 0 );
+    return ( $offset, $max ) unless ( $limit );
     if ( $limit =~ /,/ ) {
         ( $offset, $max ) = split /\s*,\s*/, $limit;
         $max += $offset;
@@ -229,7 +229,7 @@ in, returns undef.
 B<now( \% )>
 
 Return the current time, formatted: yyyy-mm-dd hh:mm:ss. Since we use
-the L<Date::Format|Date::Format> module (which in turn uses standard
+the L<Class::Date|Class::Date> module (which in turn uses standard
 strftime formatting strings), you can pass in a format for the
 date/time to fit your needs.
 

@@ -1,10 +1,12 @@
 package SPOPS::Tool::DBI::DiscoverField;
 
-# $Id: DiscoverField.pm,v 1.1 2002/04/30 02:40:12 lachoy Exp $
+# $Id: DiscoverField.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
 use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
+
+$SPOPS::Tool::DBI::DiscoverField::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
@@ -37,8 +39,6 @@ sub discover_fields {
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -96,5 +96,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut

@@ -1,11 +1,11 @@
 package SPOPS::Export::DBI::Data;
 
-# $Id: Data.pm,v 2.0 2002/03/19 04:00:02 lachoy Exp $
+# $Id: Data.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export::Object );
 
-$SPOPS::Export::DBI::Data::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Export::DBI::Data::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 sub create_header {
     my ( $self, $fields ) = @_;

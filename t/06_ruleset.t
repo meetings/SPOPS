@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 06_ruleset.t,v 1.3 2002/08/21 14:36:01 lachoy Exp $
+# $Id: 06_ruleset.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 use strict;
 use lib qw( t/ );

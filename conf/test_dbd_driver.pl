@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: test_dbd_driver.pl,v 2.0 2002/03/19 04:00:04 lachoy Exp $
+# $Id: test_dbd_driver.pl,v 3.0 2002/08/28 01:16:31 lachoy Exp $
 
 # test_dbd_driver.pl
 

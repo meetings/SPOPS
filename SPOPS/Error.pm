@@ -1,6 +1,6 @@
 package SPOPS::Error;
 
-# $Id: Error.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
+# $Id: Error.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use vars         qw( @FIELDS );
@@ -9,7 +9,7 @@ use Data::Dumper qw( Dumper );
 *_w    = *SPOPS::_w;
 *DEBUG = *SPOPS::DEBUG;
 
-$SPOPS::Error::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Error::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 @FIELDS   = qw( user_msg system_msg type extra
                 package filename line method );

@@ -1,6 +1,6 @@
 package SPOPS::LDAP;
 
-# $Id: LDAP.pm,v 2.4 2002/08/21 12:30:10 lachoy Exp $
+# $Id: LDAP.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use base qw( SPOPS );
@@ -12,7 +12,7 @@ use SPOPS            qw( DEBUG _w );
 use SPOPS::Exception::LDAP;
 use SPOPS::Secure    qw( :level );
 
-$SPOPS::LDAP::VERSION   = substr(q$Revision: 2.4 $, 10);
+$SPOPS::LDAP::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 
 ########################################

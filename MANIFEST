@@ -121,6 +121,7 @@ t/03_uuid_key.t
 t/04_random_key.t
 t/05_exception.t
 t/06_ruleset.t
+t/07_utility.t
 t/10_hash_file.t
 t/20_gdbm.t
 t/30_dbi.t

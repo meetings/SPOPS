@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 40_ldap.t,v 2.2 2002/08/21 20:52:09 lachoy Exp $
+# $Id: 40_ldap.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 use strict;
 use constant NUM_TESTS => 37;

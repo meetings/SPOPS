@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 01_tie.t,v 2.1 2002/08/21 17:09:02 lachoy Exp $
+# $Id: 01_tie.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 use strict;
 use Test::More  tests => 21;

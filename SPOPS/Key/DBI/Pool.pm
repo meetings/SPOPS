@@ -1,11 +1,11 @@
 package SPOPS::Key::DBI::Pool;
 
-# $Id: Pool.pm,v 2.0 2002/03/19 04:00:03 lachoy Exp $
+# $Id: Pool.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
-$SPOPS::Key::DBI::Pool::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Key::DBI::Pool::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 
 # Ensure only PRE_fetch_id works.

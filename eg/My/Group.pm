@@ -1,10 +1,10 @@
 package My::Group;
 
-# $Id: Group.pm,v 2.1 2002/04/26 15:35:22 lachoy Exp $
+# $Id: Group.pm,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 use strict;
 
-$My::Group::VERSION = sprintf("%d.%02d", q$Revision: 2.1 $ =~ /(\d+)\.(\d+)/);
+$My::Group::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 my $USER_CLASS = 'My::User';
 

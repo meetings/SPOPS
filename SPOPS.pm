@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 2.12 2002/08/26 12:33:01 lachoy Exp $
+# $Id: SPOPS.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -11,8 +11,8 @@ use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.66';
-$SPOPS::Revision  = substr(q$Revision: 2.12 $, 10);
+$SPOPS::VERSION   = '0.67';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant

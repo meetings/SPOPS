@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 2.5 2002/08/26 12:34:07 lachoy Exp $
+# $Id: Makefile.PL,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 # See 'README' for the environment variables we use in builds without
 # intervention.

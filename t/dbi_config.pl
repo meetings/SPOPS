@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: dbi_config.pl,v 2.3 2002/08/21 20:52:09 lachoy Exp $
+# $Id: dbi_config.pl,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 use strict;
 use DBI qw( SQL_VARCHAR SQL_INTEGER );

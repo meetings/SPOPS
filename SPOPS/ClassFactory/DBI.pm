@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 2.6 2002/08/21 14:37:24 lachoy Exp $
+# $Id: DBI.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-$SPOPS::ClassFactory::DBI::VERSION  = substr(q$Revision: 2.6 $, 10);
+$SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 

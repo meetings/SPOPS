@@ -1,11 +1,11 @@
 package SPOPS::Export::XML;
 
-# $Id: XML.pm,v 2.0 2002/03/19 04:00:02 lachoy Exp $
+# $Id: XML.pm,v 3.0 2002/08/28 01:16:30 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export );
 
-$SPOPS::Export::XML::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Export::XML::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEFAULT_DOC_TAG    => 'spops';
 use constant DEFAULT_OBJECT_TAG => 'spops-object';

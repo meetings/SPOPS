@@ -1,11 +1,11 @@
 package SPOPS::DBI::InterBase;
 
-# $Id: InterBase.pm,v 1.2 2002/04/30 04:03:56 lachoy Exp $
+# $Id: InterBase.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
-$SPOPS::DBI::InterBase::VERSION  = substr(q$Revision: 1.2 $, 10);
+$SPOPS::DBI::InterBase::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 # Values are:
 #   %s - Generator name (config item 'sequence_name'

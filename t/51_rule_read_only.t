@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 51_rule_read_only.t,v 1.1 2002/08/21 18:14:33 lachoy Exp $
+# $Id: 51_rule_read_only.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 use strict;
 use lib qw( t/ );

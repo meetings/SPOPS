@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: datasource_configure_ldap.pl,v 2.1 2002/04/26 15:35:37 lachoy Exp $
+# $Id: datasource_configure_ldap.pl,v 3.0 2002/08/28 01:16:32 lachoy Exp $
 
 use strict;
 use Data::Dumper qw( Dumper );

@@ -1,10 +1,12 @@
 package SPOPS::Tool::CreateOnly;
 
-# $Id: CreateOnly.pm,v 1.3 2002/08/21 18:11:42 lachoy Exp $
+# $Id: CreateOnly.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK );
+
+$SPOPS::Tool::CreateOnly::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;

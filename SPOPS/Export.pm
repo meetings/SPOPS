@@ -1,12 +1,12 @@
 package SPOPS::Export;
 
-# $Id: Export.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
+# $Id: Export.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Class::Factory );
 use SPOPS::Exception;
 
-$SPOPS::Export::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Export::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 use constant AKEY => '_attrib';
 

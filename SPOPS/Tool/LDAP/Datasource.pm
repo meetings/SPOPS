@@ -1,10 +1,12 @@
 package SPOPS::Tool::LDAP::Datasource;
 
-# $Id: Datasource.pm,v 1.1 2002/04/26 15:37:15 lachoy Exp $
+# $Id: Datasource.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
 use SPOPS::ClassFactory qw( ERROR OK NOTIFY );
+
+$SPOPS::Tool::LDAP::Datasource::VERSION = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
 
 sub behavior_factory {
     my ( $class ) = @_;
@@ -60,7 +62,7 @@ sub datasource_access {
 
 1;
 
-=pod
+__END__
 
 =head1 NAME
 
@@ -137,6 +139,3 @@ Chris Winters <chris@cwinters.com>
 
 Thanks to jeffa on PerlMonks
 (http://www.perlmonks.org/index.pl?node_id=18800) for suggesting this!
-
-=cut
-
