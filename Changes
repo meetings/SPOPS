@@ -3,6 +3,16 @@ Revision history for Perl extension SPOPS.
 NOTE: All items with a leading 'SP-###' are issues in the JIRA issue
 tracking system. Learn more at http://jira.openinteract.org/
 
+0.86  Sat May 22 15:33:30 EDT 2004
+
+Individual:
+
+ * SPOPS/DBI.pm
+
+   - SP-4: In _execute_multiple_record_query() allow for case-sensitive
+   table names. Thanks to Ray Zimmerman.
+
+
 0.85  Tue May 11 00:19:22 EDT 2004
 
 Overall:

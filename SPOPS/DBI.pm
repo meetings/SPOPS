@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.21 2004/05/11 02:08:26 lachoy Exp $
+# $Id: DBI.pm,v 3.22 2004/05/11 14:33:43 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -15,7 +15,7 @@ use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
 my $log = get_logger();
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.21 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.22 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -447,7 +447,7 @@ sub fetch_count {
 sub _execute_multiple_record_query {
     my ( $class, $p ) = @_;
     $p->{from}   ||= [ $class->table_name ];
-    my %from = map { lc $_ => 1 } @{ $p->{from} };
+    my %from = map { $_ => 1 } @{ $p->{from} };
     unless ( $from{ $class->table_name } ) {
         $from{ $class->table_name }++;
     }
