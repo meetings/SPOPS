@@ -1,11 +1,11 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: Utility.pm,v 3.1 2002/08/28 16:25:32 lachoy Exp $
 
 use strict;
 use SPOPS qw( DEBUG _w );
 
-$SPOPS::Utility::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Utility::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 
 # initialize limit tracking vars -- the limit passed in can be:
@@ -14,17 +14,17 @@ $SPOPS::Utility::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+
 
 sub determine_limit {
     my ( $class, $limit ) = @_;
-    my ( $offset, $max ) = ( 0, 0 );
-    return ( $offset, $max ) unless ( $limit );
+    return ( 0, 0 ) unless ( $limit );
     if ( $limit =~ /,/ ) {
-        ( $offset, $max ) = split /\s*,\s*/, $limit;
+        my ( $offset, $max ) = split /\s*,\s*/, $limit;
         $max += $offset;
+        DEBUG() && _w( 1, "Limit set: Start $offset to $max" );
+        return ( $offset, $max );
     }
     else {
-        $max = $limit;
+        DEBUG() && _w( 1, "Limit set: Start 0 to $limit" );
+        return ( 0, $limit );
     }
-    DEBUG() && _w( 1, "Limit set: Start $offset to $max" );
-    return ( $offset, $max );
 }
 
 

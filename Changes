@@ -1,5 +1,21 @@
 Revision history for Perl extension SPOPS.
 
+0.68
+
+Individual:
+
+   * SPOPS/Utility.pm:
+
+     - Modify the determine_limit() to always explicitly return a 0
+     when appropriate.
+
+   * t/07_utility.t:
+
+     - Modify the list_process() tests to not depend on the order of
+     the items returned. (Test would work on 5.6.x a-ok, but not on
+     5.8.x -- thanks for report from the CPAN testers.)
+
+
 0.67  Tue Aug 27 21:19:14 EDT 2002
 
 Overall:

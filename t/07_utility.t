@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 07_utility.t,v 3.2 2002/08/28 11:23:59 lachoy Exp $
+# $Id: 07_utility.t,v 3.3 2002/08/28 16:25:31 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
@@ -65,13 +65,17 @@ SKIP: {
     my $date = Class::Date->new( $base_time );
 }
 
-# List process
+# List process. The 'is_deeply' comparisons are a little cumbersome
+# because we can't depend on the order of the items coming back.
 
 {
     my @existing = qw( a b c d );
     my @new      = qw( b d e );
     my $process_results = SPOPS::Utility->list_process( \@existing, \@new );
-    is_deeply( $process_results->{add}, [ 'e' ], 'List process add items' );
-    is_deeply( $process_results->{keep}, [ 'b', 'd' ], 'List process keep items' );
-    is_deeply( $process_results->{remove}, [ 'a', 'c' ], 'List process remove items' );
+    my %add = map { $_ => 1 } @{ $process_results->{add} };
+    is_deeply( \%add, { 'e' => 1 }, 'List process add items' );
+    my %keep = map { $_ => 1 } @{ $process_results->{keep} };
+    is_deeply( \%keep, { 'b' => 1, 'd' => 1 }, 'List process keep items' );
+    my %remove = map { $_ => 1 } @{ $process_results->{remove} };
+    is_deeply( \%remove, { 'a' => 1, 'c' => 1 }, 'List process remove items' );
 }
