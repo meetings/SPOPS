@@ -241,7 +241,7 @@ David Boone <dave@bis.bc.ca>
 COPYRIGHT AND DISCLAIMER
 ========================
 
-SPOPS is Copyright (c) 2001 by intes.net, inc. All rights reserved.
+SPOPS is Copyright (c) 2001-2002 by intes.net, inc. All rights reserved.
 
 This program is free software; you can redistribute it and/or modify
 it under the terms of the Perl Artistic License or the GNU General
@@ -250,4 +250,4 @@ version 2 of the License (see 'COPYING'), or (at your option) any
 later version.
 
 =========================
-$Id: README,v 1.9 2001/10/15 04:28:24 lachoy Exp $
+$Id: README,v 1.10 2002/01/02 02:37:04 lachoy Exp $

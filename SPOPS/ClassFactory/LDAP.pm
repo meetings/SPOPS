@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory::LDAP;
 
-# $Id: LDAP.pm,v 1.18 2001/10/12 21:00:26 lachoy Exp $
+# $Id: LDAP.pm,v 1.20 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
@@ -8,7 +8,7 @@ use SPOPS::ClassFactory qw( OK ERROR DONE );
 
 @SPOPS::ClassFactory::LDAP::ISA      = ();
 $SPOPS::ClassFactory::LDAP::VERSION  = '1.90';
-$SPOPS::ClassFactory::LDAP::Revision = substr(q$Revision: 1.18 $, 10);
+$SPOPS::ClassFactory::LDAP::Revision = substr(q$Revision: 1.20 $, 10);
 
 
 ########################################
@@ -72,7 +72,7 @@ sub conf_read_code {
 my $generic_hasa = <<'HASA';
     sub %%CLASS%%::%%HASA_ALIAS%% {
         my ( $self, $p ) = @_;
-        die "Cannot call from unsaved object or class!" unless ( $self->dn );
+        unless ( $self->dn ) { SPOPS::Exception->throw( "Cannot call from unsaved object or class!" ) }
         my @object_list = ();
         my $conf_other = %%HASA_CLASS%%->CONFIG;
         my $hasa_value = $self->{%%HASA_FIELD%%};
@@ -108,11 +108,7 @@ my $generic_hasa = <<'HASA';
             $added++;
             SPOPS::_wm( 2, $p->{DEBUG}, "Will add has_a object:", $has_a->dn );
         }
-        eval { $self->save( $p ) };
-        if ( $@ ) {
-            die "Could not save object (", $self->id, ") after link additions in %%HASA_FIELD\n",
-                "Error: $@ / $SPOPS::Error::system_msg";
-        }
+        $self->save( $p );
         return $added;
     }
 
@@ -134,15 +130,7 @@ my $generic_hasa = <<'HASA';
             SPOPS::_wm( 2, $p->{DEBUG}, "Will remove has_a object:", $has_a->dn );
 
         }
-        eval { $self->save( $p ) };
-        if ( $@ ) {
-            my $new_members = ( ref $self->{%%HASA_FIELD%%} )
-                                ? $self->{%%HASA_FIELD%%} : [ $self->{%%HASA_FIELD%%} ];
-            die "Could not save object (", $self->id, ") after link removals for %%HASA_FIELD%%\n",
-                "Old members: ", join( " || ", @{ $old_members } ), "\n",
-                "New members: ", join( " || ", @{ $new_members } ), "\n",
-                "Error: $SPOPS::Error::system_msg";
-        }
+        $self->save( $p );
         return $removed;
     }
 
@@ -218,18 +206,8 @@ my $generic_linksto = <<'LINKSTO';
             # whether it's multivalue or not
 
             $link_to->{%%LINKSTO_FIELD%%} = $link_dn;
-            eval { $link_to->save( $p ) };
-            if ( $@ ) {
-                push @{ $error_list }, "Could not save link object (", $link_to->dn,
-                                       ")\nError: $@ / $SPOPS::Error::system_msg";
-            }
-            else {
-                $added++;
-            }
-        }
-        if ( scalar @{ $error_list } ) {
-            $SPOPS::Error::system_msg = join "\n\n", @{ $error_list };
-            die 'Add %%LINKSTO_ALIAS%% failed for one or more items';
+            $link_to->save( $p );
+            $added++;
         }
         return $added;
     }
@@ -251,18 +229,8 @@ my $generic_linksto = <<'LINKSTO';
             else {
                 $link_to->{%%LINKSTO_FIELD%%} = undef;
             }
-            eval { $link_to->save( $p ) };
-            if ( $@ ) {
-                push @{ $error_list }, "Could not remove link object (", $link_to->dn,
-                                       ")\nError: $@ / $SPOPS::Error::system_msg";
-            }
-            else {
-                $removed++;
-            }
-        }
-        if ( scalar @{ $error_list } ) {
-            $SPOPS::Error::system_msg = join "\n\n", @{ $error_list };
-            die 'Add %%LINKSTO_ALIAS%% failed for one or more items';
+            $link_to->save( $p );
+            $removed++;
         }
         return $removed;
     }
@@ -446,7 +414,7 @@ L<SPOPS|SPOPS>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 MSN Marketing Services Nordwest, GmbH. All rights
+Copyright (c) 2001-2002 MSN Marketing Services Nordwest, GmbH. All rights
 reserved.
 
 This library is free software; you can redistribute it and/or modify

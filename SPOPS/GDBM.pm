@@ -1,6 +1,6 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 1.15 2001/10/23 12:16:01 lachoy Exp $
+# $Id: GDBM.pm,v 1.17 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -9,7 +9,7 @@ use SPOPS         qw( _w DEBUG );
 
 @SPOPS::GDBM::ISA      = qw( SPOPS );
 $SPOPS::GDBM::VERSION  = '1.90';
-$SPOPS::GDBM::Revision = substr(q$Revision: 1.15 $, 10);
+$SPOPS::GDBM::Revision = substr(q$Revision: 1.17 $, 10);
 
 # Make this the default for everyone -- they can override it
 # themselves...
@@ -91,7 +91,8 @@ sub global_datasource_handle {
     }
     DEBUG() && _w( 1, "Trying file ($gdbm_filename) to connect" );
     unless ( $gdbm_filename ) {
-        die "Insufficient/incorrect information to tie to GDBM file! ($gdbm_filename)\n";
+        SPOPS::Exception->throw(
+                    "Insufficient/incorrect information to tie to GDBM file [$gdbm_filename]" );
     }
 
     DEBUG() && _w( 2, "Beginning perm: ", defined( $p->{perm} ) ? $p->{perm} : '' );
@@ -106,7 +107,7 @@ sub global_datasource_handle {
     my %db = ();
     tie( %db, 'GDBM_File', $gdbm_filename, $perm, 0666 );
     if ( $p->{perm} eq 'create' && ! -w $gdbm_filename ) {
-        die "Failed to create GDBM file! ($gdbm_filename)\n";
+        SPOPS::Exception->throw( "Failed to create GDBM file! [$gdbm_filename]" );
     }
 
     return \%db;
@@ -126,7 +127,9 @@ sub id {
 sub object_key {
     my ( $self, $id ) = @_;
     $id ||= $self->id  if ( ref $self );
-    die "Cannot create object key without object or id!\n"  unless ( $id );
+    unless ( $id ) {
+        SPOPS::Exception->throw( "Cannot create object key without object or id!" );
+    }
     my $class = ref $self || $self;
     return join( '--', $class, $id );
 }
@@ -144,7 +147,9 @@ sub _return_structure_for_key {
         no strict 'vars';
         $data = eval $item_info;
     }
-    die "Cannot rebuild object! Error: $@" if ( $@ );
+    if ( $@ ) {
+        SPOPS::Exception->throw( "Cannot rebuild object! Error: $@" );
+    }
     return $data;
 }
 
@@ -418,7 +423,7 @@ GDBM on Perl/Win32:
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

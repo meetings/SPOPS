@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.13 2001/12/15 19:18:51 lachoy Exp $
+# $Id: Makefile.PL,v 1.16 2002/01/14 02:58:03 lachoy Exp $
 
 use strict;
 use ExtUtils::MakeMaker;
@@ -44,7 +44,8 @@ my $CONFIG_FILE = 'spops_test.conf';
 
     my ( $dbi_test, $dbi_driver, $dbi_dsn, $dbi_user, $dbi_password ) = check_dbi();
     my ( $ldap_test, $ldap_host, $ldap_port, $ldap_base_dn, $ldap_bind_dn, $ldap_password ) = check_ldap();
-    my ( $gdbm_test ) = check_gdbm();     
+    my ( $gdbm_test ) = check_gdbm();
+    my ( $uuid_test ) = check_uuid();
 
     if ( $dbi_test eq 'n' and $ldap_test eq 'n' and $gdbm_test eq 'n' ) {
         print "Only the HashFile test will be run.\n";
@@ -65,6 +66,7 @@ LDAP_base_dn:  $ldap_base_dn
 LDAP_bind_dn:  $ldap_bind_dn
 LDAP_bind_password: $ldap_password
 GDBM_test:     $gdbm_test
+UUID_test:     $uuid_test
 $EXTRA_INFO
 CONFIG
     }
@@ -83,12 +85,16 @@ sub write_makefile {
     'VERSION_FROM' => 'SPOPS.pm',
     'AUTHOR'       => 'Chris Winters <chris@cwinters.com>',
     'ABSTRACT'     => 'Data abstraction layer used for object persistence and security',
-    'PREREQ_PM'    => { 'Storable'        => 1.00,
-                        'Class::ISA'      => undef,
-                        'Test::More'      => 0.07,
-                        'Data::Dumper'    => undef,
-                        'Class::Date'     => 1.00,
-                        'Class::Accessor' => undef } );
+    'PREREQ_PM'    => { 'Storable'          => 1.00,
+                        'Class::ISA'        => undef,
+                        'Test::More'        => 0.07,
+                        'Data::Dumper'      => undef,
+                        'Class::Date'       => 1.00,
+                        'Carp::Assert'      => undef,
+                        'Class::Fields'     => undef,
+                        'Class::Accessor'   => undef,
+                        'Devel::StackTrace' => undef,
+                        } );
 }
 
 
@@ -227,8 +233,18 @@ sub check_gdbm {
     if ( $@ ) {
         print "You don't appear to have GDBM_File installed, skipping GDBM tests.\n";
         return ( 'n' );
-    } 
-    my $gdbm_test = lc get_response( "Would you like to run tests using GDBM? (Y/n)\n", 'Y' );
-    print "\n";
-    return ( $gdbm_test );
+    }
+    return 'y';
+}
+
+# Find out about UUID test
+
+sub check_uuid {
+    eval { require Data::UUID };
+    if ( $@ ) {
+        print "You don't appear to have Data::UUID installed,\n",
+              "skipping UUID key generation tests\n";
+        return( 'n' );
+    }
+    return 'y';
 }

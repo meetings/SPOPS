@@ -1,6 +1,6 @@
 package SPOPS::LDAP;
 
-# $Id: LDAP.pm,v 1.32 2001/10/23 14:23:27 lachoy Exp $
+# $Id: LDAP.pm,v 1.34 2002/01/08 02:43:53 lachoy Exp $
 
 use strict;
 use Data::Dumper     qw( Dumper );
@@ -8,12 +8,12 @@ use Net::LDAP        qw();
 use Net::LDAP::Entry qw();
 use Net::LDAP::Util  qw();
 use SPOPS            qw( DEBUG _w );
-use SPOPS::Error     qw();
+use SPOPS::Exception::LDAP;
 use SPOPS::Secure    qw( :level );
 
 @SPOPS::LDAP::ISA       = qw( SPOPS );
 $SPOPS::LDAP::VERSION   = '1.90';
-$SPOPS::LDAP::Revision  = substr(q$Revision: 1.32 $, 10);
+$SPOPS::LDAP::Revision  = substr(q$Revision: 1.34 $, 10);
 
 
 ########################################
@@ -25,8 +25,12 @@ $SPOPS::LDAP::Revision  = substr(q$Revision: 1.32 $, 10);
 sub no_insert                { return $_[0]->CONFIG->{no_insert}   || {}  }
 sub no_update                { return $_[0]->CONFIG->{no_update}   || {}  }
 sub skip_undef               { return $_[0]->CONFIG->{skip_undef}  || {}  }
-sub base_dn                  { return $_[0]->CONFIG->{ldap_base_dn}
-                                || die "No Base DN defined, cannot continue!\n" }
+sub base_dn {
+    unless ( $_[0]->CONFIG->{ldap_base_dn} ) {
+        SPOPS::Exception->throw( "No Base DN defined" );
+    }
+    return $_[0]->CONFIG->{ldap_base_dn};
+}
 sub id_value_field           { return $_[0]->CONFIG->{id_value_field} }
 sub ldap_object_class        { return $_[0]->CONFIG->{ldap_object_class} }
 sub ldap_fetch_object_class  { return $_[0]->CONFIG->{ldap_fetch_object_class} }
@@ -95,7 +99,9 @@ sub _class_initialize {}
 
 sub dn {
     my ( $self, $dn ) = @_;
-    die "Cannot call dn() as class method\n" unless ( ref $self );
+    unless ( ref $self ) {
+        SPOPS::Exception->throw( "Cannot call dn() as class method" );
+    }
     $self->{tmp_dn} = $dn if ( $dn );
     return $self->{tmp_dn};
 }
@@ -109,7 +115,8 @@ sub create_id_filter {
     my ( $item, $id ) = @_;
     return join( '=', $item->id_field, $id )  if ( $id );
     unless ( ref $item ) {
-        die "Cannot create ID filter with a class method call and no ID passed in\n";
+        SPOPS::Exception->throw(
+               "Cannot create ID filter with a class method call and no ID" );
     }
     return join( '=', $item->id_field, $item->id );
 }
@@ -203,7 +210,7 @@ sub _fetch_single_entry {
                  scope  => $p->{scope} || 'sub' );
     $args{filter} = $p->{filter} if ( $p->{filter} );
     my $ldap_msg = $ldap->search( %args );
-    $class->_check_error( $ldap_msg, 'Error trying to run LDAP search for single object' );
+    $class->_check_error( $ldap_msg, 'fetch' );
 
     # Go ahead and use $count here since we've hopefully only
     # retrieved a single record and don't have to worry about blocking
@@ -211,10 +218,8 @@ sub _fetch_single_entry {
 
     my $count = $ldap_msg->count;
     if ( $count > 1 ) {
-        SPOPS::Error->set({ user_msg   => "More than one entry retrieved!",
-                            system_msg => "Trying to retrieve unique record, retrieved ($count)",
-                            extra      => { filter => $p->{filter} } });
-        die $SPOPS::Error::user_msg;
+        SPOPS::Exception::LDAP->throw( "Trying to retrieve unique record, retrieved [$count]",
+                                       { filter => $p->{filter} } );
     }
     if ( $count == 0 ) {
         DEBUG && _w( 1, "No entry found matching filter ($p->{filter})" );
@@ -245,7 +250,7 @@ sub fetch_iterator {
     ( $p->{offset}, $p->{max} )    = $class->fetch_determine_limit( $p->{limit} );
     unless ( ref $p->{id_list} ) {
         $p->{ldap_msg} = $class->_execute_multiple_record_query( $p );
-        $class->_check_error( $p->{ldap_msg}, 'Error trying to run LDAP search' );
+        $class->_check_error( $p->{ldap_msg}, 'fetch_iterator' );
     }
     return SPOPS::Iterator::LDAP->new( { %{ $p }, skip_default_values => 1 });
 }
@@ -257,7 +262,7 @@ sub fetch_group {
     my ( $class, $p ) = @_;
     my ( $offset, $max ) = $class->fetch_determine_limit( $p->{limit} );
     my $ldap_msg = $class->_execute_multiple_record_query( $p );
-    $class->_check_error( $ldap_msg, 'Error trying to run LDAP search' );
+    $class->_check_error( $ldap_msg, 'fetch_group' );
 
     my $entry_count = 0;
     my @group = ();
@@ -467,7 +472,7 @@ sub _save_insert {
     DEBUG && _w( 1, "Trying to create a record with:\n", Dumper( \%insert_data ) );
     my $ldap_msg = $ldap->add( dn   => $self->dn,
                                attr => [ %insert_data ]);
-    $self->_check_error( $ldap_msg, 'Cannot create new LDAP record' );
+    $self->_check_error( $ldap_msg, 'save' );
     DEBUG && _w( 1, "Record created ok." );
 }
 
@@ -505,7 +510,7 @@ ATTRIB:
     }
     DEBUG && _w( 1, "Entry before Update:\n", Dumper( $entry ) );
     my $ldap_msg = $entry->update( $ldap );
-    $self->_check_error( $ldap_msg, 'Cannot update existing record' );
+    $self->_check_error( $ldap_msg, 'save' );
     DEBUG && _w( 1, "Record updated ok." );
 }
 
@@ -556,7 +561,7 @@ sub remove {
     my $dn = $self->dn;
     my $ldap = $p->{ldap} || $self->global_datasource_handle( $p->{connect_key} );;
     my $ldap_msg = $ldap->delete( $dn );
-    $self->_check_error( $ldap_msg, 'Failed to remove object from datastore' );
+    $self->_check_error( $ldap_msg, 'remove' );
 
     # Otherwise...
     # ... remove this item from the cache
@@ -588,18 +593,15 @@ sub remove {
 # Error consolidation routine
 
 sub _check_error {
-    my ( $class, $ldap_msg, $user_msg ) = @_;
-    return undef unless ( $ldap_msg->code );
-    my $system_msg = Net::LDAP::Util::ldap_error_desc( $ldap_msg->code );
-    _w( 1, "\nLDAP error desc: (", $ldap_msg->error, ") $system_msg",
-           "\nLDAP error text: ", Net::LDAP::Util::ldap_error_text( $ldap_msg->code ),
-           "\nLDAP error name: ", Net::LDAP::Util::ldap_error_name( $ldap_msg->code ),
-           "\nLDAP error code: ", $ldap_msg->code );
-    SPOPS::Error->set({ user_msg   => $user_msg,
-                        system_msg => $system_msg,
-                        type       => 'db',
-                        extra      => { code => $ldap_msg->code } });
-    die "$SPOPS::Error::user_msg\n";
+    my ( $class, $ldap_msg, $action ) = @_;
+    my $code = $ldap_msg->code;
+    return undef unless ( $code );
+    SPOPS::Exception::LDAP->throw(
+               Net::LDAP::Util::ldap_error_desc( $code ),
+               { code       => $code,
+                 action     => $action,
+                 error_name => Net::LDAP::Util::ldap_error_name( $code ),
+                 error_text => Net::LDAP::Util::ldap_error_text( $code ) } );
 }
 
 
@@ -613,17 +615,20 @@ sub build_dn {
     my $id_value       = $p->{id};
     unless ( $id_value ) {
         unless ( ref $item ) {
-            die "Cannot create DN for object without an ID value as parameter ",
-                "when called as class method\n";
+            SPOPS::Exception->throw(
+                    "Cannot create DN for object without an ID value as " .
+                    "parameter when called as class method" );
         }
         $id_value = $item->{ $id_value_field } || $item->id;
         unless ( $id_value ) {
-            die "Cannot create DN for object without an ID value\n";
+            SPOPS::Exception->throw(
+                    "Cannot create DN for object without an ID value" );
         }
     }
     unless ( $id_field and $id_value and $base_dn ) {
-        die "Cannot create Base DN without all parts\n",
-            "ID field: ($id_field); ID: ($id_value); Base DN: ($base_dn)\n";
+        SPOPS::Exception->throw(
+                    "Cannot create Base DN without all parts: ",
+                    "field: [$id_field]; ID: [$id_value]; BaseDN: [$base_dn]" );
     }
     return join( ',', join( '=', $id_field, $id_value ), $base_dn );
 }
@@ -883,7 +888,7 @@ L<SPOPS|SPOPS>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 MSN Marketing Service Nordwest, GmbH. All rights
+Copyright (c) 2001-2002 MSN Marketing Service Nordwest, GmbH. All rights
 reserved.
 
 This library is free software; you can redistribute it and/or modify

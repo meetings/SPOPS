@@ -1,6 +1,6 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 1.17 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Hierarchy.pm,v 1.19 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use vars          qw( $ROOT_OBJECT_NAME );
@@ -12,7 +12,7 @@ require Exporter;
 @SPOPS::Secure::Hierarchy::ISA       = qw( Exporter SPOPS::Secure );
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
 $SPOPS::Secure::Hierarchy::VERSION   = '1.90';
-$SPOPS::Secure::Hierarchy::Revision  = substr(q$Revision: 1.17 $, 10);
+$SPOPS::Secure::Hierarchy::Revision  = substr(q$Revision: 1.19 $, 10);
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 
@@ -143,18 +143,12 @@ SECVALUE:
     foreach my $security_check ( @{ $p->{check_list} } ) {
         DEBUG() && _w( 1, "Find value for $p->{class} ($security_check)" );
         push @ordered, $security_check  if ( $p->{ordered} );
-        my $sec_listing = eval { $so_class->fetch_by_object(
-                                   $p->{class},
-                                   { object_id => $security_check,
-                                     user      => $p->{user},
-                                     group     => $p->{group} }) };
-        DEBUG() && _w( 1, "Security found for ($security_check):\n", Dumper( $sec_listing ) );
-        if ( $@ ) {
-            $SPOPS::Error::user_msg = "Cannot retrieve security listing for " .
-                                      "hierarchy value ($security_check)";
-            _w( 0, "Error found when checking ($security_check): $@" );
-            die $SPOPS::Error::user_msg;
-        }
+        my $sec_listing = $so_class->fetch_by_object( $p->{class},
+                                                      { object_id => $security_check,
+                                                        user      => $p->{user},
+                                                        group     => $p->{group} });
+        DEBUG() && _w( 1, "Security found for ($security_check):\n",
+                          Dumper( $sec_listing ) );
 
         $first_found ||= $security_check if ( $sec_listing );
         $level_track->{ $security_check } = $sec_listing;
@@ -508,7 +502,7 @@ L<SPOPS::Secure|SPOPS::Secure>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,13 +1,13 @@
 package SPOPS::Configure::Ruleset;
 
-# $Id: Ruleset.pm,v 1.13 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Ruleset.pm,v 1.14 2002/01/02 02:37:03 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
 @SPOPS::Configure::Ruleset::ISA      = ();
 $SPOPS::Configure::Ruleset::VERSION  = '1.90';
-$SPOPS::Configure::Ruleset::Revision = substr(q$Revision: 1.13 $, 10);
+$SPOPS::Configure::Ruleset::Revision = substr(q$Revision: 1.14 $, 10);
 
 sub create_relationship {
     die "SPOPS::Configure::Ruleset is deprecated -- please see the docs for SPOPS::ClassFactory.\n";
@@ -34,7 +34,7 @@ this directly anyway :-)
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

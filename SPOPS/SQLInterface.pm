@@ -1,15 +1,16 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 1.26 2001/10/23 02:34:03 lachoy Exp $
+# $Id: SQLInterface.pm,v 1.30 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use Data::Dumper qw( Dumper );
 use DBI          ();
 use SPOPS        qw( _w _wm DEBUG );
+use SPOPS::Exception::DBI;
 
 @SPOPS::SQLInterface::ISA      = ();
 $SPOPS::SQLInterface::VERSION  = '1.90';
-$SPOPS::SQLInterface::Revision = substr(q$Revision: 1.26 $, 10);
+$SPOPS::SQLInterface::Revision = substr(q$Revision: 1.30 $, 10);
 
 use constant DEBUG_SELECT     => 0;
 use constant DEBUG_INSERT     => 0;
@@ -26,6 +27,13 @@ my %FAKE_TYPES = (
    'date'  => DBI::SQL_DATE(),
 );
 
+sub throw_no_database_handle_error {
+    my ( $item ) = @_;
+    my $class = ref $item || $item;
+    my $error = "No database handle available; pass using the 'db' parameter or " .
+                "define $class->global_datasource_handle to return a valid DBI handle.";
+    SPOPS::Exception->throw( $error );
+}
 
 # This can get overridden to use the $type of the field to give the
 # database driver a hint as to how to quote it. But some drivers don't
@@ -63,16 +71,13 @@ sub db_select {
     my ( $class, $p ) = @_;
     my $DEBUG = DEBUG_SELECT || $p->{DEBUG} || 0;
     my $db    = $p->{db} || $class->global_datasource_handle;
+    $class->throw_no_database_handle_error unless ( $db );
 
   # Don't do anything if the SQL isn't passed in and you don't have
   # either a list of fields to select or a table to select them from
 
     unless ( $p->{sql} or ( $p->{select} and $p->{from} ) ) {
-        my $msg = 'SELECT failed';
-        SPOPS::Error->set({ user_msg   => $msg,
-                            type       => 'db',
-                            system_msg => 'Cannot run db_select without select/from statements!' });
-        die $msg;
+        SPOPS::Exception->throw( 'Cannot run without select/from statements!' );
     }
 
     $DEBUG && _wm( 2, $DEBUG, "Entering db_select with ", Dumper( $p ) );
@@ -108,31 +113,19 @@ sub db_select {
 
     # First prepare and check for errors...
 
-    my ( $sth );
-    eval { $sth = $db->prepare( $sql ); };
+    my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
-        my $msg = 'SELECT failed; cannot retrieve records';
-        SPOPS::Error->set({ user_msg   => $msg,
-                            type       => 'db',
-                            system_msg => "Prepare failed. Error: $@",
-                            extra      => { sql => $sql } });
-        die $msg;
+        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'prepare' } );
     }
 
     # Execute with any bound parameters; note that for Sybase you do
     # not need to pass any types at all.
 
     $DEBUG && _wm( 1, $DEBUG, "Values bound: ", join( '//', @{ $p->{value} } ) );
-    eval { $sth->execute( @{ $p->{value} } ); };
+    eval { $sth->execute( @{ $p->{value} } ) };
     if ( $@ ) {
-        my $msg = 'SELECT failed; cannot retrieve records';
-        my $db_error = $@;
-        chomp $db_error;
-        SPOPS::Error->set({ user_msg   => $msg,
-                            type       => 'db',
-                            system_msg => "Execute of SELECT failed. Error: [[$db_error]]",
-                            extra      => { sql => $sql, value => @{ $p->{value} } } });
-        die $msg;
+        SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
+                                            action => 'execute' } );
     }
 
     # If they asked for the handle back, give it to them
@@ -149,12 +142,8 @@ sub db_select {
         $DEBUG && _wm( 1, $DEBUG, "Returning single row." );
         my $row =  eval { $sth->fetchrow_arrayref; };
         if ( $@ ) {
-            my $msg = 'Fetch failed; cannot retrieve single record';
-            SPOPS::Error->set({ user_msg   => $msg,
-                                type       => 'db',
-                                system_msg => "Cannot fetch record. Error: $@",
-                                extra      => { sql => $sql, value => @{ $p->{value} } } });
-            die $msg;
+            SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
+                                                action => 'fetchrow_arrayref' } );
         }
         return $row;
     }
@@ -165,12 +154,8 @@ sub db_select {
         $DEBUG && _wm( 1, $DEBUG, "Returning list of lists." );
         my $rows = eval { $sth->fetchall_arrayref; };
         if ( $@ ) {
-            my $msg = 'Fetch failed; cannot retrieve multiple records';
-            SPOPS::Error->set({ user_msg   => $msg,
-                                type       => 'db',
-                                system_msg => "Cannot fetch multiple records. Error: $@",
-                                extra      => { sql => $sql, value => @{ $p->{value} } } });
-            die $msg;
+            SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
+                                                action => 'fetchall_arrayref' } );
         }
         return $rows;
     }
@@ -181,13 +166,8 @@ sub db_select {
         $DEBUG && _wm( 1, $DEBUG, "Returning list of single items." );
         my $rows = eval { $sth->fetchall_arrayref };
         if ( $@ ) {
-            my $msg = 'Fetch failed; cannot retrieve multiple records';
-            SPOPS::Error->set({ user_msg   => $msg,
-                                type       => 'db',
-                                system_msg => "Cannot fetch multiple records. Error: $@",
-                                extra      => { sql => $sql, value => @{ $p->{value} } } });
-            _w( 0, "Failure to fetch: $msg;\n$@" );
-            die $msg;
+            SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
+                                                action => 'fetchall_arrayref' } );
         }
         return [ map { $_->[0] } @{ $rows } ];
     }
@@ -207,12 +187,8 @@ sub db_select {
             }
         };
         if ( $@ ) {
-            my $msg = 'Fetch failed; cannot retrieve multiple records';
-            SPOPS::Error->set({ user_msg   => $msg,
-                                type       => 'db',
-                                system_msg => "Cannot fetch multiple records as hashrefs. Error: $@",
-                                extra      => { sql => $sql, value => @{ $p->{value} } } });
-            die $msg;
+            SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
+                                                action => 'fetchall_arrayref' } );
         }
         return \@rows;
     }
@@ -230,17 +206,14 @@ sub db_insert {
     my ( $class, $p ) = @_;
     my $DEBUG   = DEBUG_INSERT || $p->{DEBUG} || 0;
     my $db    = $p->{db} || $class->global_datasource_handle;
+    $class->throw_no_database_handle_error unless ( $db );
+
     $DEBUG && _wm( 2, $DEBUG, "Enter insert procedure\n", Dumper( $p ) );
 
     # If we weren't given direct sql or a list of values or table, bail
 
     unless ( $p->{sql} or ( $p->{value} and $p->{table} ) ) {
-        my $msg = 'INSERT failed';
-        SPOPS::Error->set({
-                 user_msg   => $msg,
-                 type       => 'db',
-                 system_msg => 'Cannot continue with no SQL, values or table name' });
-        die $msg;
+        SPOPS::Exception->throw( 'Cannot continue with no SQL, values or table name' );
     }
 
     # Find the types for all fields in this table (we don't have to use
@@ -303,18 +276,14 @@ sub db_insert {
     # do p/e if the user's asked for the statement handle
 
     $DEBUG && _wm( 1, $DEBUG, "Preparing\n$sql" );
-    my ( $sth, $rv );
-    eval {
-        $sth = $db->prepare( $sql );
-        $rv = $sth->execute;
-    };
+    my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
-        my $msg = 'INSERT failed; cannot create new record';
-        SPOPS::Error->set({ user_msg   => $msg,
-                            type       => 'db',
-                            system_msg => "Error: $@",
-                            extra      => { sql => $sql } });
-        die $msg;
+        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'prepare' } );
+    }
+
+    my $rv = eval { $sth->execute };
+    if ( $@ ) {
+        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'execute' } );
     }
     $DEBUG && _wm( 1, $DEBUG, "Prepare/execute went ok." );
 
@@ -337,15 +306,12 @@ sub db_update {
     my ( $class, $p ) = @_;
     my $DEBUG   = DEBUG_UPDATE || $p->{DEBUG} || 0;
     my $db    = $p->{db} || $class->global_datasource_handle;
+    $class->throw_no_database_handle_error unless ( $db );
 
   # If we weren't given direct sql or a list of values or table, bail
 
     unless ( $p->{sql} or ( $p->{value} and $p->{table} ) ) {
-        my $msg = 'UPDATE failed';
-        SPOPS::Error->set( { user_msg   => $msg,
-                             type       => 'db',
-                             system_msg => 'Cannot continue with no SQL, values or table name' } );
-        die $msg;
+        SPOPS::Exception->throw( 'Cannot continue with no SQL, values or table name' );
     }
     my $sql = $p->{sql};
 
@@ -361,7 +327,7 @@ sub db_update {
     unless ( $sql ) {
         my ( @update );
         my @values = ();
-  
+
         # Go through each field and setup an update assign subset
         # for each; most of them get a bound parameter and push the
         # value onto the stack, but values that cannot be bound push
@@ -390,18 +356,14 @@ sub db_update {
         /;
     }
     $DEBUG && _wm( 1, $DEBUG, "Prepare/execute\n$sql" );
-    my ( $sth, $rv );
-    eval {
-        $sth = $db->prepare( $sql );
-        $rv = $sth->execute;
-    };
+    my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
-        my $msg = 'UPDATE failed';
-        SPOPS::Error->set({ user_msg   => $msg,
-                            type       => 'db',
-                            system_msg => "Error: $@",
-                            extra      => { sql => $sql } });
-        die $msg;
+        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'prepare' } );
+    }
+
+    my $rv = eval { $sth->execute };
+    if ( $@ ) {
+        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'execute' } );
     }
     return $rv;
 }
@@ -416,45 +378,37 @@ sub db_delete {
     my ( $class, $p ) = @_;
     my $DEBUG   = DEBUG_DELETE || $p->{DEBUG} || 0;
     my $db    = $p->{db} || $class->global_datasource_handle;
+    $class->throw_no_database_handle_error unless ( $db );
 
     # Gotta have a table to delete from
 
     unless ( $p->{table} or $p->{sql} ) {
-        my $msg = 'DELETE failed';
-        SPOPS::Error->set({ user_msg   => $msg,
-                            type       => 'db',
-                            system_msg => 'Cannot delete records without SQL or a table name' });
-        die $msg;
+        SPOPS::Exception->throw( 'Cannot delete records without SQL or a table name' );
     }
 
     # If we weren't given SQL, build it.
 
     my $sql = $p->{sql};
     unless ( $sql ) {
- 
+
         # Hopefully you'll have a WHERE clause... but we'll let
         # you shoot yourself in the foot if you forget :)
 
         my $where = ( $p->{where} ) ? "WHERE $p->{where}" : '';
-        $sql = qq/
-           DELETE FROM $p->{table}
-           $where
-        /;
+        $sql = qq/ DELETE FROM $p->{table} $where /;
     }
+
     $DEBUG && _wm( 1, $DEBUG, "SQL for DELETE:\n$sql" );
     $p->{value} ||= [];
-    my ( $sth, $rv );
-    eval {
-        $sth = $db->prepare( $sql );
-        $rv = $sth->execute( @{ $p->{value} } );
-    };
+    my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
-        my $msg = 'DELETE failed; cannot remove records';
-        SPOPS::Error->set({ user_msg   => $msg,
-                            type       => 'db',
-                            system_msg => "Execute of DELETE failed. Error: $@",
-                            extra      => { sql => $sql, value => @{ $p->{value} } } });
-        die $msg;
+        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'prepare' } );
+    }
+
+    my $rv = eval { $sth->execute( @{ $p->{value} } ) };
+    if ( $@ ) {
+        SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
+                                            action => 'execute' } );
     }
     return $rv;
 }
@@ -468,6 +422,8 @@ sub db_discover_types {
     # Create the index used to find the table info later
 
     my $db       = $p->{db} || $class->global_datasource_handle;
+    $class->throw_no_database_handle_error unless ( $db );
+
     my $type_idx = join( '-', lc $db->{Name}, lc $table );
     $DEBUG && _wm( 2, $DEBUG, "Type index used to discover data types: ($type_idx)" );
 
@@ -483,6 +439,7 @@ sub db_discover_types {
     if ( my $conf = eval { $class->CONFIG } ) {
         $ti = $conf->{dbi_type_info};
     }
+
     if ( $ti ) {
         DEBUG() && _w( 1, "Class has type information specified" );
         my ( $dbi_info );
@@ -494,26 +451,21 @@ sub db_discover_types {
             $TYPE_INFO{ $type_idx }{ lc $field } = $dbi_info->{ $field };
         }
         return $TYPE_INFO{ $type_idx };
-  }
+    }
 
     # Other statement necessary to get type info from the db? Let the
     # class take care of it.
 
     my $sql = $class->sql_fetch_types( $table );
-    my ( $sth );
-    eval {
-        $sth = $db->prepare( $sql );
-        $sth->execute;
-    };
+    my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
-        my $msg = 'Data-type discovery failed';
-        SPOPS::Error->set({ user_msg   => $msg,
-                            type       => 'db',
-                            system_msg => "Error: $@",
-                            extra      => { sql => $sql } });
-        _w( 0, "Failed to read data types: $@" );
-        die $msg;
-  }
+        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'prepare' } );
+    }
+
+    my $rv = eval { $sth->execute };
+    if ( $@ ) {
+        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'execute' } );
+    }
 
     # Go through the fields and match them up to types; note that
     # %TYPE_INFO is a lexical scoped for the entire file, so all
@@ -1030,9 +982,10 @@ your object config:
 
 =head1 ERROR HANDLING
 
-Like other classes in SPOPS, all errors encountered will result in the
-error information saved in L<SPOPS::Error|SPOPS::Error> and a die()
-being thrown. (More later.)
+All errors encountered by this module throw a
+L<SPOPS::Exception|SPOPS::Exception> object (in case of a lack of
+required information) or, in most cases, a
+L<SPOPS::Exception::DBI|SPOPS::Exception::DBI> object.
 
 =head1 TO DO
 
@@ -1057,7 +1010,7 @@ L<DBI|DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

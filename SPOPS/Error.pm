@@ -1,6 +1,6 @@
 package SPOPS::Error;
 
-# $Id: Error.pm,v 1.11 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Error.pm,v 1.13 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use vars         qw( @FIELDS );
@@ -11,7 +11,7 @@ use Data::Dumper qw( Dumper );
 
 @SPOPS::Error::ISA      = ();
 $SPOPS::Error::VERSION  = '1.90';
-$SPOPS::Error::Revision = substr(q$Revision: 1.11 $, 10);
+$SPOPS::Error::Revision = substr(q$Revision: 1.13 $, 10);
 
 @FIELDS   = qw( user_msg system_msg type extra
                 package filename line method );
@@ -59,9 +59,14 @@ __END__
 
 =head1 NAME
 
-SPOPS::Error - Centralized error messages from all SPOPS objects.
+SPOPS::Error - (DEPRECATED) Centralized error messages from all SPOPS objects.
 
 =head1 SYNOPSIS
+
+NOTE: AS OF SPOPS 0.56 THIS CLASS IS DEPRECATED IN FAVOR OF THE
+SPOPS::Exception HIERARCHY. THAT CLASS MAINTAINS BACKWARD
+COMPATIBILITY WITH THIS ONE, BUT THIS WILL BE REMOVED SOMETIME BEFORE
+A FINAL 1.0 RELEASE.
 
  # Using SPOPS in your application
 
@@ -207,7 +212,7 @@ None known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

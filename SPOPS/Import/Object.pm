@@ -1,6 +1,6 @@
 package SPOPS::Import::Object;
 
-# $Id: Object.pm,v 1.7 2001/12/27 22:11:46 lachoy Exp $
+# $Id: Object.pm,v 1.9 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
@@ -18,9 +18,13 @@ sub run {
     my ( $self ) = @_;
     my $fields       = $self->fields;
     my $object_class = $self->object_class;
-    unless ( $fields )       { die "Cannot run w/o fields defined!\n" }
-    unless ( $object_class ) { die "Cannot run w/o object class defined\n" }
-    unless ( $self->data )   { die "Cannot run w/o data defined\n" }
+    eval {
+        unless ( $fields )       { die "Cannot run w/o fields defined!\n" }
+        unless ( $object_class ) { die "Cannot run w/o object class defined\n" }
+        unless ( $self->data )   { die "Cannot run w/o data defined\n" }
+    };
+    if ( $@ ) { SPOPS::Exception->throw( $@ ) }
+
     my $num_fields = scalar @{ $fields };
     my @status = ();
     foreach my $data ( @{ $self->data } ) {
@@ -48,8 +52,9 @@ sub fields_as_hashref {
     my ( $self ) = @_;
     my $field_list = $self->fields;
     unless ( ref $field_list eq 'ARRAY' and scalar @{ $field_list } ) {
-        die "Please set the fields in the importer object using:\n",
-            "\$importer->fields( \\\@fields\n";
+        SPOPS::Exception->throw(
+               "Please set the fields in the importer object using:\n",
+               "\$importer->fields( \\\@fields" );
     }
     my $count = 0;
     return { map { $_ => $count++ } @{ $field_list } };
@@ -221,7 +226,7 @@ L<SPOPS::Export::Object|SPOPS::Export::Object>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,6 +1,6 @@
 package My::UTFConvert;
 
-# $Id: UTFConvert.pm,v 1.1 2001/11/25 01:02:34 lachoy Exp $
+# $Id: UTFConvert.pm,v 1.2 2002/01/02 02:37:02 lachoy Exp $
 
 # WARNING: This currently only works in 5.6.0 and earlier versions of
 # Perl. It will barf with a syntax error on later versions.
@@ -91,7 +91,7 @@ L<perlunicode>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 Chris Winters. All rights reserved.
+Copyright (c) 2001-2002 Chris Winters. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

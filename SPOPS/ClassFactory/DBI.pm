@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 1.14 2001/11/26 16:27:19 lachoy Exp $
+# $Id: DBI.pm,v 1.16 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
@@ -9,7 +9,7 @@ use SPOPS::ClassFactory qw( OK ERROR DONE );
 
 @SPOPS::ClassFactory::DBI::ISA      = ();
 $SPOPS::ClassFactory::DBI::VERSION  = '1.90';
-$SPOPS::ClassFactory::DBI::Revision = substr(q$Revision: 1.14 $, 10);
+$SPOPS::ClassFactory::DBI::Revision = substr(q$Revision: 1.16 $, 10);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 
@@ -104,12 +104,7 @@ my $generic_multifield_etc = <<'MFETC';
         my %val = ();
         my $db = $p->{db} || $self->global_datasource_handle( $p->{connect_key} );
         unless ( $db ) {
-            my $msg = 'Cannot create ID clause';
-            SPOPS::Error->set({ user_msg   => $msg,
-                                system_msg => 'No db handle available',
-                                method     => 'id_clause',
-                                type       => 'db' });
-            die $msg;
+            SPOPS::Exception->throw( "Cannot create ID clause: no DB handle available" );
         }
 
         my $type_info = eval { $self->db_discover_types(
@@ -124,7 +119,7 @@ my $generic_multifield_etc = <<'MFETC';
     	    ( %%ID_FIELD_VARIABLE_LIST%% ) = ( %%ID_FIELD_OBJECT_LIST%% );
         }
         unless ( %%ID_FIELD_BOOLEAN_LIST%% ) {
-	        die "Insufficient values for ID (%%ID_FIELD_VARIABLE_LIST%%)\n";
+	        SPOPS::Exception->throw( "Insufficient values for ID (%%ID_FIELD_VARIABLE_LIST%%)" );
         }
     	my @clause     = ();
     	my $table_name = $self->table_name;
@@ -197,18 +192,13 @@ my $generic_linksto = <<'LINKSTO';
                          ? join ( ' AND ', $p->{where}, $id_clause ) : $id_clause;
         $p->{return} = 'list';
         $p->{db}   ||= %%LINKSTO_CLASS%%->global_datasource_handle;
-        my $rows = eval { %%LINKSTO_CLASS%%->db_select( $p ) };
-        if ( $@ ) {
-            $SPOPS::Error::user_msg = 'Cannot retrieve %%LINKSTO_ALIAS%% object(s)';
-            SPOPS::_w( 0, "$SPOPS::Error::user_msg -- $@" );
-            die $SPOPS::Error::system_msg;
-        }
+        my $rows = %%LINKSTO_CLASS%%->db_select( $p );
         my @obj = ();
         foreach my $info ( @{ $rows } ) {
             my $item = eval { %%LINKSTO_CLASS%%->fetch( $info->[0], $p ) };
             if ( $@ ) {
                 SPOPS::_w( 0, " Cannot fetch linked object %%LINKSTO_ALIAS%% => ",
-                              "$SPOPS::Error::system_msg ($@). Continuing with others..." );
+                              "[$@]. Continuing with others..." );
                 next;
             }
             push @obj, $item if ( $item );
@@ -223,31 +213,15 @@ my $generic_linksto = <<'LINKSTO';
 
         $link_id_list = ( ref $link_id_list ) ? $link_id_list : [ $link_id_list ];
         my $added = 0;
-        my @error_list = ();
         $p->{db} ||= %%LINKSTO_CLASS%%->global_datasource_handle;
         foreach my $link_id ( @{ $link_id_list } ) {
             SPOPS::_wm( 1, $p->{DEBUG}, "Trying to add link to ID ($link_id)" );
-            eval { %%LINKSTO_CLASS%%->db_insert({ table => '%%LINKSTO_TABLE%%',
-                                                  field => [ '%%ID_FIELD%%', '%%LINKSTO_ID_FIELD%%' ],
-                                                  value => [ $self->{%%ID_FIELD%%}, $link_id ],
-                                                  db    => $p->{db},
-                                                  DEBUG => $p->{DEBUG} }) };
-            if ( $@ ) {
-                my $count = scalar @error_list + 1;
-                my $value_list = ( ref $SPOPS::Error::extra->{value} )
-                                   ? join( ' // ', @{ $SPOPS::Error::extra->{value} } )
-                                   : 'none reported';
-                my $error_msg = "Error $count\n$@\n$SPOPS::Error::system_msg\n" .
-                                "SQL: $SPOPS::Error::extra->{sql}\nValues: $value_list";
-                push @error_list, $error_msg;
-            }
-            else {
-                $added++;
-            }
-        }
-        if ( scalar @error_list ) {
-            $SPOPS::Error::system_msg = join "\n\n", @error_list;
-            die 'Add %%LINKSTO_ALIAS%% failed for one or more items';
+            %%LINKSTO_CLASS%%->db_insert({ table => '%%LINKSTO_TABLE%%',
+                                           field => [ '%%ID_FIELD%%', '%%LINKSTO_ID_FIELD%%' ],
+                                           value => [ $self->{%%ID_FIELD%%}, $link_id ],
+                                           db    => $p->{db},
+                                           DEBUG => $p->{DEBUG} });
+            $added++;
         }
         return $added;
     }
@@ -260,32 +234,16 @@ my $generic_linksto = <<'LINKSTO';
 
         $link_id_list = ( ref $link_id_list ) ? $link_id_list : [ $link_id_list ];
         my $removed = 0;
-        my @error_list = ();
         $p->{db} ||= %%LINKSTO_CLASS%%->global_datasource_handle;
         foreach my $link_id ( @{ $link_id_list } ) {
             SPOPS::_wm( 1, $p->{DEBUG}, "Trying to remove link to ID ($link_id)" );
             my $from_id_clause = $self->id_clause( undef, 'noqualify', $p  );
             my $to_id_clause   = %%LINKSTO_CLASS%%->id_clause( $link_id, 'noqualify', $p );
-            eval { %%LINKSTO_CLASS%%->db_delete({ table => '%%LINKSTO_TABLE%%',
-                                                  where => join( ' AND ', $from_id_clause, $to_id_clause ),
-                                                  db    => $p->{db},
-                                                  DEBUG => $p->{DEBUG} }) };
-            if ( $@ ) {
-                my $count = scalar @error_list + 1;
-                my $value_list = ( ref $SPOPS::Error::extra->{value} )
-                                   ? join( ' // ', @{ $SPOPS::Error::extra->{value} } )
-                                   : 'none reported';
-                my $error_msg = "Error $count\n$@\n$SPOPS::Error::system_msg\n" .
-                                "SQL: $SPOPS::Error::extra->{sql}\nValues: $value_list";
-                push @error_list, $error_msg;
-            }
-            else {
-                $removed++;
-            }
-        }
-        if ( scalar @error_list ) {
-            $SPOPS::Error::system_msg = join "\n\n", @error_list;
-            die 'Remove %%LINKSTO_ALIAS%% failed for one or more items';
+            %%LINKSTO_CLASS%%->db_delete({ table => '%%LINKSTO_TABLE%%',
+                                           where => join( ' AND ', $from_id_clause, $to_id_clause ),
+                                           db    => $p->{db},
+                                           DEBUG => $p->{DEBUG} });
+            $removed++;
         }
         return $removed;
     }
@@ -467,7 +425,7 @@ None known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

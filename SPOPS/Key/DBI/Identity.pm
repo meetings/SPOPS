@@ -1,13 +1,13 @@
 package SPOPS::Key::DBI::Identity;
 
-# $Id: Identity.pm,v 1.13 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Identity.pm,v 1.15 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
 @SPOPS::Key::DBI::Identity::ISA      = ();
 $SPOPS::Key::DBI::Identity::VERSION  = '1.90';
-$SPOPS::Key::DBI::Identity::Revision = substr(q$Revision: 1.13 $, 10);
+$SPOPS::Key::DBI::Identity::Revision = substr(q$Revision: 1.15 $, 10);
 
 # Ensure only POST_fetch_id used
 
@@ -25,12 +25,9 @@ sub post_fetch_id {
         $sth = $p->{db}->prepare( $sql );
         $sth->execute;
     };
-
-    # Don't clear the error so it will persist from SELECT statement
-
     if ( $@ ) {
-        $SPOPS::Error::user_msg   = 'Record saved, but ID of record unknown';;
-        die $SPOPS::Error::user_msg;
+        SPOPS::Exception::DBI->throw( "Cannot retrieve \@\@IDENTITY value: $@",
+                                      { sql => $sql, action => 'post_fetch_id' } );
     }
     my $row = $sth->fetchrow_arrayref;
     DEBUG() && _w( 1, "Found inserted ID ($row->[0])" );
@@ -96,7 +93,7 @@ L<DBI|DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

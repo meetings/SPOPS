@@ -18,6 +18,10 @@ SPOPS/DBI/MySQL.pm
 SPOPS/DBI/Pg.pm
 SPOPS/DBI/Sybase.pm
 SPOPS/Error.pm
+SPOPS/Exception.pm
+SPOPS/Exception/DBI.pm
+SPOPS/Exception/LDAP.pm
+SPOPS/Exception/Security.pm
 SPOPS/Export.pm
 SPOPS/Export/Object.pm
 SPOPS/Export/Perl.pm
@@ -53,7 +57,7 @@ SPOPS/Manual/CodeGeneration.pod
 SPOPS/Manual/Configuration.pod
 SPOPS/Manual/Cookbook.pod
 SPOPS/Manual/Datasource.pod
-SPOPS/Manual/Error.pod
+SPOPS/Manual/Exceptions.pod
 SPOPS/Manual/ImportExport.pod
 SPOPS/Manual/Intro.pod
 SPOPS/Manual/Object.pod
@@ -71,6 +75,8 @@ conf/test_dbd_driver.dat
 conf/test_dbd_driver.pl
 conf/test_dbd_driver.sql
 eg/README
+eg/datasource_configure.pl
+eg/datasource_configure_ldap.pl
 eg/export_doodads.pl
 eg/fetch_doodads.pl
 eg/find_defaults_demo.pl
@@ -90,11 +96,14 @@ eg/My/ReadOnly.pm
 eg/My/Security.pm
 eg/My/User.pm
 eg/My/UTFConvert.pm
+eg/My/DBI/DatasourceConfigure.pm
 eg/My/DBI/FindDefaults.pm
+eg/My/LDAP/DatasourceConfigure.pm
 t/01_tie.t
 t/02_tie_strict.t
 t/03_uuid_key.t
 t/04_random_key.t
+t/05_exception.t
 t/10_hash_file.t
 t/20_gdbm.t
 t/30_dbi.t

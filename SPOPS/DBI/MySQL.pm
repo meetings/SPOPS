@@ -1,6 +1,6 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 1.13 2001/10/24 02:51:24 lachoy Exp $
+# $Id: MySQL.pm,v 1.14 2002/01/02 02:37:03 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
@@ -9,7 +9,7 @@ use SPOPS::Key::DBI::HandleField;
 
 @SPOPS::DBI::MySQL::ISA      = ();
 $SPOPS::DBI::MySQL::VERSION  = '1.90';
-$SPOPS::DBI::MySQL::Revision = substr(q$Revision: 1.13 $, 10);
+$SPOPS::DBI::MySQL::Revision = substr(q$Revision: 1.14 $, 10);
 
 sub sql_current_date  { return 'NOW()' }
 
@@ -116,7 +116,7 @@ L<DBI|DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

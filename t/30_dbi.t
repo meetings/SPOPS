@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 1.5 2001/11/26 16:27:19 lachoy Exp $
+# $Id: 30_dbi.t,v 1.6 2002/01/14 02:53:13 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -9,10 +9,15 @@
 use strict;
 use Data::Dumper qw( Dumper );
 
-use constant NUM_TESTS       => 18;
+use constant NUM_TESTS       => 20;
 use constant TEST_TABLE_NAME => 'spops_test';
 
 my $SPOPS_CLASS = 'DBITest';
+my @ID_LIST     = ( 42, 1792, 1588 );
+
+my ( $db );
+
+END { cleanup( $db, TEST_TABLE_NAME ) }
 
 {
 
@@ -55,7 +60,7 @@ my $SPOPS_CLASS = 'DBITest';
 
     # Create a database handle and create our testing table
 
-    my $db = get_db_handle( $config );
+    $db = get_db_handle( $config );
     create_table( $db, 'simple', TEST_TABLE_NAME );
 
     # Create an object
@@ -110,6 +115,7 @@ my $SPOPS_CLASS = 'DBITest';
         ok( ! $@, 'Save object (create, after clone)' );
         if ( $@ ) {
             warn "Cannot save object: $@\n", Dumper( SPOPS::Error->get ), "\n";
+
         }
     }
 
@@ -142,22 +148,29 @@ my $SPOPS_CLASS = 'DBITest';
 
     # Create an iterator and run through the objects
     {
-        my $iter = eval { $SPOPS_CLASS->fetch_iterator({ db => $db, skip_cache => 1 }) };
-        ok( $iter->isa( 'SPOPS::Iterator' ), 'Iterator returned' );
+        my $iter = eval { $SPOPS_CLASS->fetch_iterator({ db         => $db,
+                                                         skip_cache => 1 }) };
+        ok( $iter->isa( 'SPOPS::Iterator::DBI' ), 'Iterator returned (fetch_iterator)' );
         my $count = 0;
-        while ( my $obj = $iter->get_next ) {
-            $count++;
-        }
-        ok( $count == 3, 'Iterator fetch count' );
+        $count++ while ( my $obj = $iter->get_next );
+        is( $count, 3, 'Iterator fetch count (fetch_iterator)' );
     }
 
-    cleanup( $db, TEST_TABLE_NAME );
+    # Create an iterator from the object IDs then run through them
+    {
+        my $iter = SPOPS::Iterator::DBI->new({ id_list => \@ID_LIST,
+                                               class   => $SPOPS_CLASS,
+                                               db      => $db });
+        ok( $iter->isa( 'SPOPS::Iterator::DBI' ), 'Iterator returned (ID list)' );
+        my $count = 0;
+        $count++ while ( my $obj = $iter->get_next );
+        is( $count, 3, 'Iterator fetch count (ID list)' );
+    }
 
 # Future testing ideas:
 #  - security
 #  - timestamp checking
 #  - fetch_group using 'where'
-
 
 }
 

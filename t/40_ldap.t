@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 40_ldap.t,v 1.11 2001/10/26 03:18:37 lachoy Exp $
+# $Id: 40_ldap.t,v 1.12 2002/01/14 02:53:23 lachoy Exp $
 
 use strict;
 use constant NUM_TESTS => 37;
@@ -20,6 +20,10 @@ my @USER_DATA = (
    [ 'lachoy', 'La Choy', 'Choy', 'La', 'lachoy@spoiled.com' ],
    [ 'bofh', 'Joe Shmoe', 'Shmoe', 'Joe', 'dingdong@411.com' ]
 );
+
+my ( $ldap );
+END { tear_down( $ldap );
+      $ldap->unbind }
 
 {
     # Read in the config file and make sure we're supposed to run
@@ -87,8 +91,8 @@ my @USER_DATA = (
 
     # Tests: 7 - 8
 
-    my $ldap = Net::LDAP->new( $config->{LDAP_host},
-                               port    => $config->{LDAP_port} );
+    $ldap = Net::LDAP->new( $config->{LDAP_host},
+                            port    => $config->{LDAP_port} );
     ok( $ldap, 'Connect to directory' );
     my @bind_args = ( $config->{LDAP_bind_dn} )
                       ? ( $config->{LDAP_bind_dn}, password => $config->{LDAP_bind_password} )
@@ -299,11 +303,6 @@ my @USER_DATA = (
     }
 
     is ( $user_remove, scalar @USER_DATA, 'Remove object' );
-
-    # And remove our OU object
-
-    tear_down( $ldap );
-    $ldap->unbind;
 }
 
 # Create our ou object

@@ -1,14 +1,14 @@
 package SPOPS::LDAP::MultiDatasource;
 
-# $Id: MultiDatasource.pm,v 1.9 2001/10/25 12:08:57 lachoy Exp $
+# $Id: MultiDatasource.pm,v 1.11 2002/01/08 02:43:53 lachoy Exp $
 
 use strict;
+use base qw( SPOPS::LDAP );
 use SPOPS qw( DEBUG _w );
-use SPOPS::LDAP;
+use SPOPS::Exception::LDAP;
 
-@SPOPS::LDAP::MultiDatasource::ISA       = qw( SPOPS::LDAP );
 $SPOPS::LDAP::MultiDatasource::VERSION   = '1.90';
-$SPOPS::LDAP::MultiDatasource::Revision  = substr(q$Revision: 1.9 $, 10);
+$SPOPS::LDAP::MultiDatasource::Revision  = substr(q$Revision: 1.11 $, 10);
 
 use constant DEFAULT_CONNECT_KEY => 'main';
 
@@ -16,7 +16,7 @@ sub base_dn  {
     my ( $class, $connect_key ) = @_;
     my $partial_dn = $class->get_partial_dn( $connect_key );
     unless ( $partial_dn ) {
-        die "No Base DN defined in SPOPS configuration key 'ldap_base_dn', cannot continue!\n";
+        SPOPS::Exception->throw( "No Base DN defined in configuration key 'ldap_base_dn'" );
     }
     my $connect_info = $class->connection_info( $connect_key );
     return join( ',', $partial_dn, $connect_info->{base_dn} );
@@ -168,6 +168,7 @@ SPOPS::LDAP::MultiDatasource -- SPOPS::LDAP functionality but fetching objects f
     class      => 'My::LDAPThings',
     datasource => [ 'main', 'secondary', 'tertiary' ],
     isa        => [ ... 'SPOPS::LDAP::MultiDatasource' ],
+    ...,
  };
 
  # Fetch an object and see where it came from
@@ -296,21 +297,26 @@ configurations. For example:
  sub global_datasource_handle {
      my ( $class, $connect_key ) = @_;
      unless ( $connect_key ) {
-         die "Cannot retrieve handle without connect key!\n";
+         SPOPS::Exception->throw( "Cannot retrieve handle without connect key" );
      }
      unless ( $DS{ $connect_key } ) {
          my $ldap_info = $class->connection_info( $connect_key );
          $ldap_info->{port} ||= 389;
          my $ldap = Net::LDAP->new( $ldap_info->{host},
                                     port => $ldap_info->{port} );
-         die "Cannot create LDAP connection!\n" unless ( $ldap );
+         unless ( $ldap ) {
+             SPOPS::Exception->throw( "Cannot create LDAP connection: $@" );
+         }
          my ( %bind_params );
          if ( $ldap_info->{bind_dn} ) {
              $bind_params{dn}       = $ldap_info->{bind_dn};
              $bind_params{password} = $ldap_info->{bind_password};
          }
          my $bind_msg = $ldap->bind( %bind_params );
-         die "Cannot bind! Error: ", $bind_msg->error, "\n" if ( $bind_msg->code );
+         if ( $bind_msg->code ) {
+             SPOPS::Exception::LDAP->throw( "Cannot bind to directory: " . $bind_msg->error,
+                                            { code   => $bind_msg->code,
+                                              action => 'global_datasource_handle' } );
          $DS{ $connect_key } = $ldap;
      }
      return $DS{ $connect_key };
@@ -389,7 +395,7 @@ Example in SPOPS distribution: eg/ldap_multidatasource.pl
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 MSN Marketing Service Nordwest, GmbH. All rights
+Copyright (c) 2001-2002 MSN Marketing Service Nordwest, GmbH. All rights
 reserved.
 
 This library is free software; you can redistribute it and/or modify

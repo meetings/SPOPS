@@ -1,6 +1,6 @@
 package SPOPS::Export::XML;
 
-# $Id: XML.pm,v 1.4 2001/12/31 03:21:22 lachoy Exp $
+# $Id: XML.pm,v 1.5 2002/01/02 02:37:02 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export );
@@ -128,7 +128,7 @@ L<SPOPS::Manual::ImportExport|SPOPS::Manual::ImportExport>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

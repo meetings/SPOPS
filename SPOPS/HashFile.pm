@@ -1,6 +1,6 @@
 package SPOPS::HashFile;
 
-# $Id: HashFile.pm,v 1.15 2001/10/30 23:47:51 lachoy Exp $
+# $Id: HashFile.pm,v 1.17 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use Data::Dumper;
@@ -8,7 +8,7 @@ use SPOPS;
 
 @SPOPS::HashFile::ISA       = qw( SPOPS );
 $SPOPS::HashFile::VERSION   = '1.90';
-$SPOPS::HashFile::Revision  = substr(q$Revision: 1.15 $, 10);
+$SPOPS::HashFile::Revision  = substr(q$Revision: 1.17 $, 10);
 
 # Just grab the tied hash from the SPOPS::TieFileHash
 
@@ -52,12 +52,12 @@ sub save {
     my $obj = tied %{ $self };
 
     unless ( $obj->{perm} eq 'write' ) {
-        die "Cannot save $obj->{filename}: it was opened as read-only.\n";
+        SPOPS::Exception->throw( "Cannot save [$obj->{filename}]; opened as read-only" );
     }
 
     unless ( $obj->{filename} ) {
-        die "Cannot save data: the filename has been erased. Did you assign ",
-            "an empty hash to the object?\n";
+        SPOPS::Exception->throw( "Cannot save data: the filename has been " .
+                                 "erased. Did you assign an empty hash to the object?" );
     }
 
     my $temp_filename = "$obj->{filename}.tmp";
@@ -65,8 +65,8 @@ sub save {
         unlink( $temp_filename ); # just to be sure...
     }
     if ( -f $obj->{filename} ) {
-        rename( $obj->{filename}, $temp_filename )
-              || die "Cannot rename old file to make room for new one. Error: $!";
+        rename( $obj->{filename}, $temp_filename ) ||
+              SPOPS::Exception->throw( "Cannot rename old file to make room for new one. Error: $!" );
     }
 
     return undef unless ( $self->pre_save_action( $p ) );
@@ -77,10 +77,10 @@ sub save {
 
     eval { open( INFO, "> $obj->{filename}" ) || die $! };
     if ( $@ ) {
-        rename( $temp_filename, $obj->{filename} )
-              || die "Cannot open file for writing (reason: $@ ) and ",
-                     "cannot move backup file to original place. Reason: $!";
-        die "Cannot open file for writing. Backup file restored. Error: $@";
+        rename( $temp_filename, $obj->{filename} ) ||
+              SPOPS::Exception->throw( "Cannot open file for writing [$@] and " .
+                                       "cannot move backup file to original place [$!]" );
+        SPOPS::Exception->throw( "Cannot open file for writing [$@]. Backup file restored ok." );
     }
     print INFO Data::Dumper->Dump( [ \%data ], [ 'data' ] );
     close( INFO );
@@ -97,10 +97,11 @@ sub remove {
     my ( $self, $p ) = @_;
     my $obj = tied %{ $self };
     unless ( $obj->{perm} eq 'write' ) {
-        die "Cannot save $obj->{filename}: it was opened as read-only.\n";
+        SPOPS::Exception->throw( "Cannot save [$obj->{filename}]; opened as read-only" );
     }
     unless ( $obj->{filename} ) {
-        die "Cannot save data: the filename has been erased. Did you assign an empty hash to the object?\n";
+        SPOPS::Exception->throw( "Cannot remove data: the filename has been " .
+                                 "erased. Did you assign an empty hash to the object?" );
     }
     return undef unless ( $self->pre_remove_action( $p ) );
     my $rv = %{ $self } = ();
@@ -130,7 +131,7 @@ use strict;
 use File::Copy qw( cp );
 
 @SPOPS::TieFileHash::ISA       = ();
-$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.15 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.17 $ =~ /(\d+)\.(\d+)/);
 
 # These are all very standard routines for a tied hash; more info: see
 # 'perldoc Tie::Hash'
@@ -144,10 +145,10 @@ sub TIEHASH {
     my ( $class, $filename, $perm ) = @_;
     $perm ||= 'read';
     if ( $perm !~ /^(read|write|new|write\-new)$/ ) {
-        die "Valid permissions: read | write | new | write-new (Value: $perm)\n";
+        SPOPS::Exception->throw( "Invalid permissions [$perm]; valid: [read|write|new|write-new]" );
     }
     unless ( $filename ) {
-        die "You must pass a filename to use for reading and writing.\n";
+        SPOPS::Exception->throw( "You must pass a filename to use for reading and writing." );
     }
     my $file_exists = ( -f $filename );
     unless ( $file_exists ) {
@@ -155,7 +156,8 @@ sub TIEHASH {
             $perm = 'new';
         }
         else {
-            die "Cannot create object without existing file or 'new' permission (File: $filename; Permission: $perm)\n";
+            SPOPS::Exception->throw( "Cannot create object without existing file " .
+                                     "or 'new' permission [$filename] [$perm]" );
         }
     }
     $perm = 'write' if ( $perm eq 'write-new' );
@@ -169,7 +171,8 @@ sub TIEHASH {
 
         # Then open up the file
 
-        open( PD, $filename ) || die "Cannot open ($filename). Reason: $!";
+        open( PD, $filename ) ||
+            SPOPS::Exception->throw( "Cannot open [$filename]:  $!" );
         local $/ = undef;
         my $info = <PD>;
         close( PD );
@@ -183,7 +186,9 @@ sub TIEHASH {
             no strict 'vars';
             $data = eval $info;
         }
-        die "Error reading in perl code: $@"  if ( $@ );
+        if ( $@ ) {
+            SPOPS::Exception->throw( "Error reading in perl code: $@" );
+        }
     }
     else {
         $data = {};
@@ -229,10 +234,11 @@ sub DELETE {
 sub CLEAR {
     my ( $self ) = @_;
     if ( $self->{perm} ne 'write' ) {
-        die "Cannot remove $self->{filename}; permission set to read-only.\n";
+        SPOPS::Exception->throw( "Cannot remove [$self->{filename}]; " .
+                                 "permission set to read-only" );
     }
-    unlink( $self->{filename} )
-          || die "Cannot remove file $self->{filename}. Reason: $!";
+    unlink( $self->{filename} ) ||
+            SPOPS::Exception->throw( "Cannot remove [$self->{filename}]: $!" );
     $self->{data} = undef;
     $self->{perm} = undef;
 }
@@ -268,15 +274,15 @@ dumped to text
 
 =head1 SYNOPSIS
 
- my $config = SPOPS::HashFile->new( { filename => '/home/httpd/myapp/server.perl',
-                                      perm => 'read' } );
+ my $config = SPOPS::HashFile->new({ filename => '/home/httpd/myapp/server.perl',
+                                     perm     => 'read' } );
  print "My SMTP host is $config->{smtp_host}";
 
  # Setting a different value is ok...
  $config->{smtp_host} = 'smtp.microsoft.com';
 
- # ...but this will 'die' with an error, since you set the permission
- # to read-only 'read' in the 'new' call
+ # ...but this will throw an exception since you set the permission to
+ # read-only 'read' in the 'new' call
  $config->save;
 
 =head1 DESCRIPTION
@@ -367,7 +373,7 @@ L<Data::Dumper|Data::Dumper>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

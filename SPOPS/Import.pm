@@ -1,9 +1,10 @@
 package SPOPS::Import;
 
-# $Id: Import.pm,v 1.7 2001/12/31 03:43:05 lachoy Exp $
+# $Id: Import.pm,v 1.9 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor );
+use SPOPS::Exception;
 
 use constant AKEY => '_attrib';
 
@@ -16,9 +17,10 @@ sub new {
     my ( $pkg, $type, $params ) = @_;
     my $class = $CLASSES{ $type };
     unless ( $class ) {
-        die "You must specify a type of import to run -- available ",
-            "types are: ", join( ', ', sort keys %CLASSES ), "\n",
-            "(You specified: [$type])\n";
+        SPOPS::Exception->throw(
+                 "You must specify a type of import to run -- available " .
+                 "types are: ", join( ', ', sort keys %CLASSES ), "\n",
+                 "(You specified: [$type])" );
     }
 
     my $self = bless( {}, $class );;
@@ -41,13 +43,13 @@ sub set { return $_[0]->{ AKEY() }{ $_[1] } = $_[2] }
 
 sub add_type {
     my ( $class, $import_type, $import_class ) = @_;
-    die "Cannot add import type: no type\n"  unless ( $import_type );
-    die "Cannot add import type: no class\n" unless ( $import_class );
+    unless ( $import_type )  { SPOPS::Exception->throw( "Cannot add import type: no type" ) }
+    unless ( $import_class ) { SPOPS::Exception->throw( "Cannot add import type: no class" ) }
 
     eval "require $import_class";
     if ( $@ ) {
-        die "Cannot add import type [$import_type]: class [$import_class]\n",
-            "cannot be required. Error: $@\n";
+        SPOPS::Exception->throw( "Cannot add import type [$import_type]: " .
+                                 "class [$import_class] cannot be required [$@]" );
     }
 
     if ( $CLASSES{ $import_type } ) {
@@ -60,7 +62,7 @@ sub add_type {
     return $CLASSES{ $import_type };
 }
 
-sub run { die "SPOPS::Import subclass should implement run()\n" }
+sub run { SPOPS::Exception->throw( "SPOPS::Import subclass should implement run()" ) }
 
 
 ########################################
@@ -74,7 +76,7 @@ sub raw_data_from_file {
     my ( $class, $filename ) = @_;
     my $raw_data = $class->read_perl_file( $filename );
     unless ( ref $raw_data eq 'ARRAY' ) {
-        die "Data not in correct format -- must be in arrayref format.\n";
+        SPOPS::Exception->throw( "Raw data must be in arrayref format." );
     }
     return $raw_data;
 }
@@ -85,9 +87,9 @@ sub raw_data_from_fh {
     no strict 'vars';
     my $raw = $class->read_fh( $fh );
     my $data = eval $raw;
-    die "Cannot parse data from filehandle: $@\n"  if ( $@ );
+    if ( $@ ) { SPOPS::Exception->throw( "Cannot parse data from filehandle: [$@]" ) }
     unless ( ref $data eq 'ARRAY' ) {
-        die "Data not in correct format -- must be in arrayref format.\n";
+        SPOPS::Exception->throw( "Data must be in arrayref format" );
     }
     return $data;
 }
@@ -100,7 +102,7 @@ sub read_perl_file {
     no strict 'vars';
     my $raw  = $class->read_file( $filename );
     my $data = eval $raw;
-    die "Cannot parse data file ($filename): $@\n"  if ( $@ );
+    if ( $@ ) { SPOPS::Exception->throw( "Cannot parse data file ($filename): $@" ) }
     return $data;
 }
 
@@ -109,8 +111,10 @@ sub read_perl_file {
 
 sub read_file {
     my ( $class, $filename ) = @_;
-    die "Cannot read data file: ($filename) does not exist!\n"   unless ( -f $filename );
-    open( DF, $filename ) || die "Cannot read data file: $!\n";
+
+    unless ( -f $filename ) { SPOPS::Exception->throw( "Cannot read: [$filename] does not exist" ) }
+    open( DF, $filename ) ||
+        SPOPS::Exception->throw( "Cannot read data file: $!" );
     local $/ = undef;
     my $raw = <DF>;
     close( DF );
@@ -252,7 +256,7 @@ L<SPOPS::Manual::ImportExport|SPOPS::Manual::ImportExport>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

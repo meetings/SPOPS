@@ -1,16 +1,17 @@
 package SPOPS::ClassFactory;
 
-# $Id: ClassFactory.pm,v 1.21 2001/11/06 21:45:08 lachoy Exp $
+# $Id: ClassFactory.pm,v 1.24 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use Class::ISA;
 use Data::Dumper  qw( Dumper );
 use SPOPS         qw( _w DEBUG );
+use SPOPS::Exception;
 require Exporter;
 
 @SPOPS::ClassFactory::ISA       = qw( Exporter );
 $SPOPS::ClassFactory::VERSION   = '1.90';
-$SPOPS::ClassFactory::Revision  = substr(q$Revision: 1.21 $, 10);
+$SPOPS::ClassFactory::Revision  = substr(q$Revision: 1.24 $, 10);
 @SPOPS::ClassFactory::EXPORT_OK = qw( OK DONE NOTIFY ERROR RESTART
                                       FACTORY_METHOD RULESET_METHOD );
 
@@ -31,7 +32,8 @@ my $PK = '__private__'; # Save typing...
 # order and be able to keep the variable a lexical
 
 my @SLOTS = qw(
-  manipulate_configuration id_method read_code fetch_by has_a links_to add_rule
+  manipulate_configuration id_method read_code
+  fetch_by has_a links_to add_rule
 );
 
 my %SLOT_NUM = map { $SLOTS[ $_ ] => $_ } ( 0 .. ( scalar @SLOTS - 1 ) );
@@ -80,9 +82,9 @@ sub create_all_stubs {
         my $this_class = $all_config->{ $alias }{class};
         $all_config->{ $alias }->{main_alias} ||= $alias;
         my ( $status, $msg ) = $class->create_stub( $all_config->{ $alias } );
-        die $msg     if ( $status eq ERROR );
+        if ( $status eq ERROR )     { SPOPS::Exception->throw( $msg ) }
         my ( $cfg_status, $cfg_msg ) = $class->install_configuration( $this_class, $all_config->{ $alias } );
-        die $cfg_msg if ( $cfg_status eq ERROR );
+        if ( $cfg_status eq ERROR ) { SPOPS::Exception->throw( $cfg_msg ) }
     }
 }
 
@@ -338,7 +340,7 @@ BEHAVIOR:
         DEBUG() && _w( 1, "Status returned from behavior: ($status)" );
 
         if ( $status eq ERROR ) {
-            die "Error running behavior for $slot_name in $this_class: $msg\n";
+            SPOPS::Exception->throw( "Cannot run behavior in [$slot_name] [$this_class]: $msg" );
         }
 
         # If anything but an error, go ahead and mark this behavior as
@@ -399,7 +401,7 @@ sub sync_isa {
     @{ $this_class . '::ISA' } = @{ $config_isa };
     DEBUG && _w( 2, "ISA for ($this_class) synched, now: ", join( ', ', @{ $config_isa } ) );
     my ( $status, $msg ) = $class->require_config_classes( $this_class->CONFIG );
-    die "$msg\n" if ( $status eq ERROR );
+    if ( $status eq ERROR ) { SPOPS::Exception->throw( $msg ) }
     return 1;
 }
 
@@ -555,7 +557,8 @@ to execute or if all the behaviors execute without returning an
 C<ERROR>.
 
 If a behavior returns an C<ERROR>, the entire process is stopped and a
-C<die> is thrown with the message returned from the behavior.
+L<SPOPS::Exception|SPOPS::Exception> object is thrown with the message
+returned from the behavior.
 
 If a behavior returns a C<RESTART>, we re-find all behaviors for the
 class and if they do not match up with what was found earlier, run the
@@ -568,7 +571,8 @@ you could get into some hairy situations with this recursion -- e.g.,
 two behaviors keep adding each other -- but practically it will rarely
 occur. (At least we hope so.)
 
-Return value: true if success, C<die>s on failure.
+Return value: true if success, throws
+L<SPOPS::Exception|SPOPS::Exception> on failure.
 
 B<create_stub( \%config )>
 
@@ -660,8 +664,9 @@ Synchronize the C<@ISA> in C<$class> with the C<{isa}> key in its
 configuration. Also C<require>s all classes in the newly synchronized
 C<@ISA>.
 
-Returns true if there are no problems, throws a C<die> otherwise. (The
-only reason it would fail is if a recently added class cannot be
+Returns true if there are no problems, throws a
+L<SPOPS::Exception|SPOPS::Exception> object otherwise. (The only
+reason it would fail is if a recently added class cannot be
 C<require>d.)
 
 B<compare_behavior_map( \%behavior_map, \%behavior_map )>
@@ -682,11 +687,13 @@ Nothing known.
 
 =head1 SEE ALSO
 
+L<SPOPS::Manual::CodeGeneration|SPOPS::Manual::CodeGeneration>
+
 L<SPOPS|SPOPS>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

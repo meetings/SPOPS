@@ -1,6 +1,6 @@
 package My::DBI::FindDefaults;
 
-# $Id: FindDefaults.pm,v 1.1 2001/10/22 05:16:59 lachoy Exp $
+# $Id: FindDefaults.pm,v 1.3 2002/01/07 13:00:14 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
@@ -29,7 +29,7 @@ sub find_defaults {
     my $id_clause = $class->id_clause( $CONFIG->{find_default_id},
                                        '', { db => $dbh } );
     my $sql = qq/
-         SELECT $default_fields 
+         SELECT $default_fields
            FROM $CONFIG->{base_table}
           WHERE $id_clause /;
     my ( $sth );
@@ -116,7 +116,7 @@ POOP Group mailing list thread:
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,6 +1,6 @@
 package SPOPS::Iterator::WrapList;
 
-# $Id: WrapList.pm,v 1.5 2001/10/12 21:00:26 lachoy Exp $
+# $Id: WrapList.pm,v 1.6 2002/01/02 02:37:02 lachoy Exp $
 
 use strict;
 use SPOPS           qw( DEBUG _w );
@@ -9,7 +9,7 @@ use SPOPS::Iterator qw( ITER_IS_DONE ITER_FINISHED );
 
 @SPOPS::Iterator::WrapList::ISA       = qw( SPOPS::Iterator );
 $SPOPS::Iterator::WrapList::VERSION   = '1.90';
-$SPOPS::Iterator::WrapList::Revision  = substr(q$Revision: 1.5 $, 10);
+$SPOPS::Iterator::WrapList::Revision  = substr(q$Revision: 1.6 $, 10);
 
 
 sub initialize {
@@ -100,7 +100,7 @@ L<SPOPS::DBI|SPOPS::DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

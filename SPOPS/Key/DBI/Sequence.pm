@@ -1,13 +1,13 @@
 package SPOPS::Key::DBI::Sequence;
 
-# $Id: Sequence.pm,v 1.12 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Sequence.pm,v 1.14 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
 @SPOPS::Key::DBI::Sequence::ISA      = ();
 $SPOPS::Key::DBI::Sequence::VERSION  = '1.90';
-$SPOPS::Key::DBI::Sequence::Revision = substr(q$Revision: 1.12 $, 10);
+$SPOPS::Key::DBI::Sequence::Revision = substr(q$Revision: 1.14 $, 10);
 
 # Default SELECT statement to use to retrieve the sequence -- you can
 # override this in your config or in the parameters passed to
@@ -46,11 +46,14 @@ sub retrieve_sequence {
     my $sql = sprintf( $sequence_call, $sequence_name );
     DEBUG() && _w( 2, "SQL used to retrieve sequence:\n$sql" );
     my ( $sth );
-    eval { 
+    eval {
         $sth = $p->{db}->prepare( $sql );
         $sth->execute;
     };
-    die "Cannot retrieve value from sequence $sequence_name : $@" if ( $@ );
+    if ( $@ ) {
+        SPOPS::Exception::DBI->throw( "Cannot kick sequence [$sequence_name]: $@",
+                                      { sql => $sql, action => 'retrieve_sequence' } );
+    }
     my ( $id ) = $sth->fetchrow_array;
     return $id;
 }
@@ -152,7 +155,7 @@ L<DBI|DBI>, PostgreSQL and Oracle databases, both of which have sequences.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

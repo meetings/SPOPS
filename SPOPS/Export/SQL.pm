@@ -1,6 +1,6 @@
 package SPOPS::Export::SQL;
 
-# $Id: SQL.pm,v 1.4 2001/12/31 03:21:22 lachoy Exp $
+# $Id: SQL.pm,v 1.6 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export );
@@ -24,9 +24,10 @@ sub create_record {
     my $table = $self->table_name ||
                 $self->table_name( $object_class->table_name );
     unless ( $table ) {
-        die "No table name set (via \$exporter->table_name( \$table )) and\n",
-            "your object class ($object_class) does not have a table name\n",
-            "associated with it. No records exported\n";
+        SPOPS::Exception->throw(
+                    "No table name set (via \$exporter->table_name( \$table ))\n" .
+                    " and your object class ($object_class) does not have a\n" .
+                    "table name associated with it. No records exported" );
     }
     my @values = map { $self->serialize_field_data( $object->{ $_ } ) } @{ $fields };
     my $field_text = join( ', ', @{ $fields } );
@@ -109,7 +110,7 @@ Nothing known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

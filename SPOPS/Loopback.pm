@@ -1,12 +1,12 @@
 package SPOPS::Loopback;
 
-# $Id: Loopback.pm,v 1.1 2001/12/03 13:29:31 lachoy Exp $
+# $Id: Loopback.pm,v 1.2 2002/01/02 02:37:04 lachoy Exp $
 
 use strict;
 use SPOPS;
 
 @SPOPS::Loopback::ISA      = qw( SPOPS );
-$SPOPS::Loopback::VERSION  = substr(q$Revision: 1.1 $, 10);
+$SPOPS::Loopback::VERSION  = substr(q$Revision: 1.2 $, 10);
 
 
 sub fetch {
@@ -122,7 +122,7 @@ L<SPOPS|SPOPS>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -215,7 +215,7 @@ IS AVAILABLE FOR LATER INSPECTION.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 Chris Winters. All rights reserved.
+Copyright (c) 2001-2002 Chris Winters. All rights reserved.
 
 See L<SPOPS::Manual|SPOPS::Manual> for license.
 

@@ -1,12 +1,12 @@
 package My::User;
 
-# $Id: User.pm,v 1.6 2001/10/15 04:25:35 lachoy Exp $
+# $Id: User.pm,v 1.8 2002/01/08 04:31:54 lachoy Exp $
 
 use strict;
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::User::VERSION = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+$My::User::VERSION = sprintf("%d.%02d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
 $My::User::crypt_password = undef;
 
 sub _base_config {
@@ -109,7 +109,7 @@ My::User - Create and manipulate SPOPS users.
   $user->{last_name}  = 'Lah';
   eval { $user->save };
   if ( $@ ) {
-      die "Error: $SPOPS::Error::system_msg\n";
+      print "Cannot save user: $@\n";
   }
 
   # Use crypt()ed password
@@ -117,7 +117,7 @@ My::User - Create and manipulate SPOPS users.
 
   # Check the password
   unless ( $user->check_password( $given_password ) ) {
-      die "Invalid login!\n";
+      print "Invalid login!\n";
   }
 
   # Add this user to the group 'public'
@@ -150,7 +150,7 @@ None known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

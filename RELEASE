@@ -1,6 +1,15 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.56 Tue Jan 15 07:17:02 EST 2002
+
+  * Change all error handling to use exceptions
+
+  * Sample classes to make writing one-off standalone scripts easier.
+
+  * Minor bugfixes
+
+
 0.55 Mon Dec 31 00:49:15 EST 2001
 
   * Add Import/Export tools, new key generation method; minor bugfix.
@@ -83,4 +92,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 1.12 2001/12/31 05:34:04 lachoy Exp $
+$Id: RELEASE,v 1.14 2002/01/15 11:58:39 lachoy Exp $

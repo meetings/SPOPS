@@ -1,13 +1,13 @@
 package SPOPS::DBI::Sybase;
 
-# $Id: Sybase.pm,v 1.10 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Sybase.pm,v 1.11 2002/01/02 02:37:03 lachoy Exp $
 
 use strict;
 use SPOPS::Key::DBI::Identity;
 
 @SPOPS::DBI::Sybase::ISA      = ();
 $SPOPS::DBI::Sybase::VERSION  = '1.90';
-$SPOPS::DBI::Sybase::Revision = substr(q$Revision: 1.10 $, 10);
+$SPOPS::DBI::Sybase::Revision = substr(q$Revision: 1.11 $, 10);
 
 sub sql_quote {
     my ( $class, $value, $type, $db ) = @_;
@@ -96,7 +96,7 @@ L<DBI|DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

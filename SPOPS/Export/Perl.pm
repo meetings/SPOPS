@@ -1,6 +1,6 @@
 package SPOPS::Export::Perl;
 
-# $Id: Perl.pm,v 1.2 2001/12/31 03:21:22 lachoy Exp $
+# $Id: Perl.pm,v 1.3 2002/01/02 02:37:03 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export );
@@ -62,7 +62,7 @@ L<Data::Dumper|Data::Dumper>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,13 +1,13 @@
 package SPOPS::Configure::DBI;
 
-# $Id: DBI.pm,v 1.16 2001/10/12 21:00:26 lachoy Exp $
+# $Id: DBI.pm,v 1.17 2002/01/02 02:37:03 lachoy Exp $
 
 use strict;
 use SPOPS::Configure;
 
 @SPOPS::Configure::DBI::ISA      = qw( SPOPS::Configure );
 $SPOPS::Configure::DBI::VERSION  = '1.90';
-$SPOPS::Configure::DBI::Revision = substr(q$Revision: 1.16 $, 10);
+$SPOPS::Configure::DBI::Revision = substr(q$Revision: 1.17 $, 10);
 
 1;
 
@@ -37,7 +37,7 @@ tree will be removed entirely.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

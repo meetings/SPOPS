@@ -1,10 +1,11 @@
 package SPOPS::Import::DBI::Table;
 
-# $Id: Table.pm,v 1.1 2001/12/27 22:10:46 lachoy Exp $
+# $Id: Table.pm,v 1.3 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
 use Data::Dumper qw( Dumper );
+use SPOPS::Exception;
 use SPOPS::Import::DBI::TableTransform;
 
 my @FIELDS = qw( database_type transforms print_only );
@@ -19,15 +20,19 @@ sub run {
     my ( $self ) = @_;
 
     unless ( $self->data ) {
-        die "Cannot import a table without data!\n",
-            "Please set it using \$table_import->data( \$table_sql )\n",
-            "or \$table_import->read_table_from_file( '/path/to/mytable.sql' )\n",
-            "or \$table_import->read_table_from_fh( \$filehandle )\n",
+        my $m = "Cannot import a table without data!\n" .
+                "Please set it using \$table_import->data( \$table_sql )\n" .
+                "or \$table_import->read_table_from_file( '/path/to/mytable.sql' )\n" .
+                "or \$table_import->read_table_from_fh( \$filehandle )";
+        SPOPS::Exception->throw( $m );
     }
 
     unless ( $self->database_type ) {
-        die "Cannot import a table without specifying a database type.\n",
-            "Please set the database type using \$table_import->database_type( 'dbtype' )\n";
+        my $m = "Cannot import a table without specifying a database type.\n" .
+                "Please set the database type using:\n" .
+                "\$table_import->database_type( 'dbtype' )";
+        SPOPS::Exception->throw( $m );
+
     }
 
     my $table_sql = $self->transform_table;
@@ -39,16 +44,18 @@ sub run {
 
     my $object_class = $self->object_class;
     unless ( $object_class ) {
-        die "Cannot retrieve a database handle without an object class being\n",
-            "defined. Please set it using \$table_import->object_class( 'My::Class' )\n",
-            "so I know what to use.\n";
+        my $m = "Cannot retrieve a database handle without an object class being\n" . 
+                "defined. Please set it using \$table_import->object_class( 'My::Class' )\n" .
+                "so I know what to use.";
+        SPOPS::Exception->throw( $m );
     }
 
     my $db = $object_class->global_datasource_handle;
     unless ( $db ) {
-        die "No datasource defined for ($object_class) -- please ensure that\n",
-            "when I call \$object_class->global_datasource_handle() I get a\n",
-            "DBI handle back.\n";
+        my $m = "No datasource defined for ($object_class) -- please ensure that\n" .
+                "when I call \$object_class->global_datasource_handle() I get a\n" .
+                "DBI database handle back.\n";
+        SPOPS::Exception->throw( $m );
     }
 
     eval { $db->do( $table_sql ) };
@@ -74,19 +81,18 @@ sub transform_table {
 
     # These are the built-ins
 
-    $transform->auto_increment( \$table_sql );
+    $transform->increment( \$table_sql );
     $transform->increment_type( \$table_sql );
 
     # Run the custom transformations
 
     my $transforms = $self->transforms;
-    if ( ref $transforms eq 'ARRAY' and scalar @{ $transforms } ) {
-        foreach my $transform_sub ( @{ $transforms } ) {
-            next unless ( ref $transform_sub eq 'CODE'  );
-            $transform_sub->( $transform, \$table_sql, $self );
-        }
+    my $transforms_list = ( ref $transforms eq 'ARRAY' )
+                            ? $transforms : [ $transforms ];
+    foreach my $transform_sub ( @{ $transforms_list } ) {
+        next unless ( ref $transform_sub eq 'CODE' );
+        $transform_sub->( $transform, \$table_sql, $self );
     }
-
     return $table_sql;
 }
 
@@ -112,7 +118,7 @@ __END__
 
 =head1 NAME
 
-SPOPS::DBI::Table - Import a DBI table structure
+SPOPS::Import::DBI::Table - Import a DBI table structure
 
 =head1 SYNOPSIS
 
@@ -154,6 +160,27 @@ SPOPS::DBI::Table - Import a DBI table structure
   unique        ( login_name )
  )
 
+ Output:
+
+ CREATE TABLE sys_user (
+
+  user_id       NUMERIC( 10, 0 ) IDENTITY NOT NULL,
+  login_name    varchar(25) not null,
+  password      varchar(30) not null,
+  last_login    datetime null,
+  num_logins    int null,
+  theme_id      NUMERIC( 10, 0 ) default 1,
+  first_name    varchar(50) null,
+  last_name     varchar(50) null,
+  title         varchar(50) null,
+  email         varchar(100) not null,
+  language      char(2) default 'en',
+  notes         text null,
+  removal_date  datetime null,
+  primary key   ( user_id ),
+  unique        ( login_name )
+ )
+
 =head1 DESCRIPTION
 
 This class allows you to transform and import (or simply display) a
@@ -165,6 +192,70 @@ L<SPOPS::Import::DBI::TableTransform|SPOPS::Import::DBI::TableTransform>. The
 second is custom code that you can write.
 
 =head1 METHODS
+
+B<database_type> ($)
+
+Type of database to generate a table for. See
+L<SPOPS::Import::DBI::TableTransform|SPOPS::Import::DBI::TableTransform>
+for the listing and types to use.
+
+B<transforms> (\@ of \&, or \&)
+
+Register with the import object one or more code references that will
+get called to modify a SQL statement. See L<CUSTOM TRANSFORMATIONS>
+below.
+
+B<print_only> (boolean)
+
+If set to true, the final table will be printed to STDOUT rather than
+sent to a database.
+
+=head1 CUSTOM TRANSFORMATIONS
+
+As the example in L<SYNOPSIS> indicates, you can register perl code to
+modify the contents of a table before it is displayed or sent to a
+database. When called the code will get three arguments:
+
+=over 4
+
+=item 1. an object that is a subclass of
+L<SPOPS::Import::DBI::TableTransform|SPOPS::Import::DBI::TableTransform>
+for the database type specified
+
+=item 2. a scalar reference to the SQL statement to be transformed
+
+=item 3. the L<SPOPS::Import::DBI::Table|SPOPS::Import::DBI::Table>
+object being currently used.
+
+=back
+
+Most of the transformation code will be very simple, along the lines
+of:
+
+ sub my_transform {
+    my ( $self, $sql, $importer ) = @_;
+    $$sql =~ s/%%THIS_KEY%%/THAT SQL EXPRESSION/g;
+ }
+
+=head1 BUILT-IN TRANSFORMATIONS
+
+There are two built-in transformations:
+
+B<increment>
+
+Key: %%INCREMENT%%
+
+Replaces the key with an expression to generate a unique ID value with
+every INSERT. Some databases accomplish this with a sequence, others
+with an auto-incrementing value.
+
+B<increment_type>
+
+Key: %%INCREMENT_TYPE%%
+
+Datatype of the increment field specified by %%INCREMENT%%. This is
+necessary when you are creating foreign keys (logical or enforced) and
+need to know the datatype of the ID you are referencing.
 
 =head1 BUGS
 
@@ -178,9 +269,11 @@ Nothing known.
 
 L<SPOPS::Manual::ImportExport|SPOPS::Manual::ImportExport>
 
+L<SPOPS::Import::DBI::TableTransform|SPOPS::Import::DBI::TableTransform>
+
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

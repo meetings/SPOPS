@@ -1,6 +1,6 @@
 package My::Common;
 
-# $Id: Common.pm,v 1.4 2001/10/15 04:25:35 lachoy Exp $
+# $Id: Common.pm,v 1.5 2002/01/08 04:31:53 lachoy Exp $
 
 # Common routines for the My:: classes.
 
@@ -59,7 +59,7 @@ sub global_datasource_handle {
     return $DB if ( $DB );
     $DB = DBI->connect( DBI_DSN, DBI_USER, DBI_PASSWORD,
                         { RaiseError => 1, PrintError => 0, AutoCommit => 1 });
-    unless ( $DB ) { die $DBI::errstr }
+    unless ( $DB ) { SPOPS::Exception->throw( "Cannot connect to DB: $DBI::errstr" ) }
     return $DB;
 }
 

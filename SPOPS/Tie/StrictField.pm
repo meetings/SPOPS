@@ -1,6 +1,6 @@
 package SPOPS::Tie::StrictField;
 
-# $Id: StrictField.pm,v 1.13 2001/10/12 21:00:26 lachoy Exp $
+# $Id: StrictField.pm,v 1.14 2002/01/02 02:37:02 lachoy Exp $
 
 use strict;
 use Carp       qw( carp );
@@ -9,7 +9,7 @@ use SPOPS::Tie qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP
 
 @SPOPS::Tie::StrictField::ISA      = qw( SPOPS::Tie );
 $SPOPS::Tie::StrictField::VERSION  = '1.90';
-$SPOPS::Tie::StrictField::Revision = substr(q$Revision: 1.13 $, 10);
+$SPOPS::Tie::StrictField::Revision = substr(q$Revision: 1.14 $, 10);
 
 *_w    = *SPOPS::_w;
 *DEBUG = *SPOPS::DEBUG;
@@ -145,7 +145,7 @@ L<perltie|perltie>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

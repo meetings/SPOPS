@@ -1,6 +1,6 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 1.19 2001/10/15 00:00:53 lachoy Exp $
+# $Id: Tie.pm,v 1.21 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use vars         qw( $PREFIX_TEMP $PREFIX_INTERNAL );
@@ -13,7 +13,7 @@ require Exporter;
                              IDX_CHECK_FIELDS IDX_LAZY_LOADED
                              $PREFIX_TEMP $PREFIX_INTERNAL );
 $SPOPS::Tie::VERSION   = '1.90';
-$SPOPS::Tie::Revision  = substr(q$Revision: 1.19 $, 10);
+$SPOPS::Tie::Revision  = substr(q$Revision: 1.21 $, 10);
 
 use constant IDX_DATA          => '_dat';
 use constant IDX_CHANGE        => '_chg';
@@ -125,7 +125,7 @@ sub _lazy_load {
     my ( $self, $key ) = @_;
     my $cmp_key = lc $key;
     unless ( ref $self->{ IDX_LAZY_LOAD_SUB() } eq 'CODE' ) {
-        die "Lazy loading activated but no load function specified!\n";
+        SPOPS::Exception->throw( "Lazy loading activated but no load function specified!" );
     }
     DEBUG() && _w( 1, "Trying to lazy load ($key) since the loaded is:",
                       $self->{ IDX_LAZY_LOADED() }->{ $cmp_key } );
@@ -213,7 +213,8 @@ sub STORE {
 
     # We don't know how to handle anything else
 
-    die "I do not know what to do with a value type of ($typeof) with multivalues";
+    SPOPS::Exception->throw( "I do not know what to do with a value type " .
+                             "of ($typeof) with multivalues" );
 }
 
 sub _can_store { return 1 }
@@ -578,7 +579,7 @@ L<perltie|perltie>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

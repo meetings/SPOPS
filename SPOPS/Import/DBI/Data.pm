@@ -1,9 +1,10 @@
 package SPOPS::Import::DBI::Data;
 
-# $Id: Data.pm,v 1.1 2001/12/27 22:10:46 lachoy Exp $
+# $Id: Data.pm,v 1.3 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
+use SPOPS::Exception;
 use SPOPS::SQLInterface;
 
 my @FIELDS = qw( table fields db );
@@ -16,10 +17,13 @@ sub get_fields { return ( $_[0]->SUPER::get_fields(), @FIELDS ) }
 
 sub run {
     my ( $self ) = @_;
-    unless ( $self->db )     { die "Cannot run w/o a database handle available!\n" }
-    unless ( $self->table )  { die "Cannot run w/o table defined!\n" }
-    unless ( $self->fields ) { die "Cannot run w/o fields defined!\n" }
-    unless ( $self->data )   { die "Cannot run w/o data defined\n" }
+    eval {
+        unless ( $self->db )     { die "Cannot run w/o a database handle available!" }
+        unless ( $self->table )  { die "Cannot run w/o table defined!" }
+        unless ( $self->fields ) { die "Cannot run w/o fields defined!" }
+        unless ( $self->data )   { die "Cannot run w/o data defined" }
+    };
+    if ( $@ ) { SPOPS::Exception->throw( $@ ) }
 
     my %insert_args = ( db    => $self->db,
                         table => $self->table,
@@ -29,7 +33,7 @@ sub run {
         $insert_args{value} = $data;
         my $rv = eval { SPOPS::SQLInterface->db_insert( \%insert_args ) };
         if ( $@ ) {
-            push @status, [ undef, $data, "$@ - $SPOPS::Error::system_msg" ];
+            push @status, [ undef, $data, $@ ];
         }
         else {
             push @status, [ 1, $data, undef ];
@@ -45,8 +49,9 @@ sub fields_as_hashref {
     my ( $self ) = @_;
     my $field_list = $self->fields;
     unless ( ref $field_list eq 'ARRAY' and scalar @{ $field_list } ) {
-        die "Before using this method, please set the fields in the ",
-            "importer object using:\n\$importer->fields( \\\@fields\n";
+        SPOPS::Exception->throw(
+                    "Before using this method, please set the fields in the " .
+                    "importer object using:\n\$importer->fields( \\\@fields" );
     }
     my $count = 0;
     return { map { $_ => $count++ } @{ $field_list } };
@@ -142,7 +147,7 @@ Nothing known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

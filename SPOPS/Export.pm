@@ -1,9 +1,10 @@
 package SPOPS::Export;
 
-# $Id: Export.pm,v 1.6 2001/12/31 03:43:05 lachoy Exp $
+# $Id: Export.pm,v 1.8 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor );
+use SPOPS::Exception;
 
 use constant AKEY => '_attrib';
 
@@ -16,9 +17,10 @@ sub new {
     my ( $pkg, $type, $params ) = @_;
     my $class = $CLASSES{ $type };
     unless ( $class ) {
-        die "You must specify a type of export to run -- available ",
-            "types are: ", join( ', ', sort keys %CLASSES ), "\n",
-            "(You specified: [$type])\n";
+        SPOPS::Exception->throw(
+                    "You must specify a type of export to run -- available " .
+                    "types are: ", join( ', ', sort keys %CLASSES ) .
+                    "(You specified: [$type])" );
     }
 
     # Now fill in the fields used by this class from the parameters
@@ -46,13 +48,17 @@ sub set { return $_[0]->{ AKEY() }{ $_[1] } = $_[2] }
 
 sub add_type {
     my ( $class, $export_type, $export_class ) = @_;
-    die "Cannot add export type: no type\n"  unless ( $export_type );
-    die "Cannot add export type: no class\n" unless ( $export_class );
+    eval {
+        unless ( $export_type )  { die "Cannot add export type: no type\n" }
+        unless ( $export_class ) { die "Cannot add export type: no class\n" }
+    };
+    if ( $@ ) { SPOPS::Exception->throw( $@ ) }
 
     eval "require $export_class";
     if ( $@ ) {
-        die "Cannot add export type [$export_type]: class [$export_class]\n",
-            "cannot be required. Error: $@\n";
+        SPOPS::Exception->throw(
+                    "Cannot add export type [$export_type]: class [$export_class]\n",
+                    "cannot be required: [$@]" );
     }
 
     if ( $CLASSES{ $export_type } ) {
@@ -72,8 +78,9 @@ sub run {
     my ( $self ) = @_;
     my $object_class = $self->object_class;
     unless ( $object_class ) {
-        die "Cannot export objects without an object class! Please set using\n",
-            "\$exporter->object_class( \$object_class )\n";
+        SPOPS::Exception->throw(
+                    "Cannot export objects without an object class! Please set",
+                    " using\n\$exporter->object_class( \$object_class )" );
     }
     my @export_fields = $self->_find_export_fields;
     my @output = ();
@@ -312,7 +319,7 @@ L<SPOPS::Manual::ImportExport|SPOPS::Manual::ImportExport>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

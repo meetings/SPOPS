@@ -1,6 +1,6 @@
 package SPOPS::Iterator;
 
-# $Id: Iterator.pm,v 1.12 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Iterator.pm,v 1.14 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use SPOPS  qw( DEBUG _w );
@@ -8,7 +8,7 @@ require Exporter;
 
 @SPOPS::Iterator::ISA       = qw( Exporter );
 $SPOPS::Iterator::VERSION   = '1.90';
-$SPOPS::Iterator::Revision  = substr(q$Revision: 1.12 $, 10);
+$SPOPS::Iterator::Revision  = substr(q$Revision: 1.14 $, 10);
 
 @SPOPS::Iterator::EXPORT_OK   = qw( ITER_IS_DONE ITER_FINISHED );
 
@@ -72,12 +72,10 @@ sub new {
     $self->{_CLASS}         = $params->{class};
     $self->{_SKIP_SECURITY} = $params->{skip_security};
     $self->{_FIELDS}        = $params->{fields};
-    eval { $self->initialize( $params ) };
-    if ( $@ ) {
-        SPOPS::Error->set({ user_msg   => "Cannot create iterator -- initialization failed! ($@)",
-                            system_msg => $@ });
-        die $SPOPS::Error::user_msg;
-    }
+
+    # Let potential errors bubble up from this method
+    $self->initialize( $params );
+
     $self->load_next;
     return $self;
 }
@@ -86,15 +84,15 @@ sub new {
 sub initialize   { 
     my ( $self ) = @_;
     DEBUG() && _w( 1, "Calling initialize() in parent class, which is likely a bad thing. ",
-                      "Implementation (", ref $self, ") refshould override" );
-    return 1; 
+                      "Implementation (", ref $self, ") should override" );
+    return 1;
 }
 
 
 sub fetch_object { 
     my ( $self ) = @_;
     DEBUG() && _w( 1, "Calling fetch_object() in parent class, which is a bad thing. ",
-                      "Implementation (", ref $self, ") refshould override" );
+                      "Implementation (", ref $self, ") should override" );
     return undef;
 }
 
@@ -433,8 +431,9 @@ and gets the iterator ready to rumble. This might be preparing a SQL
 statement and executing it, or opening up a file and positioning the
 seek at the first record: whatever.
 
-There is no return value from this method, but if you C<die> it will
-be caught and a decent error thrown.
+There is no return value from this method. If you encounter an error
+you should throw a L<SPOPS::Exception|SPOPS::Exception> object or
+appropriate subclass.
 
 B<fetch_object()>
 
@@ -519,7 +518,7 @@ iterators. (See: http://www.plover.com/perl/)
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

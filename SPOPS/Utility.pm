@@ -1,12 +1,12 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 1.15 2001/12/03 13:25:57 lachoy Exp $
+# $Id: Utility.pm,v 1.16 2002/01/02 02:37:04 lachoy Exp $
 
 use strict;
 
 @SPOPS::Utility::ISA      = qw();
 $SPOPS::Utility::VERSION  = '1.90';
-$SPOPS::Utility::Revision = substr(q$Revision: 1.15 $, 10);
+$SPOPS::Utility::Revision = substr(q$Revision: 1.16 $, 10);
 
 
 # Return a random code of length $length. If $opt is 'mixed', then the
@@ -254,7 +254,7 @@ can probably think of other applications.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

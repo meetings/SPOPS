@@ -1,11 +1,12 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 1.56 2001/12/15 19:20:54 lachoy Exp $
+# $Id: DBI.pm,v 1.62 2002/01/14 02:54:28 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
 use DBI           ();
 use SPOPS         qw( _wm _w DEBUG );
+use SPOPS::Exception::DBI;
 use SPOPS::Iterator::DBI;
 use SPOPS::Secure qw( :level );
 use SPOPS::SQLInterface;
@@ -13,7 +14,7 @@ use SPOPS::Tie    qw( $PREFIX_INTERNAL );
 
 @SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
 $SPOPS::DBI::VERSION   = '1.90';
-$SPOPS::DBI::Revision  = substr(q$Revision: 1.56 $, 10);
+$SPOPS::DBI::Revision  = substr(q$Revision: 1.62 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -145,14 +146,10 @@ sub id_clause {
 
     my $db = $p->{db} || $item->global_datasource_handle( $p->{connect_key} );
     unless ( $db ) {
-        _w( 0, "Cannot create ID clause because no database handle accessible." );
-        my $msg = 'Cannot create ID clause';
-        SPOPS::Error->set({ user_msg   => $msg,
-                            system_msg => 'No db handle available when id_clause routine entered',
-                            method     => 'id_clause',
-                            type       => 'db' });
-        die $msg;
+        my $error = 'Cannot create ID clause because no database handle accessible.';
+        SPOPS::Exception->throw( $error );
     }
+
     my $id_field  = $item->id_field;
     my $type_info = eval { $item->db_discover_types( $item->base_table,
                                                      { dbi_type_info => $p->{dbi_type_info},
@@ -184,8 +181,11 @@ sub id_clause {
 sub format_select {
     my ( $class, $fields, $conf ) = @_;
     $conf ||= {};
-    unless ( ref $fields eq 'ARRAY' ) {
-        die "Fields passed in for referring to format must be an arrayref: ($fields)";
+    my $typeof = ref $fields;
+    unless ( $typeof eq 'ARRAY' ) {
+        my $error = "Fields passed in for referring to format must be " .
+                    "an arrayref (Type: $typeof)";
+        SPOPS::Exception->throw( $error );
     }
     my @return_fields;
     my $altered = $class->field_alter();
@@ -199,7 +199,6 @@ sub format_select {
 sub fetch {
     my ( $class, $id, $p ) = @_;
     $p->{DEBUG} ||= DEBUG_FETCH;
-    $id ||= 0;
     $p->{DEBUG} && _wm( 2, $p->{DEBUG}, "Trying to fetch an item of $class with ID $id and params ",
                            join " // ",
                                 map { $_ . ' -> ' . ( defined( $p->{$_} ) ? $p->{$_} : '' ) }
@@ -207,7 +206,7 @@ sub fetch {
 
     # No ID, no object
 
-    return undef   unless ( $id and $id !~ /^tmp/ );
+    return undef  unless ( defined( $id ) and $id !~ /^tmp/ );
 
     # Security violations bubble up to caller
 
@@ -248,14 +247,10 @@ sub fetch {
                      db     => $p->{db},
                      return => 'single',
                      DEBUG  => $p->{DEBUG} );
-        my $row = eval { $class->db_select( \%args ); };
-
-        # Keep the SQLInterface error messages in place
-
+        my $row = eval { $class->db_select( \%args ) };
         if ( $@ ) {
             $class->fail_fetch( \%args );
-            _w( 0, "FETCH failed. Error returned: $@" );
-            die $SPOPS::Error::user_msg;
+            die $@;
         }
 
         # If the row isn't found, return nothing; just as if an incorrect
@@ -269,7 +264,7 @@ sub fetch {
         # method (e.g., the optional 'field_alter') is not the same as
         # a parameter of an object -- THAT would be fun to debug...
 
-        $obj = $class->new( { id => $id, skip_default_values => 1, %{ $p } } );
+        $obj = $class->new({ id => $id, skip_default_values => 1, %{ $p } });
         $obj->_fetch_assign_row( $raw_fields, $row, $p );
     }
     return $obj->_fetch_post_process( $p, $level );
@@ -513,18 +508,18 @@ sub get_lazy_load_sub {
 sub perform_lazy_load {
     my ( $class, $data, $field ) = @_;
     DEBUG() && _w( 3, "Performing lazy load for $class -> $field" );
-    die "No object data given -- cannot lazy load!\n"  unless ( ref $data eq 'HASH' );
-    die "No field given -- cannot lazy load!\n"        unless ( $field );
+    unless ( ref $data eq 'HASH' ) {
+        SPOPS::Exception->throw( 'No object data given -- cannot lazy load!' );
+    }
+    unless ( $field ) {
+        SPOPS::Exception->throw( 'No field given -- cannot lazy load!' );
+    }
     my %args = ( from   => [ $class->table_name ],
                  select => [ $field ],
                  where  => $class->id_clause( $data->{ $class->id_field } ),
                  return => 'single',
                  DEBUG  => DEBUG );
-    my $row = eval { $class->db_select( \%args ); };
-    if ( $@ ) {
-        $SPOPS::Error::user_msg = "Error retrieving single field ($field) on lazy load for ($class)";
-        die $SPOPS::Error::user_msg;
-    }
+    my $row = $class->db_select( \%args );
     return $row->[0];
 }
 
@@ -651,23 +646,19 @@ sub _save_insert {
                  return_sth => 1,
                  db         => $db,
                  %{ $p } );
-    my $sth = eval { $self->db_insert( \%args ) };
-
-    # Don't overwrite the values in $SPOPS::Error that
-    # were already set by SPOPS::SQLInterface
-
+    my $sth = $self->db_insert( \%args );
     if ( $@ ) {
-        _w( 0, "Insert failed! Args: ", Dumper( \%args ), "$SPOPS::Error::system_msg" );
+        _w( 0, "Insert failed! Args: ", Dumper( \%args ), $@ );
         $self->fail_save( \%args );
-        $SPOPS::Error::user_msg = 'Error saving record to database';
-        die $SPOPS::Error::user_msg;
+        die $@;
     }
 
     # Ability to get the ID from the statement just inserted
     # via an overridden subclass method; if something is
     # returned, set the ID in the object.
 
-    my $post_id = $self->post_fetch_id( { %{ $p }, db => $db, statement => $sth } );
+    my $post_id = $self->post_fetch_id( { %{ $p }, db => $db,
+                                          statement => $sth } );
     if ( $post_id ) {	
         $self->id( $post_id );
         $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "ID fetched after insert: $post_id" );
@@ -697,9 +688,7 @@ sub _save_insert {
             # processing... I'm ambivalent about this.
 
             if ( $@ ) {
-                $SPOPS::Error::user_msg = 'Cannot re-fetch row. Continuing with normal process';
-                _w( 0, $SPOPS::Error::user_msg, "(Simple: $@)",
-                    "(Enhanced: $SPOPS::Error::system_msg)" );
+                _w( 0, "Cannot refetch row: $@" );
             }
             else {
                 for ( my $i = 0; $i < scalar @{ $fill_in_fields }; $i++ ) {
@@ -713,9 +702,12 @@ sub _save_insert {
     # Now create the initial security for this object unless
     # we have requested to skip it
 
+    # TODO: Check this -- should skip_security only mean that we don't
+    # want to check security for saving? Should it mean we skip it
+    # ENTIRELY, as if it's not there? (I suspect not...)
+
     unless ( $p->{skip_security} ) {
-        eval { $self->create_initial_security({ object_id => scalar $self->id }) };
-        _w( 0, "Error creating initial security: $@" ) if ( $@ );
+        $self->create_initial_security({ object_id => scalar $self->id });
     }
     return 1;
 }
@@ -742,10 +734,9 @@ sub _save_update {
                  %{ $p } );
     my $rv =  eval { $self->db_update( \%args ); };
     if ( $@ ) {
-        _w( 0, "Update failed! Args: ", Dumper( \%args ), "$SPOPS::Error::system_msg" );
+        _w( 0, "Update failed! Args: ", Dumper( \%args ), $@ );
         $self->fail_save( \%args );
-        $SPOPS::Error::user_msg = 'Error saving record to database';
-        die $SPOPS::Error::user_msg;
+        die $@;
     }
     return 1;
 }
@@ -783,14 +774,11 @@ sub remove {
                             where => $where,
                             value => $p->{value},
                             db    => $p->{db},
-                            DEBUG => $p->{DEBUG}  }) };
-
-    # Throw the error if it occurs
+                            DEBUG => $p->{DEBUG} }) };
 
     if ( $@ ) {
         $self->fail_remove;
-        $SPOPS::Error::user_msg = 'Error removing record from database';
-        die $SPOPS::Error::user_msg;
+        die $@
     }
 
     # Otherwise...
@@ -924,7 +912,7 @@ instance, your database handle class could look like:
    unless ( ref $DB ) {
      $DB = DBI->connect( DBI_DSN, DBI_USER, DBI_PASS,
                          { RaiseError => 1, LongReadLen => 65536, LongTruncOk => 0 } )
-               || die "Cannot connect! $DBI::errstr";
+               || SPOPS::Exception->throw( "Cannot connect! $DBI::errstr" );
    }
    return $DB;
  }
@@ -1033,13 +1021,15 @@ B<fetch( $id, \%params )>
 
 Fetches the information for an object of type class from the data
 store, creates an object with the data and returns the object. Any
-failures trigger a die with pertinent information as described in
-L<ERROR HANDLING>.
+failures result in either an L<SPOPS::Exception|SPOPS::Exception> or
+an L<SPOPS::Exception::DBI|SPOPS::Exception::DBI> object being thrown,
+depending on the source of the error.
 
 If you have security turned on for the object class, the system will
 first check if the currently-configured user is allowed to fetch the
 object. If the user has less that SEC_LEVEL_READ access, the fetch is
-denied and a die() triggered.
+denied and a L<SPOPS::Exception::Security|SPOPS::Exception::Security>
+object thrown.
 
 Note that if the fetch is successful we store the access level of this
 object within the object itself. Check the temporary property
@@ -1216,7 +1206,7 @@ B<save( [ \%params ] )>
 
 Object method that saves this object to the data store.  Returns the
 new ID of the object if it is an add; returns the object ID if it is
-an update. As with other methods, any failures trigger a die().
+an update. As with other methods, any failures trigger an exception
 
 Example:
 
@@ -1225,7 +1215,7 @@ Example:
  $obj->{param2} = $value2;
  my $new_id = eval { $obj->save };
  if ( $@ ) {
-   print "Error inserting object: $@->{error}\n";
+   print "Error inserting object: $@\n";
  }
  else {
    print "New object created with ID: $new_id\n";
@@ -1280,11 +1270,11 @@ remove the object from the cache. The object will not actually be
 destroyed until it goes out of scope, so do not count on its DESTROY
 method being called exactly when this happens.
 
-Returns 1 on success, die() with hashref on failure. Example:
+Returns 1 on success, throws exception on failure. Example:
 
  eval { $obj->remove };
  if ( $@ ) {
-   print "Object not removed. Error: $@->{error}";
+   print "Object not removed. Error: $@";
  }
  else {
    print "Object removed properly.";
@@ -1312,13 +1302,6 @@ method C<global_datasource_handle()> (see L<DATABASE HANDLE> above)
 for your object -- otherwise the C<perform_lazy_load()> method will
 not be able to get it.
 
-=head1 ERROR HANDLING
-
-Like all SPOPS classes, any errors encountered will be tossed up to
-the application using a die() and a simple string as a message. We
-also set more detailed information in a number of L<SPOPS::Error|SPOPS::Error>
-package variables; see that module for more details.
-
 =head1 TO DO
 
 B<Consistent Field Handling>
@@ -1335,7 +1318,7 @@ None known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

@@ -1,13 +1,13 @@
 package SPOPS::Key::DBI::Pool;
 
-# $Id: Pool.pm,v 1.12 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Pool.pm,v 1.14 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
 @SPOPS::Key::DBI::Pool::ISA      = ();
 $SPOPS::Key::DBI::Pool::VERSION  = '1.90';
-$SPOPS::Key::DBI::Pool::Revision = substr(q$Revision: 1.12 $, 10);
+$SPOPS::Key::DBI::Pool::Revision = substr(q$Revision: 1.14 $, 10);
 
 
 # Ensure only PRE_fetch_id works.
@@ -19,13 +19,8 @@ sub pre_fetch_id  {
 
     my $pool_sql = eval { $class->CONFIG->{pool_sql} };
     unless ( $pool_sql ) {
-        my $msg   = 'Cannot retrieve ID to insert record';
-        SPOPS::Error->set({ 
-             user_msg   => $msg,
-             type       => 'db',
-             system_msg => "No SQL specified in the configuration of ($class) using the key 'pool_sql'",
-             method     => 'pre_fetch_id' });
-        die $msg;
+        SPOPS::Exception->throw( "Cannot retrieve pool value; no SQL specified " .
+                                 "in key 'pool_sql'" );
     }
     DEBUG() && _w( 1, "Getting ID with SQL:\n$pool_sql" );
 
@@ -36,14 +31,8 @@ sub pre_fetch_id  {
     if ( $values ) {
         my $value_type = ref $values;
         if ( $value_type ne 'ARRAY' and $value_type ) {
-            my $msg   = 'Cannot retrieve ID to insert record';
-            SPOPS::Error->set({ 
-                 user_msg   => $msg,
-                 type       => 'db',
-                 system_msg => "Configuration key 'pool_value' in ($class)" .
-                               "must be a scalar or arrayref.",
-                 method     => 'pre_fetch_id' });
-            die $msg;
+            SPOPS::Exception->throw( "Cannot retrieve pool value; key 'pool_value' " .
+                                     "must be scalar or arrayref" );
         }
 
         my $list_values = ( $value_type eq 'ARRAY' ) ? $values : [ $values ];
@@ -56,11 +45,7 @@ sub pre_fetch_id  {
     }
 
     $params->{return} = 'single';
-    my $row = eval { SPOPS::SQLInterface->db_select( $params ) };
-    if ( $@ ) {
-        $SPOPS::Error::user_msg = 'Cannot retrieve ID to insert record';
-        die $SPOPS::Error::user_msg;
-    }
+    my $row = SPOPS::SQLInterface->db_select( $params );
     DEBUG() && _w( 1, "Returned <<$row->[0]>> for ID" );
     return $row->[0];
 }
@@ -129,7 +114,7 @@ It might be a good idea to subclass this with a pure Perl solution.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

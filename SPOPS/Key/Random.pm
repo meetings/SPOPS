@@ -1,6 +1,6 @@
 package SPOPS::Key::Random;
 
-# $Id: Random.pm,v 1.13 2001/12/03 13:26:18 lachoy Exp $
+# $Id: Random.pm,v 1.14 2002/01/02 02:37:02 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
@@ -8,7 +8,7 @@ use SPOPS::Utility;
 
 @SPOPS::Key::Random::ISA      = ();
 $SPOPS::Key::Random::VERSION  = '1.90';
-$SPOPS::Key::Random::Revision = substr(q$Revision: 1.13 $, 10);
+$SPOPS::Key::Random::Revision = substr(q$Revision: 1.14 $, 10);
 
 use constant DEFAULT_ID_WIDTH => 8;
 
@@ -78,7 +78,7 @@ Nothing known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

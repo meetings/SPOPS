@@ -1,14 +1,21 @@
 # -*-perl-*-
 
-# $Id: 03_uuid_key.t,v 1.1 2001/12/03 13:30:43 lachoy Exp $
+# $Id: 03_uuid_key.t,v 1.2 2001/12/31 16:10:36 lachoy Exp $
 
 use strict;
 
 {
-    eval "require Data::UUID";
-    if ( $@ ) {
+
+    # Get the configuration info (in this case, just whether we're
+    # supposed to run or not)
+
+    do "t/config.pl";
+    my $config = _read_config_file();
+    $config->{UUID_test} ||= 'n';
+    if ( $config->{UUID_test} ne 'y' ) {
         print "1..0\n";
-        print "Data::UUID not installed; skipping test on this platform\n";
+        print "Skipping test on this platform\n";
+        exit;
     }
 
     require Test::More;

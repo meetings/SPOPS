@@ -1,6 +1,6 @@
 package My::Security;
 
-# $Id: Security.pm,v 1.7 2001/10/15 04:25:35 lachoy Exp $
+# $Id: Security.pm,v 1.9 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -8,7 +8,7 @@ use SPOPS         qw( DEBUG );
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::Security::VERSION = sprintf("%d.%02d", q$Revision: 1.7 $ =~ /(\d+)\.(\d+)/);
+$My::Security::VERSION = sprintf("%d.%02d", q$Revision: 1.9 $ =~ /(\d+)\.(\d+)/);
 
 use constant DEBUG => 0;
 
@@ -58,13 +58,8 @@ sub fetch_by_object {
     my $object_id = $p->{oid} || $p->{object_id};
     unless ( $item or ( $p->{class} and defined $object_id ) ) {
         my $msg = 'Cannot check security';
-        my $system_msg = 'No item passed into method to check!';
         warn " -- Cannot retrieve security since no item passed in to check!\n";
-        SPOPS::Error->set({ user_msg   => $msg,
-                            type       => 'security',
-                            system_msg => $system_msg,
-                            method     => 'fetch_by_object' });
-        die $msg;
+        SPOPS::Exception->throw( 'No item defined to check security for' );
     }
 
     my ( $obj_class, $oid ) = $class->_get_class_and_oid({
@@ -90,12 +85,8 @@ sub fetch_by_object {
 
     # Fetch the objects
 
-     my $sec_list = eval { $class->fetch_group({ where => $where,
-                                                value => \@value }) };
-    if ( $@ ) {
-        $SPOPS::Error::user_msg = 'Cannot retrieve security settings';
-        die $SPOPS::Error::user_msg;
-    }
+     my $sec_list = $class->fetch_group({ where => $where,
+                                          value => \@value });
 
     # Setup a hashref where w/u => security_level and g points to a
     # hashref where the key is the group_id value is the security level.
@@ -153,7 +144,7 @@ sub _build_group_sql {
             DEBUG && warn scalar @{ $group_list }, " groups found passed in\n";
             $where .= ' AND ( ';
             foreach my $group ( @{ $group_list } ) {
-                next if ( ! $group );
+                next unless ( $group );
                 $where .= ' scope_id = ? OR ';
                 my $gid = ( ref $group ) ? $group->id : $group;
                 push @value, $gid;
@@ -214,23 +205,13 @@ sub fetch_match {
     # if there's an error, so we just override the user_msg with the
     # canned error message below.
 
-    my $row = eval { $class->db_select({ select => [ $class->id_field ],
-                                         from   => [ $class->table_name ],
-                                         where  => $where,
-                                         value  => \@values,
-                                         return => 'single' }) };
-    my $error_msg = 'Failure when retrieving existing security settings';
-    if ( $@ ) {
-        $SPOPS::Error::user_msg = $error_msg;
-        die $SPOPS::Error::user_msg;
-    }
+    my $row = $class->db_select({ select => [ $class->id_field ],
+                                  from   => [ $class->table_name ],
+                                  where  => $where,
+                                  value  => \@values,
+                                  return => 'single' });
     return undef unless ( $row->[0] );
-    my $obj =  eval { $class->fetch( $row->[0] ) };
-    if ( $@ ) {
-        $SPOPS::Error::user_msg = $error_msg;
-        die $SPOPS::Error::user_msg;
-    }
-    return $obj;
+    return $class->fetch( $row->[0] );
 }
 
 
@@ -381,7 +362,7 @@ None known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

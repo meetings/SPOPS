@@ -1,11 +1,11 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 1.60 2001/12/09 16:12:33 lachoy Exp $
+# $Id: SPOPS.pm,v 1.63 2002/01/10 13:41:10 lachoy Exp $
 
 use strict;
 use Data::Dumper    qw( Dumper );
 require Exporter;
-use SPOPS::Error;
+use SPOPS::Exception;
 use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 use SPOPS::Utility  qw();
@@ -14,8 +14,8 @@ use Storable        qw( store retrieve nstore );
 $SPOPS::AUTOLOAD  = '';
 @SPOPS::ISA       = qw( Exporter Storable );
 @SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
-$SPOPS::VERSION   = '0.55';
-$SPOPS::Revision  = substr(q$Revision: 1.60 $, 10);
+$SPOPS::VERSION   = '0.56';
+$SPOPS::Revision  = substr(q$Revision: 1.63 $, 10);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -702,10 +702,8 @@ SPOPS -- Simple Perl Object Persistence with Security
 
  eval { $object->save };
  if ( $@ ) {
-   my $err_info = SPOPS::Error->get;
-   die "Error trying to save object:\n",
-       "$err_info->{user_msg}\n",
-       "$err_info->{system_msg}\n";
+   print "Error trying to save object: $@\n",
+         "Stack trace: ", $@->trace->as_string, "\n";
  }
 
 =head1 OVERVIEW
@@ -803,8 +801,8 @@ When we say B<subclass>, think of B<SPOPS::DBI> for example
 
 =back
 
-Also see the L<ERROR HANDLING> section below on how we use die() to
-indicate an error and where to get more detailed infromation.
+Also see the L<ERROR HANDLING> section below on how we use exceptions
+to indicate an error and where to get more detailed infromation.
 
 B<new( [ \%initialize_data ] )>
 
@@ -1035,7 +1033,8 @@ Returns on success: an SPOPS object.
 
 Returns on failure: undef; if the action failed (incorrect fieldname
 in the object specification, database not online, database user cannot
-select, etc.) a die() will be used to raise an error.
+select, etc.) a L<SPOPS::Exception|SPOPS::Exception> object (or one of
+its subclasses) will be thrown to raise an error.
 
 The \%params parameter can contain a number of items -- all are optional.
 
@@ -1132,13 +1131,14 @@ application should not care whether the object is new or pre-owned.
 
 Returns on success: the object itself.
 
-Returns on failure: undef, and a die() to indicate that the action failed.
+Returns on failure: undef, and a L<SPOPS::Exception|SPOPS::Exception>
+object (or one of its subclasses) will be thrown to raise an error.
 
 Example:
 
  eval { $obj->save };
  if ( $@ ) {
-   warn "Save of ", ref $obj, " did not work properly!";
+   warn "Save of ", ref $obj, " did not work properly -- $@";
  }
 
 Since the method returns the object, you can also do chained method
@@ -1532,7 +1532,7 @@ None known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

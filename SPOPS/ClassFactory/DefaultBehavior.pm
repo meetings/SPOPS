@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 1.12 2001/10/15 22:00:04 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 1.14 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
@@ -8,7 +8,7 @@ use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
 @SPOPS::ClassFactory::DefaultBehavior::ISA       = ();
 $SPOPS::ClassFactory::DefaultBehavior::VERSION   = '1.90';
-$SPOPS::ClassFactory::DefaultBehavior::Revision  = substr(q$Revision: 1.12 $, 10);
+$SPOPS::ClassFactory::DefaultBehavior::Revision  = substr(q$Revision: 1.14 $, 10);
 
 my @PARSE_INTO_HASH = qw( field no_insert no_update skip_undef multivalue );
 
@@ -53,9 +53,10 @@ my $ID_TEMPLATE = <<'IDTMPL';
 
        sub %%CLASS%%::id {
           my ( $self, $new_id ) = @_;
-          my $id_field = $self->id_field
-                           || die "Cannot find ID for object since ",
-                                  "no ID field specified for class ", ref $self, "\n";
+          my $id_field = $self->id_field ||
+                             SPOPS::Exception->throw(
+                                "Cannot find ID for object since no ID field " .
+                                "specified for class [". ref( $self ) . ']' );
           return $self->{ $id_field } unless ( $new_id );
           return $self->{ $id_field } = $new_id;
        }
@@ -383,7 +384,7 @@ L<SPOPS::ClassFactory|SPOPS::ClassFactory>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

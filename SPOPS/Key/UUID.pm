@@ -1,13 +1,13 @@
 package SPOPS::Key::UUID;
 
-# $Id: UUID.pm,v 1.1 2001/12/03 13:29:07 lachoy Exp $
+# $Id: UUID.pm,v 1.2 2002/01/02 02:37:02 lachoy Exp $
 
 use strict;
 use SPOPS      qw( _w DEBUG );
 
 @SPOPS::Key::UUID::ISA      = ();
 $SPOPS::Key::UUID::VERSION  = '0.10';
-$SPOPS::Key::UUID::Revision = substr(q$Revision: 1.1 $, 10);
+$SPOPS::Key::UUID::Revision = substr(q$Revision: 1.2 $, 10);
 
 BEGIN { eval { require Data::UUID } }
 
@@ -60,7 +60,7 @@ Nothing known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

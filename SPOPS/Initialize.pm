@@ -1,13 +1,13 @@
 package SPOPS::Initialize;
 
-# $Id: Initialize.pm,v 1.13 2001/10/12 21:00:26 lachoy Exp $
+# $Id: Initialize.pm,v 1.15 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use SPOPS        qw( _w DEBUG );
 use SPOPS::ClassFactory;
 
 $SPOPS::Initialize::VERSION   = '1.90';
-$SPOPS::Initialize::Revision  = substr(q$Revision: 1.13 $, 10);
+$SPOPS::Initialize::Revision  = substr(q$Revision: 1.15 $, 10);
 
 # Main interface -- take the information read in from 'read_config()'
 # and create SPOPS classes, then initialize them
@@ -49,7 +49,8 @@ sub process {
     foreach my $spops_class ( @{ $class_created_ok } ) {
         eval { $spops_class->class_initialize() };
         if ( $@ ) {
-            die "Running '$spops_class->class_initialize()' failed: $@";
+            SPOPS::Exception->throw( "Failed to run class_initialize() " .
+                                     "on [$spops_class]: $@" );
         }
         push @full_success, $spops_class;
     }
@@ -81,7 +82,7 @@ sub read_config {
         my $dir = $p->{directory};
         DEBUG() && _w( 1, "Reading configuration files from ($dir) with pattern ($p->{pattern})" );
         opendir( CONF, $dir )
-               || die "Cannot open directory ($dir): $!";
+               || SPOPS::Exception->throw( "Cannot read configuration files from directory [$dir]: $!" );
         my @directory_files = readdir( CONF );
         close( CONF );
         foreach my $file ( @directory_files ) {
@@ -128,8 +129,7 @@ sub read_perl_file {
     close( INFO );
     my $data = eval $info;
     if ( $@ ) {
-        die "Cannot read data structure! from $filename\n",
-            "Error: $@";
+        SPOPS::Exception->throw( "Cannot read data structure from [$filename]: $@" );
     }
     return $data;
 }
@@ -306,7 +306,7 @@ L<SPOPS::ClassFactory|SPOPS::ClassFactory>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 Chris Winters. All rights reserved.
+Copyright (c) 2001-2002 Chris Winters. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

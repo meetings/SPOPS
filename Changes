@@ -1,5 +1,96 @@
 Revision history for Perl extension SPOPS.
 
+0.56  Tue Jan 15 07:17:02 EST 2002
+
+Overall:
+
+   * Overhauled the error reporting scheme to use exceptions instead
+     of package variables; as a result, modified all files that used
+     'die' to indicate error to throw an exception object
+     instead. (Backwards compatibility is maintained by echoing the
+     error information to SPOPS::Error as before.)
+
+   * Added examples for specifying DBI/LDAP connection information in
+     an object configuration, useful for one-off scripts
+
+Individual:
+
+   * Makefile.PL:
+
+     - Check to see whether Data::UUID is installed. (Thanks to brian
+     moseley <bcm@maz.org> for pointing out the test failure.)
+
+     - Add Devel::StackTrace as a dependency, as well as the
+     Class::Accessor dependencies
+
+   * eg/datasource_configure.pl:
+
+     - Added example of specifying DBI configuration in object
+     configuration
+
+   * eg/datasource_configure_ldap.pl:
+
+     - Added example of specifying LDAP configuration in object
+     configuration
+
+   * eg/My/DBI/DatasourceConfigure.pm:
+
+     - Added sample behavior to create a 'global_datasource_handle()'
+     for a class to return a DBI handle based on the configuration
+     information in the object.
+
+   * eg/My/LDAP/DatasourceConfigure.pm:
+
+     - Added sample behavior to create a 'global_datasource_handle()'
+     for a class to return a LDAP handle based on the configuration
+     information in the object.
+
+   * SPOPS/DBI.pm:
+
+     - Fixed fetch() to deal with: fetch( 0 ) properly (use:
+     'if defined $id' rather than 'if $id') and remove the default set
+     of $id to 0 as well (SF Bug: #500514)
+
+   * SPOPS/Exception.pm:
+
+    - Added base class for exceptions in SPOPS (to replace
+    SPOPS::Error with backwards compatibility)
+
+   * SPOPS/Exception/DBI.pm:
+
+    - Create exception class for DBI-specific errors
+
+   * SPOPS/Exception/LDAP.pm:
+
+    - Create exception class for LDAP-specific errors
+
+   * SPOPS/Exception/Security.pm:
+
+    - Create exception class for security errors
+
+   * SPOPS/Iterator/DBI.pm:
+
+    - Ensure we can handle ID field intialization properly, add
+    helpful debugging messages and get rid of redundant offset check
+
+   * SPOPS/Iterator/LDAP.pm:
+
+    - Add helpful debugging messages and get rid of redundant offset
+    check
+
+   * SPOPS/Manual/Exceptions.pod:
+
+    - Add manual section on exceptions.
+
+   * t/03_uuid_key.t:
+
+     - Check the build configuration to see if the test should run
+
+   * t/05_exception.t:
+
+     - Added tests for exceptions
+
+
 0.55  Mon Dec 31 00:49:15 EST 2001
 
 Overall:

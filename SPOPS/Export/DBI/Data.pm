@@ -1,6 +1,6 @@
 package SPOPS::Export::DBI::Data;
 
-# $Id: Data.pm,v 1.1 2001/12/27 22:38:38 lachoy Exp $
+# $Id: Data.pm,v 1.2 2002/01/02 02:37:02 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Export::Object );
@@ -49,7 +49,7 @@ Nothing known.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

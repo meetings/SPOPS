@@ -1,6 +1,6 @@
 package SPOPS::Iterator::DBI;
 
-# $Id: DBI.pm,v 1.9 2001/10/22 11:51:30 lachoy Exp $
+# $Id: DBI.pm,v 1.11 2002/01/14 02:52:18 lachoy Exp $
 
 use strict;
 use SPOPS           qw( _w DEBUG );
@@ -9,7 +9,7 @@ use SPOPS::Secure   qw( :level );
 
 @SPOPS::Iterator::DBI::ISA      = qw( SPOPS::Iterator );
 $SPOPS::Iterator::DBI::VERSION  = '1.90';
-$SPOPS::Iterator::DBI::Revision = substr(q$Revision: 1.9 $, 10);
+$SPOPS::Iterator::DBI::Revision = substr(q$Revision: 1.11 $, 10);
 
 # Keys with _DBI at the beginning are specific to this implementation;
 # keys without _DBI at the begining are used in all iterators.
@@ -17,9 +17,13 @@ $SPOPS::Iterator::DBI::Revision = substr(q$Revision: 1.9 $, 10);
 sub initialize {
     my ( $self, $p ) = @_;
     $self->{_DBI_STH}       = $p->{sth};
+
     $self->{_DBI_OFFSET}    = $p->{offset};
     $self->{_DBI_MAX}       = $p->{max};
+
+    $self->{_DBI_DB}        = $p->{db};
     $self->{_DBI_ID_LIST}   = $p->{id_list};
+
     $self->{_DBI_COUNT}     = 1;
     $self->{_DBI_RAW_COUNT} = 0;
 }
@@ -34,57 +38,57 @@ sub fetch_object {
     # First either grab the row with the ID if we've already got it or
     # kick the DBI statement handle for the next row
 
-    my ( $obj );
+    my ( $object );
     my $object_class = $self->{_CLASS};
     if ( $self->{_DBI_ID_LIST} ) {
         my $id = $self->{_DBI_ID_LIST}->[ $self->{_DBI_RAW_COUNT} ];
         DEBUG() && _w( 1, "Trying to retrieve idx ($self->{_DBI_RAW_COUNT}) with ",
                           "ID ($id) from class ($self->{_CLASS}" );
-        $obj = eval { $object_class->fetch( $id,
-                                            { skip_security => $self->{_SKIP_SECURITY} } ) };
+        $object = eval { $object_class->fetch( $id,
+                                               { skip_security => $self->{_SKIP_SECURITY},
+                                                 db            => $self->{_DBI_DB} } ) };
 
         # If the object doesn't exist then it's likely a security issue,
         # in which case we bump up our internal count (but not the
         # position!) and try again.
 
-        if ( $@ ) {
+        if ( $@ and $@->isa( 'SPOPS::Exception::Security' ) ) {
+            DEBUG && _w( 1, "Skip to next item, caught security exception: $@" );
             $self->{_DBI_RAW_COUNT}++;
             return $self->fetch_object;
         }
+        elsif ( $@ ) {
+            DEBUG && _w( 1, "Caught other type of exception: $@" );
+        }
 
-        unless( $obj ) {
+        unless( $object ) {
+            DEBUG && _w( 1, "Iterator is depleted (no object fetched), notify parent" );
             return ITER_IS_DONE;
         }
-
-        if ( $self->{_DBI_OFFSET} and 
-             ( $self->{_DBI_COUNT} < $self->{_DBI_OFFSET} ) ) {
-            $self->{_DBI_COUNT}++;
-            $self->{_DBI_RAW_COUNT}++;
-            return $self->fetch_object;
-        }
-
     }
     else {
         my $row = $self->{_DBI_STH}->fetchrow_arrayref;
         unless ( $row ) {
+            DEBUG && _w( 1, "Iterator is depleted (no row returned), notify parent" );
             return ITER_IS_DONE;
         }
 
         # It's ok to create the object now
 
-        $obj = $object_class->new({ skip_default_values => 1 });
-        $obj->_fetch_assign_row( $self->{_FIELDS}, $row );
+        $object = $object_class->new({ skip_default_values => 1 });
+        $object->_fetch_assign_row( $self->{_FIELDS}, $row );
 
         # Check security on the row unless overridden. If the security
         # check fails that's ok, just skip the row and move on -- DO
         # increase our internal index but DON'T increase the position.
 
-        $obj->{tmp_security_level} = SEC_LEVEL_WRITE;
+        $object->{tmp_security_level} = SEC_LEVEL_WRITE;
         unless ( $self->{_SKIP_SECURITY} ) {
-            $obj->{tmp_security_level} = eval { $obj->check_action_security({
-                                                   required => SEC_LEVEL_READ }) };
+            $object->{tmp_security_level} =
+                         eval { $object->check_action_security({
+                                             required => SEC_LEVEL_READ }) };
             if ( $@ ) {
-                DEBUG() && _w( 1, "Security check for ($self->{_CLASS}) failed." );
+                DEBUG() && _w( 1, "Security check for ($self->{_CLASS}) failed: $@" );
                 $self->{_DBI_RAW_COUNT}++;
                 return $self->fetch_object;
             }
@@ -92,7 +96,10 @@ sub fetch_object {
 
         # Now call the post_fetch callback; if it fails, fetch another row
 
-        unless ( $obj->_fetch_post_process( {}, $obj->{tmp_security_level} ) ) {
+        my $post_ok = $object->_fetch_post_process(
+                                   {}, $object->{tmp_security_level} );
+        unless ( $post_ok ) {
+            DEBUG && _w( 1, "Post process for object failed; get next" );
             $self->{_DBI_RAW_COUNT}++;
             return $self->fetch_object;
         }
@@ -110,6 +117,7 @@ sub fetch_object {
 
     if ( $self->{_DBI_OFFSET} and 
          ( $self->{_DBI_COUNT} < $self->{_DBI_OFFSET} ) ) {
+        DEBUG && _w( 1, "Not reached the offset yet, get next object" );
         $self->{_DBI_COUNT}++;
         $self->{_DBI_RAW_COUNT}++;
         return $self->fetch_object;
@@ -119,6 +127,7 @@ sub fetch_object {
 
     if ( $self->{_DBI_MAX} and
          ( $self->{_DBI_COUNT} > $self->{_DBI_MAX} ) ) {
+        DEBUG && _w( 1, "Fetched past the MAX number of objects, done" );
         return ITER_IS_DONE;
     }
 
@@ -129,7 +138,7 @@ sub fetch_object {
     $self->{_DBI_COUNT}++;
     $self->{_DBI_RAW_COUNT}++;
 
-    return ( $obj, $self->{_DBI_COUNT} );
+    return ( $object, $self->{_DBI_COUNT} );
 }
 
 
@@ -186,7 +195,7 @@ L<SPOPS::DBI|SPOPS::DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.

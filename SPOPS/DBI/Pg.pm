@@ -1,6 +1,6 @@
 package SPOPS::DBI::Pg;
 
-# $Id: Pg.pm,v 1.13 2001/12/26 16:50:44 lachoy Exp $
+# $Id: Pg.pm,v 1.15 2002/01/08 04:31:53 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
@@ -8,13 +8,15 @@ use SPOPS::Key::DBI::Sequence;
 
 @SPOPS::DBI::Pg::ISA      = ();
 $SPOPS::DBI::Pg::VERSION  = '1.90';
-$SPOPS::DBI::Pg::Revision = substr(q$Revision: 1.13 $, 10);
+$SPOPS::DBI::Pg::Revision = substr(q$Revision: 1.15 $, 10);
 
 
 sub sql_quote {
     my ( $class, $value, $type, $db ) = @_;
     $db ||= $class->global_db_handle;
-    die "No database handle could be found!" unless ( ref $db );
+    unless ( ref $db ) {
+        SPOPS::Exception->throw( "No database handle could be found!" );
+    }
     return $db->quote( $value, $type );
 }
 
@@ -170,7 +172,7 @@ L<DBI|DBI>
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001 intes.net, inc.. All rights reserved.
+Copyright (c) 2001-2002 intes.net, inc.. All rights reserved.
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
