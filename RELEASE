@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.74  Sun Jan  5 18:38:12 EST 2003
+
+ * Small bugfixes
+
+
 0.73  Thu Jan  2 01:48:26 EST 2003
 
   * Small bigfixes, lots of POD fixes
@@ -205,4 +210,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 3.7 2002/12/20 13:28:36 lachoy Exp $
+$Id: RELEASE,v 3.9 2003/01/06 00:13:08 lachoy Exp $

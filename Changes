@@ -1,5 +1,33 @@
 Revision history for Perl extension SPOPS.
 
+0.74  Sun Jan  5 18:38:12 EST 2003
+
+Individual:
+
+   * SPOPS/DBI.pm:
+
+     - Reverse change from 0.73 on field_update(): it now returns true
+     if rows were updated, false if not.
+
+   * SPOPS/SQLInterface.pm:
+
+     - Added docs to db_discover_info(), including example
+
+   * SPOPS/DBI/TypeInfo.pm:
+
+     - Added 'as_hash()' method to represent the fields and types as a
+     nonblessed hash.
+
+   * t/30_dbi.t:
+
+     - Updated field_update tests to deal with true/false values
+     rather than the number of rows returned.
+
+   * t/35_dbi_type_info.t:
+
+     - Add tests to ensure new 'as_hash()' method works
+
+
 0.73  Thu Jan  2 01:48:26 EST 2003
 
 Overall:

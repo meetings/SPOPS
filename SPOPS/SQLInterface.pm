@@ -1,6 +1,6 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 3.3 2003/01/02 06:00:24 lachoy Exp $
+# $Id: SQLInterface.pm,v 3.4 2003/01/03 05:11:19 lachoy Exp $
 
 use strict;
 use Data::Dumper          qw( Dumper );
@@ -10,7 +10,7 @@ use SPOPS::DBI::TypeInfo;
 use SPOPS::Exception      qw( spops_error );
 use SPOPS::Exception::DBI qw( spops_dbi_error );
 
-$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::SQLInterface::VERSION = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 my ( $DEBUG_SELECT, $DEBUG_INSERT, $DEBUG_UPDATE, $DEBUG_DELETE );
 sub DEBUG_SELECT     { return $DEBUG_SELECT }
@@ -888,8 +888,11 @@ for the different field types as we need them.
 
 If a DBD driver does not support the C<{TYPE}> attribute of the DBI
 statement handle, you have to specify some simple types in your class
-configuration or provide them somehow. This is still slightly tied to
-SPOPS implementations in OpenInteract, but only slightly.
+configuration or provide them either in the call to
+C<db_discover_types()> or in the object configuration using the key
+'dbi_type_info' as listed in the parameters below. (See
+L<SPOPS::DBI::TypeInfo|SPOPS::DBI::TypeInfo> for an enumeration of the
+the values to use.)
 
 Return a L<SPOPS::DBI::TypeInfo|SPOPS::DBI::TypeInfo> object for
 C<$table>.
@@ -926,6 +929,13 @@ will be working with. See C<Fake Types> in
 L<SPOPS::DBI::TypeInfo|SPOPS::DBI::TypeInfo> for the types you can use.
 
 =back
+
+Example:
+
+  my $type_info = $class->db_discover_types( $class->table_name );
+  foreach my $field ( $type_info->get_fields ) {
+      print "$field is DBI type ", $type_info->get_type( $field ), "\n";
+  }
 
 =head2 Debugging Methods
 

@@ -1,6 +1,6 @@
 package SPOPS::DBI::TypeInfo;
 
-# $Id: TypeInfo.pm,v 1.3 2003/01/02 06:00:23 lachoy Exp $
+# $Id: TypeInfo.pm,v 1.4 2003/01/03 05:12:50 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor );
@@ -153,6 +153,16 @@ sub fetch_types {
     }
     $sth->finish;
     return $self;
+}
+
+sub as_hash {
+    my ( $self ) = @_;
+    my %h = ();
+    my $num_fields = scalar @{ $self->{_fields} };
+    for ( my $i = 0; $i < $num_fields; $i++ ) {
+        $h{ $self->{_fields}[ $i ] } = $self->{_types}[ $i ];
+    }
+    return %h;
 }
 
 1;
@@ -348,6 +358,18 @@ are returned in the order they were added.
 Example:
 
  print "Types in type info object: ", join( ", ", $type_info->get_types );
+
+B<as_hash()>
+
+Returns the fields and types as a simple hash. The case of the field
+should be the same as it was specified or retrieved from the database.
+
+Example:
+
+ my %type_map = $type_info->as_hash;
+ foreach my $field ( keys %type_map ) {
+     print "Field $field is type $type_map{ $field }\n";
+ }
 
 =head1 PROPERTIES
 

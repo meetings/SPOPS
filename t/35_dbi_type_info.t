@@ -1,9 +1,9 @@
 # -*-perl-*-
 
-# $Id: 35_dbi_type_info.t,v 1.2 2002/10/10 12:07:43 lachoy Exp $
+# $Id: 35_dbi_type_info.t,v 1.3 2003/01/03 05:12:50 lachoy Exp $
 
 use strict;
-use constant NUM_TESTS       => 30;
+use constant NUM_TESTS       => 35;
 use constant TEST_TABLE_NAME => 'spops_test';
 
 my ( $db, $do_end );
@@ -84,6 +84,17 @@ END {
     ok( $ti_shortcut->get_type( 'spops_goop' ) == DBI::SQL_VARCHAR() ||
         $ti_shortcut->get_type( 'spops_goop' ) == DBI::SQL_CHAR(), 'Field shortcut three set' );
     is( $ti_shortcut->get_type( 'spops_num' ), DBI::SQL_INTEGER(), 'Field shortcut four set' );
+
+    # Ensure the fields/types as hash is returned ok
+
+    my %map = $ti_shortcut->as_hash;
+    is( scalar keys %map, 4, 'Number of fields in hash' );
+    is( $map{spops_id}, DBI::SQL_INTEGER(), 'Field/type from hash one' );
+    ok( $map{spops_name} == DBI::SQL_VARCHAR() ||
+        $map{spops_name} == DBI::SQL_CHAR(), 'Field/type from hash two' );
+    ok( $map{spops_goop} == DBI::SQL_VARCHAR() ||
+        $map{spops_name} == DBI::SQL_CHAR(), 'Field/type from hash three' );
+    is( $map{spops_num}, DBI::SQL_INTEGER(), 'Field/type from hash four' );
 
     my $added = eval { $ti_shortcut->add_type( 'spops_new', DBI::SQL_DATETIME() ) };
     ok( ! $@, 'New type added' );

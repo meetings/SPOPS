@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 3.2 2002/12/23 22:15:17 lachoy Exp $
+# $Id: 30_dbi.t,v 3.3 2003/01/03 05:12:07 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -254,10 +254,10 @@ END {
     {
         my $changed_text = 'Multi field update';
         my $rv = eval { $SPOPS_CLASS->field_update( { spops_name => $changed_text },
-                                                    { db    => $db,
-                                                      where => 'spops_num > 0' } ) };
+                                                    { db         => $db,
+                                                      where      => 'spops_num > 0' } ) };
         warn $@ if ( $@ );
-        is( $rv, 3, 'Field update (multiple object) execution' );
+        ok( $rv, 'Field update (multiple object) execution' );
         my $obj_list = eval { $SPOPS_CLASS->fetch_group({ db => $db, skip_cache => 1 }) };
         warn $@ if ( $@ );
         is( $obj_list->[0]->{spops_name}, $changed_text, 'Field update (multiple object 1) match' );
@@ -273,7 +273,7 @@ END {
                                                     { where => 'spops_num = 1066',
                                                       db    => $db } ) };
         warn $@ if ( $@ );
-        is( $rv, 1, 'Field update (multiple object) execution with one match' );
+        ok( $rv, 'Field update (multiple object) execution with one match' );
         my $obj_list = eval { $SPOPS_CLASS->fetch_group({ where => 'spops_num = ?',
                                                           value => [ 1066 ],
                                                           db    => $db,

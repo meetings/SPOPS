@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.6 2003/01/02 06:00:25 lachoy Exp $
+# $Id: DBI.pm,v 3.7 2003/01/03 05:11:39 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -14,7 +14,7 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.7 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -954,7 +954,7 @@ sub field_update {
 	$p->{DEBUG}		||= DEBUG_SAVE;
 	$p->{db}		||= $item->global_datasource_handle( $p->{connect_key} );
 
-	my $rv = $item->db_update( $p );
+	my $rv = ( $item->db_update( $p ) != 0 );
 
 	# update values in object if db_update was successful and we
 	# passed in new values (vs. from object).
