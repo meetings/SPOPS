@@ -1,18 +1,17 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 1.4 2001/11/04 17:54:26 lachoy Exp $
+# $Id: 31_dbi_multifield.t,v 1.2 2001/11/25 01:26:47 lachoy Exp $
 
-# Note that this is a good way to see if certain databases support the
-# type checking methods of the DBI -- in fact, we might want to add
-# some date/datetime items in the table as well to see what happens
+# Almost exactly the same as 30_dbi.t, but here we're testing whether
+# multiple-field primary keys work ok
 
 use strict;
 use Data::Dumper qw( Dumper );
 
 use constant NUM_TESTS       => 18;
-use constant TEST_TABLE_NAME => 'spops_test';
+use constant TEST_TABLE_NAME => 'spops_multi_test';
 
-my $SPOPS_CLASS = 'DBITest';
+my $SPOPS_CLASS = 'DBIMultiTest';
 
 {
 
@@ -31,8 +30,7 @@ my $SPOPS_CLASS = 'DBITest';
 
     # Ensure we can get to SPOPS::Initialize
 
-    eval { require SPOPS::Initialize };
-    ok( ! $@, 'SPOPS::Initialize load' );
+    require_ok( 'SPOPS::Initialize' );
 
     # Create the class using SPOPS::Initialize
 
@@ -40,10 +38,10 @@ my $SPOPS_CLASS = 'DBITest';
         tester => {
            class        => $SPOPS_CLASS,
            isa          => [ $spops_dbi_driver, 'SPOPS::DBI' ],
-           field        => [ qw/ spops_id spops_name spops_goop spops_num / ],
-           id_field     => 'spops_id',
-           skip_undef   => { spops_num => 1 },
-           sql_defaults => [ qw/ spops_num / ],
+           field        => [ qw/ spops_time spops_user spops_name spops_goop spops_num / ],
+           id_field     => [ 'spops_time', 'spops_user' ],
+           skip_undef   => [ 'spops_num' ],
+           sql_defaults => [ 'spops_num' ],
            base_table   => TEST_TABLE_NAME,
            table_name   => TEST_TABLE_NAME,
         },
@@ -56,14 +54,18 @@ my $SPOPS_CLASS = 'DBITest';
     # Create a database handle and create our testing table
 
     my $db = get_db_handle( $config );
-    create_table( $db, 'simple', TEST_TABLE_NAME );
+    create_table( $db, 'multi', TEST_TABLE_NAME );
+
+    my $obj_time = 1004897158;
+    my $obj_user = 5;
 
     # Create an object
     {
         my $obj = eval { $SPOPS_CLASS->new({ spops_name => 'MyProject',
                                              spops_goop => 'oopie doop',
                                              spops_num  => 241,
-                                             spops_id   => 42 } ) };
+                                             spops_time => $obj_time,
+                                             spops_user => $obj_user } ) };
         ok( ! $@, 'Create object' );
 
         # Save the object
@@ -77,7 +79,7 @@ my $SPOPS_CLASS = 'DBITest';
 
     # Fetch an object, then update it
     {
-        my $obj = eval { $SPOPS_CLASS->fetch( 42, { db => $db, skip_cache => 1 } ) };
+        my $obj = eval { $SPOPS_CLASS->fetch( "$obj_time,$obj_user", { db => $db, skip_cache => 1 } ) };
         ok( ! $@, 'Fetch object (perform)' );
         if ( $@ ) {
             warn "Cannot fetch object: $@\n", Dumper( SPOPS::Error->get ), "\n";
@@ -93,16 +95,16 @@ my $SPOPS_CLASS = 'DBITest';
             warn "Cannot update object: $@\n", Dumper( SPOPS::Error->get ), "\n";
         }
 
-        my $new_obj = eval { $SPOPS_CLASS->fetch( 42, { db => $db, skip_cache => 1 } ) };
+        my $new_obj = eval { $SPOPS_CLASS->fetch( "$obj_time,$obj_user", { db => $db, skip_cache => 1 } ) };
         ok( $new_obj->{spops_name} eq $obj->{spops_name}, 'Fetch object (after update)' );
     }
 
     # Fetch an object then clone it and save it
     {
-        my $obj     = eval { $SPOPS_CLASS->fetch( 42, { db => $db, skip_cache => 1 } ) };
-        my $new_obj = eval { $obj->clone({ spops_name => 'YourProject', 
+        my $obj     = eval { $SPOPS_CLASS->fetch( "$obj_time,$obj_user", { db => $db, skip_cache => 1 } ) };
+        my $new_obj = eval { $obj->clone({ spops_name => 'YourProject',
                                            spops_goop => 'this n that',
-                                           spops_id   => 1792 } ) };
+                                           spops_time => 1004897257 } ) };
         ok( ! $@, 'Clone object (perform)' );
         ok( $new_obj->{spops_name} ne $obj->{spops_name}, 'Clone object (correct data)');
 
@@ -116,9 +118,10 @@ my $SPOPS_CLASS = 'DBITest';
     # Create another object, but this time don't define the spops_num
     # field and see if the default comes through
     {
-        my $obj = $SPOPS_CLASS->new({ spops_id   => 1588, 
-                                 spops_goop => 'here we go!', 
-                                 spops_name => 'AnotherProject' });
+        my $obj = $SPOPS_CLASS->new({ spops_time => 1004897292,
+                                      spops_user => 5,
+                                      spops_goop => 'here we go!',
+                                      spops_name => 'AnotherProject' });
         eval { $obj->save({ is_add => 1, db => $db, skip_cache => 1 }) };
         ok( $obj->{spops_num} == 2, 'Fetch object (correct data with default' );
     }
@@ -160,4 +163,3 @@ my $SPOPS_CLASS = 'DBITest';
 
 
 }
-

@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 1.11 2001/10/15 00:08:27 lachoy Exp $
+# $Id: Makefile.PL,v 1.12 2001/11/06 23:50:59 lachoy Exp $
 
 use strict;
 use ExtUtils::MakeMaker;
@@ -86,9 +86,8 @@ sub write_makefile {
     'PREREQ_PM'    => { 'Storable'     => 1.00,
                         'Class::ISA'   => undef,
                         'Test::More'   => 0.07,
-                        'Date::Format' => 2.09,
                         'Data::Dumper' => undef,
-                        'Date::Calc'   => 4.3 } );
+                        'Class::Date'  => 1.00 } );
 }
 
 

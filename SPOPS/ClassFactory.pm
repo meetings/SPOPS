@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory;
 
-# $Id: ClassFactory.pm,v 1.20 2001/10/12 21:00:26 lachoy Exp $
+# $Id: ClassFactory.pm,v 1.21 2001/11/06 21:45:08 lachoy Exp $
 
 use strict;
 use Class::ISA;
@@ -10,7 +10,7 @@ require Exporter;
 
 @SPOPS::ClassFactory::ISA       = qw( Exporter );
 $SPOPS::ClassFactory::VERSION   = '1.90';
-$SPOPS::ClassFactory::Revision  = substr(q$Revision: 1.20 $, 10);
+$SPOPS::ClassFactory::Revision  = substr(q$Revision: 1.21 $, 10);
 @SPOPS::ClassFactory::EXPORT_OK = qw( OK DONE NOTIFY ERROR RESTART
                                       FACTORY_METHOD RULESET_METHOD );
 
@@ -358,7 +358,8 @@ BEHAVIOR:
         next BEHAVIOR  if ( $status eq OK );
 
         if ( $status eq NOTIFY ) {
-            warn join( "\n", "WARNING executing $slot_name for $class", "  $msg",
+            warn join( "\n", "WARNING executing $slot_name for $this_config->{class}",
+                             "$msg",
                              'Process will continue' ), "\n";
             next BEHAVIOR;
         }

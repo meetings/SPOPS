@@ -1,5 +1,82 @@
 Revision history for Perl extension SPOPS.
 
+0.53  Sat Nov 24 20:50:32 EST 2001
+
+Overall:
+
+   - SPOPS::DBI now supports multiple-field primary keys
+
+   - Small bugfixes
+
+Individual:
+
+   * eg/My/ReadOnly.pm:
+
+     - Example of how you can create read-only objects in SPOPS.
+
+   * eg/My/UTFConvert.pm:
+
+     - Example of converting to/from unicode values for datasources
+     that store unicode (WARNING: This is a demo only, and only works
+     for those 5.6.0 and earlier versions of perl that support 'use
+     utf8')
+
+   * SPOPS.pm:
+
+     - Modified how the ID value gets set in initialize() if { id =>
+     'blah' } is passed in -- this modification enables multifield
+     keys to work properly.
+
+   * SPOPS/ClassFactory/DBI.pm:
+
+     - Add id_clause() and id() methods to classes using
+     multiple-field primary keys (see below).
+
+   * SPOPS/DBI.pm:
+
+     - Fixed the function that gathered up fields to select to ignore
+     putting the table name in front of a field unless it has the
+     'table.' in front, not just 'table'
+
+     - Enable multi-field primary keys. All you need to do is specify
+     multiple fields for your id_field:
+
+       Single field:
+
+         id_field => 'object_id',
+
+       Multiple field:
+
+         id_field => [ 'creation_time', 'created_by' ]
+
+      SPOPS::DBI will take care of the rest for you. To retrieve a
+      multi-field record, you just need to specify the ID values
+      stringified:
+
+         # '1005082576' is the creation_time, '45' is the ID of the
+         # user who created it
+
+         my $obj = My::Object->fetch( '1005082576,45' );
+
+   * SPOPS/HashFile.pm: 
+
+     - Always make a backup before doing anything, and keep it around
+     rather than deleting it.
+
+   * t/dbi_config.pl:
+
+     - Moved certain information from t/30_dbi.t here and generalized
+     for other DBI tests.
+
+   * t/30_dbi.t:
+
+     - Modified to use dbi_config.pl for certain behaviors
+
+   * t/31_dbi_multifield.t:
+
+     - Added tests for multi-field primary keys.
+
+
 0.52  Thu Oct 25 23:19:43 EDT 2001
 
 Overall:
@@ -772,7 +849,7 @@ Specifics:
      what that means, then you don't need to worry about it :)
 
      (minor note) Changed all instances of RCS keyword '$Header' to
-     '$Id' and modified my email from chris@cwinters.com to
+     '$Id' and modified my email from cwinters@intes.net to
      chris@cwinters.com.
 
 

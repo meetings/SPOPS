@@ -1,6 +1,12 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.53 Sat Nov 24 20:50:32 EST 2001
+
+  * Added support for multiple field primary keys to SPOPS::DBI
+    classes, and a few more examples. Nothing major.
+
+
 0.52 Thu Oct 25 23:19:43 EDT 2001
 
   * Bugfixes, enhancements. Nothing major.
@@ -67,4 +73,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 1.9 2001/10/26 03:22:27 lachoy Exp $
+$Id: RELEASE,v 1.10 2001/11/25 01:38:13 lachoy Exp $

@@ -1,15 +1,12 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 1.13 2001/10/22 15:13:03 lachoy Exp $
+# $Id: Utility.pm,v 1.14 2001/11/06 21:39:59 lachoy Exp $
 
 use strict;
-use Class::Date   qw();
-use Date::Format  qw( time2str );
-use Date::Calc    ();
 
 @SPOPS::Utility::ISA      = qw();
 $SPOPS::Utility::VERSION  = '1.90';
-$SPOPS::Utility::Revision = substr(q$Revision: 1.13 $, 10);
+$SPOPS::Utility::Revision = substr(q$Revision: 1.14 $, 10);
 
 
 # Return a random code of length $length. If $opt is 'mixed', then the
@@ -41,6 +38,10 @@ sub crypt_it {
 }
 
 
+########################################
+# DATE/TIME
+########################################
+
 # Return a { time } (or the current time) formatted with { format }
 #
 # Signature: $time_string = $class->now( [ { format => $strftime_format, 
@@ -48,19 +49,11 @@ sub crypt_it {
 
 sub now {
     my ( $class, $p ) = @_;
+    require Class::Date;
     $p->{format} ||= '%Y-%m-%d %T';
     $p->{time}   ||= time;
-    return time2str( $p->{format}, $p->{time} );
+    return Class::Date->new( $p->{time} )->strftime( $p->{format} );
 }
-
-
-# Class::Date version...
-#sub now {
-#    my ( $class, $p ) = @_;
-#    $p->{format} ||= '%Y-%m-%d %T';
-#    $p->{time}   ||= time;
-#    return Class::Date::new( $p->{time} )->strftime( $p->{format} );
-#}
 
 
 # Return the current time formatted 'yyyy-mm-dd'
@@ -80,41 +73,30 @@ sub today { return $_[0]->now( { format => '%Y-%m-%e' } ); }
 sub now_between_dates {
     my ( $class, $p ) = @_;
     return undef unless ( $p->{begin} or $p->{end} );
-    my @now = Date::Calc::Today();
-    my ( $begin_days, $end_days ) = undef;
+
+    require Class::Date;
+    my $now = Class::Date->now;
     my ( $begin_date, $end_date );
 
     if ( $p->{begin} ) {
         if ( ref $p->{begin} eq 'ARRAY' ) {
-            $begin_date = $p->{begin};
+            $begin_date = Class::Date->new( $p->{begin} );
         }
         else {
-            @{ $begin_date } = $p->{begin} =~ /^(\d+)\-(\d+)\-(\d+)/;
+            $begin_date = Class::Date->new([ split /\D+/, $p->{begin} ]);
         }
-
-        # Good result: 1 (meaning 'begin' is one day before 'now')
-
-        $begin_days = Date::Calc::Delta_Days( @{ $begin_date }, @now );
-        return undef if ( $begin_days < 0 );
+        return undef if ( $now < $begin_date );
     }
 
     if ( $p->{end} ) {
         if ( ref $p->{end} eq 'ARRAY' ) {
-            $end_date = $p->{end};
+            $end_date = Class::Date->new( $p->{end} );
         }
         else {
-            @{ $end_date } = $p->{end} =~ /^(\d+)\-(\d+)\-(\d+)/;
+            $end_date = Class::Date->new([ split /\D+/, $p->{end} ]);
         }
-
-        # Good result: 1 (meaning 'now' is one day before begin)
-
-        $end_days = Date::Calc::Delta_Days( @now, @{ $end_date } );
-        return undef if ( $end_days < 0 );
+        return undef if ( $now > $end_date );
     }
-    return 1 unless ( defined $begin_days and defined $end_days );
-
-    my $spread_days = Date::Calc::Delta_Days( @{ $begin_date }, @{ $end_date } );
-    return undef if ( $end_days - $begin_days > $spread_days );
     return 1;
 }
 

@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 1.54 2001/10/26 03:22:27 lachoy Exp $
+# $Id: SPOPS.pm,v 1.56 2001/11/25 01:23:37 lachoy Exp $
 
 use strict;
 use Data::Dumper    qw( Dumper );
@@ -14,8 +14,8 @@ use Storable        qw( store retrieve nstore );
 $SPOPS::AUTOLOAD  = '';
 @SPOPS::ISA       = qw( Exporter Storable );
 @SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
-$SPOPS::VERSION   = '0.52';
-$SPOPS::Revision  = substr(q$Revision: 1.54 $, 10);
+$SPOPS::VERSION   = '0.53';
+$SPOPS::Revision  = substr(q$Revision: 1.56 $, 10);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -121,8 +121,8 @@ sub new {
                       "field mapping ($params->{is_field_map})" );
 
     my ( %data );
-    my $int = tie %data, $tie_class, $class, $params;
-    DEBUG() && _w( 4, "Internal tie structure of new object: ", Dumper( $int ) );
+    my $internal = tie %data, $tie_class, $class, $params;
+    DEBUG() && _w( 4, "Internal tie structure of new object: ", Dumper( $internal ) );
     my $self = bless( \%data, $class );
 
     # Set defaults if set, unless NOT specified
@@ -174,17 +174,19 @@ sub clone {
     DEBUG() && _w( 1, "Cloning new object of class ($class) from old ",
                        "object of class (", ref $self, ")" );
     my %initial_data = ();
-    my $id_field = $class->id_field;
-    if ( $id_field ) {
-        $initial_data{ $id_field } = $p->{ $id_field } || $p->{id};
-    }
 
     while ( my ( $k, $v ) = each %{ $self } ) {
-        next if ( $id_field and $k eq $id_field );
         $initial_data{ $k } = $p->{ $k } || $v;
     }
 
-    return $class->new({ %initial_data, skip_default_values => 1 });
+    my $cloned = $class->new({ %initial_data, skip_default_values => 1 });
+
+    # Take care of the ID value AFTER the object has been instantiated
+    # so we can rely on its id() method to take care of any funky
+    # assignment needs
+
+    $cloned->id( $p->{id} ) if ( $p->{id} );
+    return $cloned;
 }
 
 
@@ -203,7 +205,8 @@ sub initialize {
     # We allow the user to substitute id => value instead for the
     # specific fieldname.
 
-    $p->{ $self->id_field } ||= $p->{id};
+    $self->id( $p->{id} )  if ( $p->{id} );
+    #$p->{ $self->id_field } ||= $p->{id};
 
     # Go through the data passed in and set data for fields used by
     # this class

@@ -1,14 +1,14 @@
 package SPOPS::HashFile;
 
-# $Id: HashFile.pm,v 1.13 2001/10/12 21:00:26 lachoy Exp $
+# $Id: HashFile.pm,v 1.15 2001/10/30 23:47:51 lachoy Exp $
 
 use strict;
-use SPOPS;
 use Data::Dumper;
+use SPOPS;
 
 @SPOPS::HashFile::ISA       = qw( SPOPS );
 $SPOPS::HashFile::VERSION   = '1.90';
-$SPOPS::HashFile::Revision  = substr(q$Revision: 1.13 $, 10);
+$SPOPS::HashFile::Revision  = substr(q$Revision: 1.15 $, 10);
 
 # Just grab the tied hash from the SPOPS::TieFileHash
 
@@ -50,36 +50,43 @@ sub fetch {
 sub save {
     my ( $self, $p ) = @_;
     my $obj = tied %{ $self };
+
     unless ( $obj->{perm} eq 'write' ) {
         die "Cannot save $obj->{filename}: it was opened as read-only.\n";
     }
+
     unless ( $obj->{filename} ) {
-        die "Cannot save data: the filename has been erased. Did you assign an empty hash to the object?\n";
+        die "Cannot save data: the filename has been erased. Did you assign ",
+            "an empty hash to the object?\n";
     }
-    if ( -f "$obj->{filename}.backup" ) {
-        unlink( "$obj->{filename}.backup}" ); # just to be sure...
+
+    my $temp_filename = "$obj->{filename}.tmp";
+    if ( -f $temp_filename ) {
+        unlink( $temp_filename ); # just to be sure...
     }
     if ( -f $obj->{filename} ) {
-        rename( $obj->{filename}, "$obj->{filename}.backup" )
+        rename( $obj->{filename}, $temp_filename )
               || die "Cannot rename old file to make room for new one. Error: $!";
     }
+
     return undef unless ( $self->pre_save_action( $p ) );
+
     my %data = %{ $obj->{data} };
     $p->{dumper_level} ||= 2;
     local $Data::Dumper::Indent = $p->{dumper_level};
-    my $string = Data::Dumper->Dump( [ \%data ], [ 'data' ] );
+
     eval { open( INFO, "> $obj->{filename}" ) || die $! };
     if ( $@ ) {
-        rename( "$obj->{filename}.backup", $obj->{filename} )
+        rename( $temp_filename, $obj->{filename} )
               || die "Cannot open file for writing (reason: $@ ) and ",
                      "cannot move backup file to original place. Reason: $!";
         die "Cannot open file for writing. Backup file restored. Error: $@";
     }
-    print INFO $string;
+    print INFO Data::Dumper->Dump( [ \%data ], [ 'data' ] );
     close( INFO );
-    if ( -f "$obj->{filename}.backup" ) {
-        unlink( "$obj->{filename}.backup" )
-              || warn "Cannot remove the old data file. It still lingers in $obj->{filename}.old....\n";
+    if ( -f $temp_filename ) {
+        unlink( $temp_filename )
+              || warn "Cannot remove the old data file. It still lingers in ($temp_filename)\n";
     }
     return undef unless ( $self->post_save_action( $p ) );
     return $self;
@@ -120,9 +127,10 @@ sub clone {
 package SPOPS::TieFileHash;
 
 use strict;
+use File::Copy qw( cp );
 
 @SPOPS::TieFileHash::ISA       = ();
-$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.13 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.15 $ =~ /(\d+)\.(\d+)/);
 
 # These are all very standard routines for a tied hash; more info: see
 # 'perldoc Tie::Hash'
@@ -154,6 +162,13 @@ sub TIEHASH {
 
     my $data = undef;
     if ( $file_exists ) {
+
+        # First create a backup...
+
+        cp( $filename, "${filename}.backup" );
+
+        # Then open up the file
+
         open( PD, $filename ) || die "Cannot open ($filename). Reason: $!";
         local $/ = undef;
         my $info = <PD>;

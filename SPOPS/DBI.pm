@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 1.53 2001/10/23 02:38:38 lachoy Exp $
+# $Id: DBI.pm,v 1.55 2001/11/25 01:25:00 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -13,7 +13,7 @@ use SPOPS::Tie    qw( $PREFIX_INTERNAL );
 
 @SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
 $SPOPS::DBI::VERSION   = '1.90';
-$SPOPS::DBI::Revision  = substr(q$Revision: 1.53 $, 10);
+$SPOPS::DBI::Revision  = substr(q$Revision: 1.55 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -46,7 +46,9 @@ sub behavior_factory {
     my ( $class ) = @_;
     require SPOPS::ClassFactory::DBI;
     DEBUG() && _w( 1, "Installing SPOPS::DBI behaviors for ($class)" );
-    return { links_to => \&SPOPS::ClassFactory::DBI::conf_relate_links_to };
+    return { links_to  => \&SPOPS::ClassFactory::DBI::conf_relate_links_to,
+             id_method => \&SPOPS::ClassFactory::DBI::conf_multi_field_key_id,
+             read_code => \&SPOPS::ClassFactory::DBI::conf_multi_field_key_other };
 }
 
 
@@ -347,19 +349,19 @@ ROW:
 
 sub _construct_group_select {
     my ( $class, $p ) = @_;
-    my $table_name = $class->CONFIG->{base_table};
+    my $table_name = $class->table_name;
     my ( $raw_fields, $select_fields ) = $class->_fetch_select_fields( $p );
     my @select = ();
     for ( my $i = 0; $i < scalar @{ $raw_fields }; $i++ ) {
-	if ( $raw_fields->[ $i ] ne $select_fields->[ $i ] ) {
-	    push @select, $select_fields->[ $i ];
-	}
-	elsif ( $raw_fields->[ $i ] =~ /^$table_name/ ) {
-	    push @select, $select_fields->[ $i ];
-	}
-	else {
-	    push @select, join( '.', $table_name, $raw_fields->[ $i ] );
-	}
+        if ( $raw_fields->[ $i ] ne $select_fields->[ $i ] ) {
+            push @select, $select_fields->[ $i ];
+        }
+        elsif ( $raw_fields->[ $i ] =~ /^$table_name\./ ) {
+            push @select, $select_fields->[ $i ];
+        }
+        else {
+            push @select, join( '.', $table_name, $raw_fields->[ $i ] );
+        }
     }
     return ( $raw_fields, \@select );
 }
@@ -371,7 +373,7 @@ sub _construct_group_select {
 
 sub fetch_count {
     my ( $class, $p ) = @_;
-    $p->{select} = [ $class->id_field() ];
+    $p->{select} = [ $class->id_field ];
     my $sth = $class->_execute_multiple_record_query( $p );
     my $row_count = 0;
     while ( my $row = $sth->fetch ) {
@@ -413,15 +415,13 @@ sub _fetch_select_fields {
     if ( ! $field_list and $p->{column_group} ) {
         DEBUG() && _w( 1, "Trying to retrieve fields for column group ($p->{column_group})" );
         if ( $p->{column_group} eq '_id_field' ) {
-            $field_list = [ $class->CONFIG->{id_field} ];
+            $field_list = [ scalar $class->id_field ];
         }
         else {
             my $column_defs = $class->CONFIG->{column_group} || {};
             $field_list = $column_defs->{ $p->{column_group} };
             if ( ref $field_list eq 'ARRAY' and scalar @{ $field_list } ) {
-                my $id_field = $class->CONFIG->{id_field};
-                my %field_hash = map { $_ => 1 } @{ $field_list };
-                $field_hash{ $id_field }++;
+                my %field_hash = map { $_ => 1 } @{ $field_list }, $class->id_field;
                 $field_list = [ keys %field_hash ];
             }
         }
@@ -528,7 +528,6 @@ sub save {
     my ( $self, $p ) = @_;
     $p->{DEBUG} ||= DEBUG_SAVE;
     $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Trying to save a (", ref $self, ")" );
-    my $id = $self->id;
 
     # We can force save() to be an INSERT by passing in a true value
     # for the is_add parameter; otherwise, we rely on the flag within
@@ -595,7 +594,7 @@ FIELD:
     # Note the action that we've just taken (opportunity for subclasses)
 
     unless ( $p->{skip_log} ) {
-        $self->log_action( $action, $self->id );
+        $self->log_action( $action, scalar $self->id );
     }
 
     # Set flags and return the object so we can do chained method calls
@@ -626,7 +625,7 @@ sub _save_insert {
     if ( $pre_id ) {
         $self->id( $pre_id );
         push @{ $p->{field} }, $self->id_field;
-        push @{ $p->{value} }, $pre_id;
+        push @{ $p->{value} }, $self->id;
         $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Retrieved ID before insert: $pre_id" );
     }
 
@@ -705,7 +704,7 @@ sub _save_insert {
     # we have requested to skip it
 
     unless ( $p->{skip_security} ) {
-        eval { $self->create_initial_security({ object_id => $self->id }) };
+        eval { $self->create_initial_security({ object_id => scalar $self->id }) };
         _w( 0, "Error creating initial security: $@" ) if ( $@ );
     }
     return 1;

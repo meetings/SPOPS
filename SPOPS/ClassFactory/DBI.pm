@@ -1,16 +1,151 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 1.10 2001/10/12 21:00:26 lachoy Exp $
+# $Id: DBI.pm,v 1.13 2001/11/25 01:26:13 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
-use SPOPS::ClassFactory qw( OK ERROR );;
+use SPOPS::ClassFactory qw( OK ERROR DONE );
+
 
 @SPOPS::ClassFactory::DBI::ISA      = ();
 $SPOPS::ClassFactory::DBI::VERSION  = '1.90';
-$SPOPS::ClassFactory::DBI::Revision = substr(q$Revision: 1.10 $, 10);
+$SPOPS::ClassFactory::DBI::Revision = substr(q$Revision: 1.13 $, 10);
 
 # NOTE: The behavior is installed in SPOPS::DBI
+
+
+########################################
+# MULTIPLE FIELD KEYS
+########################################
+
+my $generic_multifield_id = <<'MFID';
+
+    sub %%CLASS%%::id {
+        my ( $self, $id ) = @_;
+        if ( $id ) {
+	        ( %%ID_FIELD_OBJECT_LIST%% )  = split /\s*,\s*/, $id;
+	    }
+        return wantarray ? ( %%ID_FIELD_OBJECT_LIST%% )
+                         : join( ',', %%ID_FIELD_OBJECT_LIST%% );
+    }
+MFID
+
+
+# Generate an ID method for classes that have multiple-field primary
+# keys
+
+sub conf_multi_field_key_id {
+    my ( $class ) = @_;
+    my $CONFIG = $class->CONFIG;
+    my $id_field = $CONFIG->{id_field};
+
+    return ( OK, undef ) unless ( ref $id_field eq 'ARRAY' );
+    if ( scalar @{ $id_field } == 1 ) {
+        $CONFIG->{id_field} = $id_field->[0];
+        return ( OK, undef );
+    }
+
+    my $id_object_reference = join( ', ',
+                                    map { '$self->{' . $_ . '}' }
+                                        @{ $id_field } );
+    my $id_sub = $generic_multifield_id;
+    $id_sub =~ s/%%CLASS%%/$class/g;
+    $id_sub =~ s/%%ID_FIELD_OBJECT_LIST%%/$id_object_reference/g;
+    {
+        local $SIG{__WARN__} = sub { return undef };
+        eval $id_sub;
+    }
+    if ( $@ ) {
+        warn "Code: $id_sub\n";
+        return ( ERROR, "Cannot create 'id()' method for ($class): $@" );
+    }
+    return ( DONE, undef );
+}
+
+
+my $generic_multifield_etc = <<'MFETC';
+
+    sub %%CLASS%%::id_field {
+        return wantarray ? %%ID_FIELD_NAME_LIST%%
+                         : join( ',', %%ID_FIELD_NAME_LIST%% );
+    }
+
+    sub %%CLASS%%::id_clause {
+        my ( $self, $id, $opt, $p ) = @_;
+        $opt ||= '';
+        $p   ||= {};
+        my %val = ();
+        my $db = $p->{db} || $self->global_datasource_handle( $p->{connect_key} );
+        unless ( $db ) {
+            my $msg = 'Cannot create ID clause';
+            SPOPS::Error->set({ user_msg   => $msg,
+                                system_msg => 'No db handle available',
+                                method     => 'id_clause',
+                                type       => 'db' });
+            die $msg;
+        }
+
+        my $type_info = eval { $self->db_discover_types(
+                                             $self->table_name,
+                                             { dbi_type_info => $p->{dbi_type_info},
+                                               db            => $db,
+                                               DEBUG         => $p->{DEBUG} } ) };
+        if ( $id ) {
+      	    ( %%ID_FIELD_VARIABLE_LIST%% ) = split /\s*,\s*/, $id;
+        }
+        else {
+    	    ( %%ID_FIELD_VARIABLE_LIST%% ) = ( %%ID_FIELD_OBJECT_LIST%% );
+        }
+        unless ( %%ID_FIELD_BOOLEAN_LIST%% ) {
+	        die "Insufficient values for ID (%%ID_FIELD_VARIABLE_LIST%%)\n";
+        }
+    	my @clause     = ();
+    	my $table_name = $self->table_name;
+    	foreach my $id_field ( %%ID_FIELD_NAME_LIST%% ) {
+                my $use_id_field = ( $opt eq 'noqualify' )
+                                     ? $id_field
+                                     : join( '.', $table_name, $id_field );
+    	        push @clause, join( ' = ', $use_id_field,
+                                           $db->quote( $val{ $id_field },
+                                                       $type_info->{ lc $id_field } ) );
+	    }
+        return join( ' AND ', @clause );
+    }
+MFETC
+
+
+sub conf_multi_field_key_other {
+    my ( $class ) = @_;
+    my $CONFIG = $class->CONFIG;
+    my $id_field = $CONFIG->{id_field};
+
+    return ( OK, undef ) unless ( ref $id_field eq 'ARRAY' );
+    if ( scalar @{ $id_field } == 1 ) {
+        $CONFIG->{id_field} = $id_field->[0];
+        return ( OK, undef );
+    }
+
+    my $id_object_reference    = join( ', ', map { '$self->{' . $_ . '}' } @{ $id_field } );
+    my $id_variable_reference  = join( ', ', map { "\$val{$_}" } @{ $id_field } );
+    my $id_boolean_reference   = join( ' and ', map { "\$val{$_}" } @{ $id_field } );
+    my $id_field_reference     = 'qw( ' . join( ' ', @{ $id_field } ) . ' )';
+    my $id_sub = $generic_multifield_etc;
+    $id_sub =~ s/%%CLASS%%/$class/g;
+    $id_sub =~ s/%%ID_FIELD_OBJECT_LIST%%/$id_object_reference/g;
+    $id_sub =~ s/%%ID_FIELD_VARIABLE_LIST%%/$id_variable_reference/g;
+    $id_sub =~ s/%%ID_FIELD_BOOLEAN_LIST%%/$id_boolean_reference/g;
+    $id_sub =~ s/%%ID_FIELD_NAME_LIST%%/$id_field_reference/g;
+    {
+        local $SIG{__WARN__} = sub { return undef };
+        eval $id_sub;
+    }
+    if ( $@ ) {
+        warn "Code: $id_sub\n";
+        return ( ERROR, "Cannot create 'id_clause() and id_fields()'" .
+                        "methods for ($class): $@" );
+    }
+    return ( OK, undef );
+}
 
 
 ########################################

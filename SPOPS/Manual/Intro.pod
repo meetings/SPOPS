@@ -110,7 +110,8 @@ saved in a database, in the filesystem, in a directory, etc.
 You can control what happens to the object when it gets written to its
 persistent form, or when it is deleted, or fetched from its storage
 form, by implementing a simple API: C<fetch()>, C<save()>,
-C<remove()>.
+C<remove()>. (The C<save()> method encompasses both 'create' and
+'update' actions.)
 
      -------------         save, remove         ----------------
     |Runtime State|     ------------------->   |Persistent State|
@@ -128,6 +129,16 @@ value, the whole action (save, remove, fetch) is short-circuited (that
 is, a failing method bombs out of the action). See
 L<SPOPS::Manual::ObjectRules|SPOPS::Manual::ObjectRules> for details
 on the process and how to implement your own.
+
+It's important to note that you have to tell an SPOPS object to
+persist itself -- it will not happen automatically. A call to C<new()>
+will not create an entry in your datastore, only C<save()> will. For
+instance:
+
+ my $film = Film->new();          # Object exists in memory
+ $film->{name} = 'The Matrix';    #   |
+ $film->{year} = '1999';          #   |
+ $film->save;                     # Object exists in datastore
 
 =head1 COPYRIGHT
 

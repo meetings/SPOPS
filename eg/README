@@ -19,6 +19,17 @@ For the classes that are useful anywhere:
      - class that retrieves the information for a particular record to
      use as defaults.
 
+ My/ReadOnly.pm
+
+     - put this in your 'rules_from' key in the configuration and
+     suddenly 'save()' and 'remove()' don't work anymore. Cool!
+
+ My/UTFConvert.pm
+
+     - for datasources that store data in unicode format, do automatic
+     translation whenever the data are fetched and saved. WARNING:
+     THIS CURRENTLY ONLY WORKS FOR 5.6.0 AND EARLIER, AND IS ONLY A
+     DEMONSTRATION.
 
 The remainder of the files are to demonstrate user, group and security
 objects. You can use these as you like.
@@ -125,4 +136,4 @@ Object classes:
      - sample user object
 
 ========================================
-$Id: README,v 1.8 2001/10/22 05:39:17 lachoy Exp $
+$Id: README,v 1.10 2001/11/25 01:04:17 lachoy Exp $

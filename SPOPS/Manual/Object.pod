@@ -99,9 +99,8 @@ You can call to retrieve the data:
 
 Note that this is only to read the data, not to change it. The system
 does this using AUTOLOAD, and after the first call it automatically
-creates a subroutine in the namespace of your class which handles
-future calls so there is no need for AUTOLOAD on the second or future
-calls.
+creates a subroutine in the namespace of your class to handle
+successive calls.
 
 =head2 Tracking State Changes
 
@@ -134,6 +133,39 @@ you as a user can simply call:
 
 And not worry about whether it has been changed or not. If there has
 been any modification, the system will save it, otherwise it will not.
+
+=head2 Multiple-Field ID Fields
+
+As of SPOPS 0.53, L<SPOPS::DBI|SPOPS::DBI> supports multi-field
+primary keys. To use it, you just use an arrayref to represent the ID
+field rather than a string. (Wisenheimers who use an arrayref with one
+element may be shocked that SPOPS finds this attempt to trick it and
+sets the value to the single element.)
+
+On finding multiple ID fields,
+L<SPOPS::ClassFactory::DBI|SPOPS::ClassFactory::DBI> creates new
+methods for C<id()>, C<id_field> and C<id_clause>. Both C<id()> and
+C<id_field()> are context-sensitive, and C<id_clause()> returns a
+clause with multiple atoms.
+
+One at a time:
+
+B<id( [ $id_value ] )>
+
+In list context, returns the values for the ID fields in order. In
+scalar context, returns the ID values joined by a comma. (This may be
+configurable in the future.)
+
+B<id_field()>
+
+In list context, returns an n-element list with the ID fieldnames. In
+scalar context, returns the fieldnames joined by a comma. (This may be
+configurable in the future.)
+
+B<id_clause()>
+
+Returns a full WHERE clause to find this particular record -- used in
+UPDATE and DELETE statements.
 
 =head2 Lazy Loading
 

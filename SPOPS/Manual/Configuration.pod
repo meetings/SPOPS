@@ -82,10 +82,15 @@ rules from. These classes are not used as ancestors of the class, and
 once the code generation process is done the generated class has
 nothing to do with them.
 
-B<id_field> ($)
+B<id_field> ($ or \@)
 
 The name of the field used as the ID (or primary key) field for the
-object. Currently, multi-field primary keys are not supported.
+object. Currently, multi-field primary keys are supported but only in
+L<SPOPS::DBI|SPOPS::DBI>. (See
+L<SPOPS::Manual::Object|SPOPS::Manual::Object> for more information
+about multi-field primary keys.) Multi-field primary keys use an
+arrayref rather than a string, and the order of the fields must be the
+same at all times.
 
 B<column_group> (\%) (optional)
 
