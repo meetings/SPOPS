@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 62_export_perl.t,v 1.1 2002/09/11 13:06:44 lachoy Exp $
+# $Id: 62_export_perl.t,v 1.2 2003/11/26 14:13:59 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
@@ -68,10 +68,21 @@ q|$VAR1 = [
 
     $export_all_data = eval { $exporter->run };
     ok( ! $@, "Export all data (no ID)" );
-    is( $export_all_data, $ALL, "Export all data matches (no ID)" );
+    my $ALL_STRUCT = eval_struct( $ALL );
+    my $export_all_struct = eval_struct( $export_all_data );
+    is_deeply( $export_all_struct, $ALL_STRUCT, "Export all data matches (no ID)" );
 
     $exporter->where( "myname = 'bar'" );
     $export_some_data = eval { $exporter->run };
     ok( ! $@, "Export some data (no ID)" );
-    is( $export_some_data, $SOME, "Export some data matches (no ID)" );
+    my $SOME_STRUCT = eval_struct( $SOME );
+    my $export_some_struct = eval_struct( $export_some_data );
+    is_deeply( $export_some_struct, $SOME_STRUCT, "Export some data matches (no ID)" );
+}
+
+sub eval_struct {
+    my ( $data ) = @_;
+    no strict 'vars';
+    my $struct = eval $data;
+    return $struct;
 }

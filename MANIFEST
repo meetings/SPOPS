@@ -111,8 +111,9 @@ eg/users_groups_oracle.sql
 eg/users_groups_pgsql.sql
 eg/users_groups_tsql.sql
 eg/users_groups_sqlite.pl
-eg/My/Doodad.pm
 eg/My/Common.pm
+eg/My/CommonResources.pm
+eg/My/Doodad.pm
 eg/My/Group.pm
 eg/My/LDAPConnect.pm
 eg/My/Security.pm
@@ -152,3 +153,4 @@ t/dbi_config.pl
 t/hash_file_test.perl
 t/SampleRuleset.pm
 t/SecurityCommon.pm
+META.yml                                Module meta-data (added by MakeMaker)

@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 3.5 2003/06/09 03:20:56 lachoy Exp $
+# $Id: DBI.pm,v 3.8 2003/11/28 17:20:43 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-$SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.8 $ =~ /(\d+)\.(\d+)/);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 
@@ -17,7 +17,7 @@ $SPOPS::ClassFactory::DBI::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(
 
 my $generic_multifield_id = <<'MFID';
 
-    sub %%CLASS%%::id {
+    sub %%GEN_CLASS%%::id {
         my ( $self, $id ) = @_;
         if ( $id ) {
 	        ( %%ID_FIELD_OBJECT_LIST%% )  = split /\s*,\s*/, $id;
@@ -46,7 +46,7 @@ sub conf_multi_field_key_id {
                                     map { '$self->{' . $_ . '}' }
                                         @{ $id_field } );
     my $id_sub = $generic_multifield_id;
-    $id_sub =~ s/%%CLASS%%/$class/g;
+    $id_sub =~ s/%%GEN_CLASS%%/$class/g;
     $id_sub =~ s/%%ID_FIELD_OBJECT_LIST%%/$id_object_reference/g;
     DEBUG() && _w( 5, "Evaluation method 'id' for class [$class]\n$id_sub" );
     {
@@ -68,14 +68,14 @@ sub conf_multi_field_key_id {
 
 my $generic_multifield_etc = <<'MFETC';
 
-    sub %%CLASS%%::fetch {
+    sub %%GEN_CLASS%%::fetch {
         my ( $class, $id, @params ) = @_;
         my $id_string = ( ref $id eq 'ARRAY' )
                           ? join( ',', @{ $id } ) : $id;
         return $class->SPOPS::DBI::fetch( $id_string, @params );
     }
 
-    sub %%CLASS%%::clone {
+    sub %%GEN_CLASS%%::clone {
         my ( $self, $p ) = @_;
         my $class = $p->{_class} || ref $self;
         DEBUG() && _w( 1, "Cloning new object of class ($class) from old ",
@@ -102,12 +102,12 @@ my $generic_multifield_etc = <<'MFETC';
         return $cloned;
     }
 
-    sub %%CLASS%%::id_field {
+    sub %%GEN_CLASS%%::id_field {
         return wantarray ? %%ID_FIELD_NAME_LIST%%
                          : join( ',', %%ID_FIELD_NAME_LIST%% );
     }
 
-    sub %%CLASS%%::id_clause {
+    sub %%GEN_CLASS%%::id_clause {
         my ( $self, $id, $opt, $p ) = @_;
         $opt ||= '';
         $p   ||= {};
@@ -151,7 +151,7 @@ my $generic_multifield_etc = <<'MFETC';
 
     # should return something like:
     # ( 'mytable.id1', 'mytable.id2' )
-    sub %%CLASS%%::id_field_select {
+    sub %%GEN_CLASS%%::id_field_select {
         my ( $class, $p ) = @_;
         return ( $p->{noqualify} )
                  ? %%ID_FIELD_NAME_LIST%%
@@ -179,7 +179,7 @@ sub conf_multi_field_key_other {
     my $id_boolean_reference   = join( ' and ', map { "\$val{$_}" } @{ $id_field } );
     my $id_field_reference     = 'qw( ' . join( ' ', @{ $id_field } ) . ' )';
     my $other_sub = $generic_multifield_etc;
-    $other_sub =~ s/%%CLASS%%/$class/g;
+    $other_sub =~ s/%%GEN_CLASS%%/$class/g;
     $other_sub =~ s/%%ID_FIELD_OBJECT_LIST%%/$id_object_reference/g;
     $other_sub =~ s/%%ID_FIELD_VARIABLE_LIST%%/$id_variable_reference/g;
     $other_sub =~ s/%%ID_FIELD_BOOLEAN_LIST%%/$id_boolean_reference/g;
@@ -212,7 +212,7 @@ sub conf_multi_field_key_other {
 
 my $generic_linksto = <<'LINKSTO';
 
-    sub %%CLASS%%::%%LINKSTO_ALIAS%% {
+    sub %%GEN_CLASS%%::%%LINKSTO_ALIAS%% {
         my ( $self, $p ) = @_;
         $p ||= {};
         $p->{select} = [ '%%LINKSTO_ID_FIELD%%' ];
@@ -228,7 +228,7 @@ my $generic_linksto = <<'LINKSTO';
             my $item = eval { %%LINKSTO_CLASS%%->fetch( $info->[0], $p ) };
             if ( $@ ) {
                 SPOPS::_w( 0, " Cannot fetch linked object %%LINKSTO_CLASS%% [$info->[0]] ",
-                              "from %%CLASS%%: $@\nContinuing with others..." );
+                              "from %%GEN_CLASS%%: $@\nContinuing with others..." );
                 next;
             }
             push @obj, $item if ( $item );
@@ -236,7 +236,7 @@ my $generic_linksto = <<'LINKSTO';
         return \@obj;
     }
 
-    sub %%CLASS%%::%%LINKSTO_ALIAS%%_add {
+    sub %%GEN_CLASS%%::%%LINKSTO_ALIAS%%_add {
         my ( $self, $link_id_list, $p ) = @_;
         return 0 unless ( defined $link_id_list );
 
@@ -262,7 +262,7 @@ my $generic_linksto = <<'LINKSTO';
         return $added;
     }
 
-    sub %%CLASS%%::%%LINKSTO_ALIAS%%_remove {
+    sub %%GEN_CLASS%%::%%LINKSTO_ALIAS%%_remove {
         my ( $self, $link_id_list, $p ) = @_;
         $p ||= {};
 
@@ -307,28 +307,63 @@ sub conf_relate_links_to {
     # Process the 'links_to' aliases -- pretty straightforward (see pod)
 
     if ( my $links_to = $config->{links_to} ) {
-        while ( my ( $linksto_class, $table ) = each %{ $links_to } ) {
-            my $linksto_config   = $linksto_class->CONFIG;
-            my $linksto_alias    = $linksto_config->{main_alias};
-            my $linksto_id_field = $linksto_config->{id_field};
-            my $linksto_sub = $generic_linksto;
-            $linksto_sub =~ s/%%ID_FIELD%%/$this_id_field/g;
-            $linksto_sub =~ s/%%CLASS%%/$class/g;
-            $linksto_sub =~ s/%%LINKSTO_CLASS%%/$linksto_class/g;
-            $linksto_sub =~ s/%%LINKSTO_ALIAS%%/$linksto_alias/g;
-            $linksto_sub =~ s/%%LINKSTO_ID_FIELD%%/$linksto_id_field/g;
-            $linksto_sub =~ s/%%LINKSTO_TABLE%%/$table/g;
-            DEBUG() && _w( 2, "Trying to create links_to routines with ",
-                              "[$class] links_to [$linksto_class] using ",
-                              "table [$table]" );
-            DEBUG() && _w( 5, "Now going to eval the routine:\n$linksto_sub" );
+        while ( my ( $to_class, $link_info ) = each %{ $links_to } ) {
+
+            # Since the class specified can be a subclass of what's
+            # generated, ensure that it's available
+
+            eval "require $to_class";
+            my $require_error = $@;
+            my $to_config = eval { $to_class->CONFIG };
+            if ( $@ ) {
+                return ( ERROR, "Failed to retrieve configuration from ",
+                                "'$to_class': $@. (Require error: $require_error)" );
+            }
+
+            my ( $to_alias, $to_id_field, $link_table, $from_id_field );
+
+            # If the linking information is a hashref then give the
+            # user the opportunity to define everything
+
+            if ( ref( $link_info ) eq 'HASH' ) {
+                $link_table    = $link_info->{table};
+                $to_alias      = $link_info->{alias}
+                                 || $to_config->{main_alias};
+                $to_id_field   = $link_info->{to_id_field}
+                                 || $to_config->{id_field};
+                $from_id_field = $link_info->{from_id_field}
+                                 || $this_id_field;
+            }
+
+            # Otherwise, if the value is a simple scalar then it names
+            # the table
+
+            else {
+                $link_table     = $link_info;
+                $to_alias       = $to_config->{main_alias};
+                $to_id_field    = $to_config->{id_field};
+                $from_id_field  = $this_id_field;
+            }
+
+            my $link_subs = $generic_linksto;
+            $link_subs =~ s/%%ID_FIELD%%/$this_id_field/g;
+            $link_subs =~ s/%%GEN_CLASS%%/$class/g;
+            $link_subs =~ s/%%LINKSTO_CLASS%%/$to_class/g;
+            $link_subs =~ s/%%LINKSTO_ALIAS%%/$to_alias/g;
+            $link_subs =~ s/%%LINKSTO_ID_FIELD%%/$to_id_field/g;
+            $link_subs =~ s/%%LINKSTO_TABLE%%/$link_table/g;
+            DEBUG() && _w( 2, "Trying to create links_to routines from ",
+                              "[$class: $from_id_field] to ",
+                              "[$to_class: $to_id_field] using ",
+                              "table [$link_table]" );
+            DEBUG() && _w( 5, "Now going to eval the routine:\n$link_subs" );
             {
                 local $SIG{__WARN__} = sub { return undef };
-                eval $linksto_sub;
+                eval $link_subs;
                 if ( $@ ) {
                     return ( ERROR, "Cannot create 'links_to' methods for " .
                                     "class [$class] linking to class ",
-                                    "[$linksto_class] via table [$table]. " .
+                                    "[$to_class] via table [$link_table]. " .
                                     "Error: $@" );
                 }
             }

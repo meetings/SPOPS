@@ -1,13 +1,13 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 3.8 2003/08/12 03:39:33 lachoy Exp $
+# $Id: Secure.pm,v 3.9 2003/11/25 02:54:11 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
 use vars  qw( $EMPTY );
 use Data::Dumper qw( Dumper );
 
-$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.8 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.9 $ =~ /(\d+)\.(\d+)/);
 
 # Stuff for security constants and exporting
 
@@ -158,7 +158,7 @@ sub register_security_error {
     my ( $class, $p ) = @_;
     DEBUG() && _w( 1, "Cannot access $p->{class} record with ID $p->{id}; ",
                       "access: $p->{level} while $p->{required} is required." );
-    SPOPS::Exception::Security->throw( "Access denied due to security evel",
+    SPOPS::Exception::Security->throw( "Access denied due to security level",
                                        { required => $p->{required},
                                          found    => $p->{level} } );
 }

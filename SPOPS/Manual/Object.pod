@@ -79,7 +79,7 @@ being used for properties. We can also track property state as
 necessary so we can know whether an object has changed or not since it
 was created or fetched. Property values can also be lazy-loaded.
 
-=head2 Automatically Created Accessors
+=head2 Automatically Created Accessors and Mutators
 
 In addition to getting the data for an object through the hashref
 method, you can also get to the data with accessors named after the
@@ -97,10 +97,38 @@ You can call to retrieve the data:
  $user->l_name();
  $user->birthday();
 
-Note that this is only to read the data, not to change it. The system
-does this using AUTOLOAD, and after the first call it automatically
-creates a subroutine in the namespace of your class to handle
-successive calls.
+And to modify the data:
+
+ $user->f_name( 'Ferris' );
+ $user->l_name( 'Bueller' );
+ $user->birthday( '1970-02-14' );
+
+Since the accessor and mutator share a method the mutator needs to
+know whether to do its job. It does this by testing the first
+parameter passed in for definedness. Most of the time this is fine,
+but what happens when you want to clear out a value?
+
+ $user->m_name( undef );
+
+This won't do what you think -- since the first parameter is undefined
+it will simply act as an accessor.
+
+Instead call the '_clear' method associated with a fieldname:
+
+ $user->_m_name_clear;
+
+This explicitly sets the value to undef.
+
+The system accomplishes this using AUTOLOAD, and after the first call
+it automatically creates a subroutine in the namespace of your class
+to handle successive calls. If you require you can modify how these
+two methods get created by overriding
+C<_internal_create_field_methods()>. This takes three arguments: the
+argument being modified, the class to install the routines into, and
+the fieldname used to create the methods. Don't implement this unless
+you know what you're doing -- check out the implementation in
+L<SPOPS|SPOPS> before proceeding down this path, since doing it wrong
+could create some nasty side-effects.
 
 =head2 Tracking State Changes
 

@@ -1,0 +1,20 @@
+#XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
+name:         SPOPS
+version:      0.80
+version_from: SPOPS.pm
+installdirs:  site
+requires:
+    Class::ISA:                    0.32
+    Time::Piece:                   1.07
+    Devel::StackTrace:             0.9
+    Storable:                      1
+    Class::Date:                   1
+    Carp::Assert:                  0.17
+    Class::Fields:                 0.14
+    Class::Factory:                1
+    Data::Dumper:                  2
+    Test::More:                    0.41
+    Class::Accessor:               0.17
+
+distribution_type: module
+generated_by: ExtUtils::MakeMaker version 6.12

@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.18 2003/09/08 01:56:48 lachoy Exp $
+# $Id: SPOPS.pm,v 3.22 2003/11/26 14:18:07 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -11,8 +11,8 @@ use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.79';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.18 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.80';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.22 $ =~ /(\d+)\.(\d+)/);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -614,7 +614,7 @@ sub as_data_only {
 sub data { return as_data_only( @_ ) }
 
 sub AUTOLOAD {
-    my ( $item ) = @_;
+    my ( $item, @params ) = @_;
     my $request = $SPOPS::AUTOLOAD;
     $request =~ s/.*://;
 
@@ -623,19 +623,26 @@ sub AUTOLOAD {
 
     my $class = ref $item;
     unless ( $class ) {
-        _w( 0, "Cannot fill request ($request) from class $item" );
+        _w( 0, "Cannot fill class method '$request' from class '$item'" );
         return undef;
     }
 
-    no strict 'refs';
-    DEBUG() && _w( 1, "Trying to fulfill $request from $class (ISA: ",
+    DEBUG() && _w( 1, "Trying to fill $request from $class (ISA: ",
                       join( " // ", @{ $class . '::ISA' } ), ")" );
     if ( ref $item and $item->is_checking_fields ) {
         my $fields = $item->field || {};
+        my ( $field_name ) = $request =~ /^(\w+)_clear/;
         if ( exists $fields->{ $request } ) {
-            DEBUG() && _w( 2, "$class to fill  param <<$request>>; returning data." );
-            *{ $class . '::' . $request } = sub { return $_[0]->{ $request } };
-            return $item->{ $request };
+            DEBUG() && _w( 2, "$class to fill param '$request'; returning data." );
+            # TODO: make these internal methods inheritable?
+            $item->_internal_create_field_methods( $class, $request );
+            return $item->$request( @params );
+        }
+        elsif ( $field_name and exists $fields->{ $field_name } ) {
+            DEBUG() && _w( 2, "$class to fill param clear '$request'; ",
+                              "creating '$field_name' methods" );
+            $item->_internal_create_field_methods( $class, $field_name );
+            return $item->$request( @params );
         }
         elsif ( my $value = $item->{ $request } ) {
             DEBUG() && _w( 2, " $request must be a temp or something, returning value." );
@@ -655,9 +662,33 @@ sub AUTOLOAD {
         return undef;
     }
     DEBUG() && _w( 2, "$class is not checking fields, so create sub and return",
-                      "data for <<$request>>" );
-    *{ $class . '::' . $request } = sub { return $_[0]->{ $request } };
-    return $item->{ $request };
+                      "data for '$request'" );
+    $item->_internal_create_field_methods( $class, $request );
+    return $item->$request( @params );
+}
+
+sub _internal_create_field_methods {
+    my ( $item, $class, $field_name ) = @_;
+
+    no strict 'refs';
+
+    # First do the accessor/mutator...
+    *{ $class . '::' . $field_name } = sub {
+        my ( $self, $value ) = @_;
+        if ( defined $value ) {
+            $self->{ $field_name } = $value;
+        }
+        return $self->{ $field_name };
+    };
+
+    # Now the mutator to clear the field value
+    *{ $class . '::' . $field_name . '_clear' } = sub {
+        my ( $self ) = @_;
+        $self->{ $field_name } = undef;
+        return undef;
+    };
+
+    return;
 }
 
 
@@ -1000,10 +1031,44 @@ somewhere in the overridden method.
 =head2 Accessors/Mutators
 
 You should use the hash interface to get and set values in your object
--- it is easier. However, SPOPS will also create accessors for you on
-demand -- just call a method with the same name as one of your
-properties and it will be created. Generic accessors and mutators are
-available.
+-- it is easier. However, SPOPS will also create an
+accessor/mutator/clearing-mutator for you on demand -- just call a
+method with the same name as one of your properties and two methods
+('${fieldname}' and '${fieldname}_clear') will be created. Similar to
+other libraries in Perl (e.g., L<Class::Accessor|Class::Accessor>) the
+accessor and mutator share a method, with the mutator only being used
+if you pass a defined value as the second argument:
+
+ # Accessor
+ my $value = $object->fieldname;
+ 
+ # Mutator
+ $object->fieldname( 'new value' );
+ 
+ # This won't do what you want (clear the field value)...
+ $object->fieldname( undef );
+ 
+ # ... but this will
+ $object->fieldname_clear;
+
+The return value of the mutator is the B<new> value of the field which
+is the same value you passed in.
+
+Generic accessors (C<get()>) and mutators (C<set()>) are available but
+deprecated, probably to be removed before 1.0:
+
+You can modify how the accessors/mutators get generated by overriding
+the method:
+
+ sub _internal_create_field_methods {
+     my ( $self, $class, $field_name ) = @_;
+     ...
+ }
+
+This method must create two methods in the class namespace,
+'${fieldname}' and '${fieldname}_clear'. Since the value returned from
+C<AUTOLOAD> depends on these methods being created, failure to create
+them will probably result in an infinite loop.
 
 B<get( $fieldname )>
 
@@ -1034,13 +1099,15 @@ Again, you can also use the hashref interface to do the same thing:
 
  $obj->{username} = 'ding-dong';
 
-Note that unlike C<get>, You B<cannot> use the shortcut of using the
-parameter name as a method. So a call like:
+You can use the fieldname as a method to modify the field value here
+as well:
 
- my $username = $obj->username( 'new_username' );
+ $obj->username( 'ding-dong' );
 
-Will silently ignore any parameters that are passed and simply return
-the information as C<get()> would.
+Note that if you want to set the field to C<undef> you will need to
+use the hashref interface:
+
+ $obj->{username} = undef;
 
 B<id()>
 

@@ -1,5 +1,79 @@
 Revision history for Perl extension SPOPS.
 
+0.80  Sat Nov 29 13:17:17 EST 2003
+
+Overall:
+
+  * Add auto-generated mutators and clearing mutators along with the
+    accessors.
+
+  * Customize the 'links_to' mechanism for DBI object relationships.
+
+Individual:
+
+  * MANIFEST:
+  
+    - Add eg/My/CommonResources.pm, forgotten from earlier
+    version. Thanks to Simon Ilyushchenko (simonf@cshl.edu) for the
+    report.
+
+  * SPOPS.pm:
+
+    - AUTOLOAD-created accessor now also acts as a mutator. I thought
+    it was already doing this but Simon set me straight.
+
+    - Also generate a '{fieldname}_clear' to act as a clearing mutator
+    (set a field to undef).
+
+    - Allow SPOPS subclasses to define their own
+    accessor/mutator/clearing mutator methods by overriding
+    '_internal_create_field_methods()'. See docs for details.
+
+  * SPOPS/ClassFactory/DBI.pm:
+
+    - Allow 'links_to' declarations to customize the to/from ID fields
+    and alias in addition to the linking table. Thanks to Stathy
+    Touloumis (stathy@edisonaffiliates.com) for the idea.
+
+    - In 'links_to' generation stage, try to require the linked class
+    before getting its configuration. This allows us to declare the
+    SPOPS class as a superclass of our customized class.
+
+  * SPOPS/ClassFactory/Default.pm:
+
+   - In 'has_a' generation stage, try to require the contained class
+     before getting its configuration. This allows us to declare the 
+     SPOPS class as a superclass of our customized class.
+
+  * SPOPS/DBI.pm:
+
+    - In save() allow the user to pass in an empty arrayref for
+    'no_insert' and 'no_update' that will override whatever is defined
+    in the object configuration.
+
+  * SPOPS/Manual/Object.pod:
+
+    - Modify the accessor/mutator discussion to reflect changed code.
+
+  * SPOPS/Manual/Relationships.pod:
+
+    - Add new 'links_to' configuration options.
+
+  * SPOPS/Secure.pm:
+
+    - Fix typo in message generated from 'register_security_error()',
+    thanks to Simon for the report.
+
+  * t/00_base.t:
+
+    - Test auto-created mutators and clearing mutators.
+
+  * t/62_export_perl.t:
+
+    - Fix bug in tests exposed by modified hash key ordering in
+    5.8+. (Note: use 'is_deeply()'!)
+
+
 0.79  Sun Sep  7 22:45:07 EDT 2003
 
 Individual:

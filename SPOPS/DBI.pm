@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.12 2003/08/12 03:38:10 lachoy Exp $
+# $Id: DBI.pm,v 3.13 2003/10/30 03:53:12 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -14,7 +14,7 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.12 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.13 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -672,19 +672,30 @@ sub save {
                                                    is_add => $is_add }) );
 
     # Do not include these fields in the insert/update at all. Allow
-    # user to override.
+    # user to override even with an empty arrayref.
 
-    my ( $not_included );
+    my ( %not_included );
     if ( $is_add ) {
-        $not_included = $self->no_insert;
-        $p->{no_insert} ||= [];
-        map { $not_included->{ $_ } = 1 } @{ $p->{no_insert} };
-        $p->{no_insert} = $not_included;   # blech
+        my ( @no_insert_items );
+        if ( $p->{no_insert} ) {
+            @no_insert_items = ( ref $p->{no_insert} eq 'ARRAY' )
+                                 ? @{ $p->{no_insert} } : ( $p->{no_insert} );
+        }
+        elsif ( my $no_insert_config = $self->no_insert ) {
+            @no_insert_items = keys %{ $no_insert_config };
+        }
+        %not_included = map { $_ => 1 } @no_insert_items;
     }
     else {
-        $not_included = $self->no_update;
-        $p->{no_update} ||= [];
-        map { $not_included->{ $_ } = 1 } @{ $p->{no_update} };
+        my ( @no_update_items );
+        if ( $p->{no_update} ) {
+            @no_update_items = ( ref $p->{no_update} eq 'ARRAY' )
+                                 ? @{ $p->{no_update} } : ( $p->{no_update} );
+        }
+        elsif ( my $no_update_config = $self->no_update ) {
+            @no_update_items = keys %{ $no_update_config };
+        }
+        %not_included = map { $_ => 1 } @no_update_items;
     }
 
     # Do not include these fields in the insert/update if they're not defined
@@ -699,7 +710,7 @@ sub save {
 
 FIELD:
     foreach my $field ( keys %{ $self->field } ) {
-        next FIELD if ( $not_included->{ $field } );
+        next FIELD if ( $not_included{ $field } );
         my $value = $self->{ $field };
         next FIELD if ( ! defined $value and $skip_undef->{ $field } );
         push @{ $p->{field} }, $field;
@@ -709,8 +720,8 @@ FIELD:
     # Do the insert/update based on whether the object is new; don't
     # catch the die() that might be thrown -- let that percolate
 
-    if ( $is_add ) { $self->_save_insert( $p )  }
-    else           { $self->_save_update( $p )  }
+    if ( $is_add ) { $self->_save_insert( $p, \%not_included )  }
+    else           { $self->_save_update( $p, \%not_included )  }
 
     # Set the 'has_save' flag so that any saved changes to the object
     # in the post_save will be an update rather than another insert;
@@ -743,7 +754,7 @@ sub pre_fetch_id  { return undef }
 sub post_fetch_id { return undef }
 
 sub _save_insert {
-    my ( $self, $p ) = @_;
+    my ( $self, $p, $not_inserted ) = @_;
     $p ||= {};
     $p->{DEBUG} ||= DEBUG_SAVE;
     $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Treating the save as an INSERT ",
@@ -806,7 +817,7 @@ sub _save_insert {
 
     unless ( $p->{no_sync} or $self->no_save_sync ) {
         my %fill_in_uniq = map { $_ => 1 } ( @{ $self->CONFIG->{sql_defaults} },
-                                             keys %{ $p->{no_insert} } );
+                                             keys %{ $not_inserted } );
 
         # Get rid of the ID field, since it's a) defined in the
         # object, b) pre-fetched or c) post-fetched; if it's none of
@@ -1690,6 +1701,12 @@ per-object basis by passing an arrayref with the relevant parameter:
 
  my $new_obj = $class->fetch( $id );
  print $new_obj->{foo}; # Prints 'bar'
+
+You can also pass empty array references for either 'no_insert' or
+'no_update' to override information from the class
+configuration. (This changed with SPOPS 0.80, previous behavior was to
+add the values passed in with the method call to the class
+configuration instead of replacing them.)
 
 You can also tell SPOPS not to insert or update fields when they are
 undefined using the 'skip_undef' configuration key. (Configuration is

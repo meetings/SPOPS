@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 3.5 2003/05/10 19:24:43 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 3.6 2003/11/28 17:20:42 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
-$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::ClassFactory::DefaultBehavior::VERSION   = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
 
 # Overlap here with DBI...
 my @PARSE_INTO_HASH  = qw( field no_insert no_update skip_undef multivalue );
@@ -77,7 +77,7 @@ my $ID_TEMPLATE = <<'IDTMPL';
 
        # Get the ID of this object, and optionally set it as well.
 
-       sub %%CLASS%%::id {
+       sub %%GEN_CLASS%%::id {
           my ( $self, $new_id ) = @_;
           my $id_field = $self->id_field ||
                          SPOPS::Exception->throw(
@@ -95,7 +95,7 @@ IDTMPL
 sub conf_id_method {
     my ( $class ) = @_;
     my $id_method = $ID_TEMPLATE;
-    $id_method =~ s/%%CLASS%%/$class/g;
+    $id_method =~ s/%%GEN_CLASS%%/$class/g;
     DEBUG() && _w( 5, "ID method being created\n$id_method" );
     {
         local $SIG{__WARN__} = sub { return undef };
@@ -205,7 +205,7 @@ CODEPKG:
 
 my $GENERIC_HASA = <<'HASA';
 
-       sub %%CLASS%%::%%HASA_ALIAS%% {
+       sub %%GEN_CLASS%%::%%HASA_ALIAS%% {
            my ( $self, $p ) = @_;
            return undef  unless ( $self->{%%HASA_ID_FIELD%%} );
            return %%HASA_CLASS%%->fetch( $self->{%%HASA_ID_FIELD%%}, $p );
@@ -220,12 +220,24 @@ sub conf_relate_hasa {
     my ( $class ) = @_;
     my $CONFIG = $class->CONFIG;
     $CONFIG->{has_a} ||= {};
+
     foreach my $hasa_class ( keys %{ $CONFIG->{has_a} } ) {
+
+        # Since the class specified can be a subclass of what's
+        # generated, ensure that it's available
+
+        eval "require $hasa_class";
+        my $require_error = $@;
+        my $hasa_config = eval { $hasa_class->CONFIG };
+        if ( $@ ) {
+            return ( ERROR, "Failed to retrieve configuration from ",
+                            "'$hasa_class': $@. (Require error: $require_error)" );
+        }
+
         DEBUG() && _w( 1, "Try to alias [$class] hasa [$hasa_class]" );
-        my $hasa_config   = $hasa_class->CONFIG;
         my $hasa_id_field = $hasa_config->{id_field};
         my $hasa_sub = $GENERIC_HASA;
-        $hasa_sub =~ s/%%CLASS%%/$class/g;
+        $hasa_sub =~ s/%%GEN_CLASS%%/$class/g;
         $hasa_sub =~ s/%%HASA_CLASS%%/$hasa_class/g;
 
         # Each defined relationship can be between more than one instance
@@ -300,7 +312,7 @@ sub conf_relate_hasa {
 
 my $GENERIC_FETCH_BY = <<'FETCHBY';
 
-       sub %%CLASS%%::fetch_by_%%FETCH_BY_FIELD%% {
+       sub %%GEN_CLASS%%::fetch_by_%%FETCH_BY_FIELD%% {
            my ( $item, $fb_field_value, $p ) = @_;
            $p ||= {};
            my $obj_list = $item->fetch_group({ where => "%%FETCH_BY_FIELD%% = ?",
@@ -322,7 +334,7 @@ sub conf_relate_fetchby {
     $CONFIG->{fetch_by} ||= [];
     foreach my $fetch_by_field ( @{ $CONFIG->{fetch_by} } ) {
         my $fetch_by_sub = $GENERIC_FETCH_BY;
-        $fetch_by_sub    =~ s/%%CLASS%%/$class/g;
+        $fetch_by_sub    =~ s/%%GEN_CLASS%%/$class/g;
         $fetch_by_sub    =~ s/%%FETCH_BY_FIELD%%/$fetch_by_field/g;
         DEBUG() && _w( 2, "Creating fetch_by for field ($fetch_by_field)" );
         DEBUG() && _w( 5, "Now going to eval the routine:\n$fetch_by_sub" );
@@ -345,8 +357,8 @@ sub conf_relate_fetchby {
 
 my $GENERIC_RULESET_REFER = <<'RULESET';
 
-       $%%CLASS%%::RULESET = {};
-       sub %%CLASS%%::RULESET { return $%%CLASS%%::RULESET }
+       $%%GEN_CLASS%%::RULESET = {};
+       sub %%GEN_CLASS%%::RULESET { return $%%GEN_CLASS%%::RULESET }
 
 RULESET
 
@@ -358,7 +370,7 @@ sub conf_add_rules {
     # Install the variable/subroutine RULESET into the class
 
     my $ruleset_info = $GENERIC_RULESET_REFER;
-    $ruleset_info   =~ s/%%CLASS%%/$class/g;
+    $ruleset_info   =~ s/%%GEN_CLASS%%/$class/g;
 
     {
         no warnings 'redefine';

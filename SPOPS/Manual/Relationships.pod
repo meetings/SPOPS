@@ -440,6 +440,56 @@ Code adding and removing a book from the publisher might look like:
  16: }
  17: $publisher->book_add( \@book_ids );
 
+=head2 Advanced 'links_to' configuration
+
+You can also specify many of the variables used in the code generation
+process yourself. For instance, your linking table may not use the
+same ID fields as either of your classes, or you may want to modify
+the names of the methods created.
+
+To do this pass a hashref instead of a table name in the 'links_to'
+configuration. For instance, if in our 'publisher_book' table the
+publisher ID was 'p_id' and the book ID was 'b_id' we would use:
+
+  1:    links_to        => { 'My::Book' =>
+  2:                           { table         => 'publisher_book',
+  3:                             to_id_field   => 'b_id',
+  4:                             from_id_field => 'p_id', },
+  5:                       }
+
+The fields we can define are:
+
+=over 4
+
+=item B<table> (required)
+
+You must still specify the table you're using as a linking table.
+
+=item B<to_id_field> (optional)
+
+If the ID field of the object you're linking to is different than
+configured in the class you can specify it here. So in the above
+example the object linking to is 'book' and the new ID field for the
+book was 'b_id'.
+
+=item B<from_id_field> (optional)
+
+If the ID field of the object you're linking from is different than
+configured in the class you can specify it here. So in the above
+example the object linking from is 'publisher' and the new ID field
+for the book was 'p_id'.
+
+=item B<alias> (optional)
+
+You can change the names of the generated methods using this
+value. Instead of using the main alias of the class as configured you
+can specify something new here. So if you wanted the methods to be
+generated for your Spanish-speaking developers you can set this to
+'libro' and the methods generated would be 'libro', 'libro_add' and
+'libro_remove' instead of 'book', 'book_add' and 'book_remove'.
+
+=back
+
 =head1 SPOPS::LDAP - USING 'has_a' 
 
 The basic idea is the same as the default implementation for 'has_a'

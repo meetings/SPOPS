@@ -1,10 +1,10 @@
 # -*-perl-*-
 
-# $Id: 00_base.t,v 3.3 2003/09/08 01:51:42 lachoy Exp $
+# $Id: 00_base.t,v 3.5 2003/11/26 14:15:06 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
-use Test::More tests => 53;
+use Test::More tests => 60;
 
 my $SPOPS_CLASS = 'BaseTest';
 my @FIELDS      = qw( id_name name );
@@ -160,6 +160,25 @@ END {
         my $item_d = $SPOPS_CLASS->new({ id => 5, name => 'New Object' });
         is( $item_d->id_name, 5, 'Accessor created for field 1' );
         is( $item_d->name, 'New Object', 'Accessor created for field 2' );
+    }
+
+    # AUTOLOAD-ed mutators
+    {
+        my $item = $SPOPS_CLASS->new();
+        is( $item->id_name( 55 ), 55, 'Accessor/mutator created for field 1' );
+        is( $item->name( 'foo' ), 'foo', 'Accessor/mutator created for field 2' );
+        is( $item->id_name, 55, 'Value set by mutator for field 1' );
+        is( $item->name, 'foo', 'Value set by mutator for field 2' );
+    }
+
+    # AUTOLOAD-ed clearers
+    {
+        my $item = $SPOPS_CLASS->new({ id => 42, name => 'Frobozz' });
+        $item->{name} = undef;
+        is( $item->name, undef, 'Cleared through hash' );
+        $item->{name} = 'Frobozz';
+        is( $item->name_clear, undef, 'Return of clear method' );
+        is( $item->{name}, undef, 'Clear method actually cleared' );
     }
 
     ########################################
