@@ -1,6 +1,6 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 1.32 2002/02/23 05:38:58 lachoy Exp $
+# $Id: Secure.pm,v 1.34 2002/03/05 14:08:07 lachoy Exp $
 
 use strict;
 use vars         qw( $EMPTY );
@@ -8,7 +8,7 @@ use Data::Dumper qw( Dumper );
 require Exporter;
 
 @SPOPS::Secure::ISA      = qw( Exporter );
-$SPOPS::Secure::VERSION  = substr(q$Revision: 1.32 $, 10);
+$SPOPS::Secure::VERSION  = substr(q$Revision: 1.34 $, 10);
 
 # Stuff for security constants and exporting
 
@@ -169,7 +169,7 @@ sub check_security {
     my ( $class, $p ) = @_;
     my $sec_info = $p->{sec_info};
     unless ( $sec_info ) {
-        DEBUG() && _w( 1, "Retrieving security information." );
+        DEBUG() && _w( 1, "Retrieving security information using get_security()" );
         $p->{user} = shift @{ $p->{user} }   if ( ref $p->{user} eq 'ARRAY' );
 
         # Retrieve security. If a subclass wants to implement a different
@@ -218,7 +218,7 @@ sub get_security {
     my $object_id = $p->{oid} || $p->{object_id};
     my ( $class, $oid ) = $item->_get_object_info_for_security(
                                              $p->{class}, $object_id );
-    DEBUG() && _w( 1, "Checking security for $class ($oid) with:\n", Dumper( $p ) );
+    DEBUG() && _w( 1, "Checking security for [$class] [$oid] with:\n", Dumper( $p ) );
 
     my ( $user, $group_list ) = $item->get_security_scopes( $p );
 

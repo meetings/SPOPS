@@ -49,46 +49,56 @@ to these objects later, it's easy!
 SHOW ME THE CODE!
 ====================
 
-Here's a sample session. In it, we have a simple configuration file
-which names the table in our database and the fields in the table,
-along with the primary key field. We process the config, then create a
-new object with our just-created class.
+Here's a sample session to show how easily you can access existing
+data in an object-oriented fashion. In it, we have a simple
+configuration file which names the table in our database and the
+primary key field. We process the config, then fetch a group of
+objects based on criteria passed in from the command-line.
 
-(Note that this code is copied directly from the file
-'eg/fatbomb_dbi.pl'. See it for more details or to run it yourself.)
+Just set the variables starting the file to your relevant information.
 
- my $spops = {
-      fatbomb => {
-        class        => 'My::ObjectClass',
-        isa          => [ qw/ SPOPS::DBI::MySQL SPOPS::DBI / ],
-        field        => [ qw/ fatbomb_id calories cost name servings / ],     
-        base_table   => 'fatbomb',
-        id_field     => 'fatbomb_id',
-        increment_field => 1,
-        skip_undef   => [ 'servings' ],
-        sql_defaults => [ 'servings' ],
-      },
- };
- 
- SPOPS::Initialize->process({ config => $spops });
+----------------------------------------
+#!/usr/bin/perl
 
- my $object = My::ObjectClass->new;
- $object->{calories} = 1500;
- $object->{cost}     = '$3.50';
- $object->{name}     = "Super Deluxe Jumbo Big Mac";
- my $fb_id = eval { $object->save({ db => $db }) };
- if ( $@ ) {
-    my $ei = SPOPS::Error->get;
-    die "Error found! ($@) Error information: ", Dumper( $ei ), "\n";
- }
- print "Object saved ok!\n",
-       "Object ID: $fb_id\n",
-       "Servings:  $object->{servings}\n";
+# Note: Run this from the eg/ directory in the SPOPS distribution
 
-We can strip out the 'skip_undef' and 'sql_defaults' items in the
-configuration and we'd have the bare minimum configuration for a
-SPOPS::DBI object. (The 'increment_field' key exists because we're
-using the AUTO_INCREMENT feature of MySQL.)
+use strict;
+use SPOPS::Initialize;
+
+my $TABLE        = 'mytable';
+my $ID           = 'id';
+my $DSN          = 'DBI:mysql:test';
+my $USER         = 'test';
+my $PASS         = 'test';
+my $SEARCH_FIELD = 'field';
+
+{
+    my $search_value = shift @ARGV;
+    die "Usage $0 search-value\n" unless ( defined $search_value );
+    my $config = {
+      user => {
+        class          => 'My::Object',
+        isa            => [ 'SPOPS::DBI' ],
+        rules_from     => [ 'My::DBI::DatasourceConfigure',
+                            'My::DiscoverField' ],
+        field_discover => 'yes',
+        id_field       => $ID,
+        base_table     => $TABLE,
+        dbi_config     => { dsn      => $DSN,
+                            username => $USER,
+                            password => $PASS },
+      } };
+    SPOPS::Initialize->process({ config => $config });
+    my $iter = My::Object->fetch_iterator({ where => "$SEARCH_FIELD = ?",
+                                            value => [ $search_value ] });
+    while ( my $o = $iter->get_next ) {
+        print "Object: (", $o->id, ")", "\n",
+              join( "\n",
+                    map { "$_: $o->{ $_ }" }
+                        @{ My::Object->field_list } ), "\n\n";
+    }
+}
+----------------------------------------
 
 
 APPLICATION-SPECIFICITY 
@@ -96,11 +106,11 @@ APPLICATION-SPECIFICITY
 
 Up to now, this library has been tied relatively closely to the
 OpenInteract project (www.openinteract.org, or check out the CPAN
-module OpenInteract). However, it should be able to stand on its own
-two feet -- we've used it like this without any problem. But there
-might be a few assumptions lurking around the code somewhere. If you
-spot something that looks totally out of place or appears to have no
-real purpose, let us know!
+module OpenInteract). However, it can easily stand on its own two feet
+-- we've used it like this without any problem. But there might be a
+few assumptions lurking around the code somewhere. If you spot
+something that looks totally out of place or appears to have no real
+purpose, let us know!
 
 
 
@@ -112,10 +122,6 @@ should work fine for read-only operations.
 
  * MySQL (using DBD::mysql and SPOPS::DBI::MySQL
 
- * ODBC datasources; so far we've tried MS SQL Server (using DBD::ODBC
-   and SPOPS::DBI::Sybase) which works fine for read-write, and DB2 on
-   an AS/400 which works fine for read-only operations.
-
  * PostgreSQL (using DBD::Pg and SPOPS::DBI::Pg)
 
  * Sybase Adaptive Server Enterprise (using DBD::Sybase and
@@ -123,6 +129,15 @@ should work fine for read-only operations.
 
  * Sybase Adaptive Server Anywhere (using DBD::ASAny and
    SPOPS::DBI::Sybase)
+
+ * Microsoft SQL Server (using DBD::ODBC and SPOPS::DBI::Sybase)
+
+ * Oracle (using DBD::Oracle and SPOPS::DBI::Oracle)
+
+ * SQLite (using DBD::SQLite and SPOPS::DBI::SQLite)
+
+ * ODBC datasources; we have used this to access DB2 on
+   an AS/400 for read-only operations and it worked great.
 
 We also support:
 
@@ -136,8 +151,6 @@ DO YOU HAVE A LIBRARY FOR <insert name here>?
 ========================
 
 Maybe. Future development should include:
-
- * Oracle (using DBD::Oracle)
 
  * DB2 (using DBD::DB2)
 
@@ -250,4 +263,4 @@ version 2 of the License (see 'COPYING'), or (at your option) any
 later version.
 
 =========================
-$Id: README,v 1.10 2002/01/02 02:37:04 lachoy Exp $
+$Id: README,v 1.11 2002/03/05 04:50:57 lachoy Exp $

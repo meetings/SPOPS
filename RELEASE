@@ -1,6 +1,13 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.58 Thu Mar 14 09:03:35 EST 2002
+
+  * Fix id_clause() to work with DBD drivers that don't use the type
+    information when quoting. (Found with latest version of
+    DBD::SQLite.)
+
+
 0.57 Sat Feb 23 14:02:22 EST 2002
 
   * Oracle (via DBD::Oracle) support added
@@ -101,4 +108,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 1.15 2002/02/23 18:34:27 lachoy Exp $
+$Id: RELEASE,v 1.16 2002/03/14 13:39:58 lachoy Exp $

@@ -1,5 +1,29 @@
 Revision history for Perl extension SPOPS.
 
+0.58  Thu Mar 14 09:03:35 EST 2002
+
+Overall:
+
+   * Modified DBI id_clause() quoting (in both single and multifield keys)
+     so it will call ->sql_quote() (in SPOPS::SQLInterface or
+     overridden by the SPOPS DBI driver class) instead of ->quote()
+     directly on the db handle, since some drivers don't know what to
+     do with the extra type information. (Found with latest version --
+     0.11 -- of DBD::SQLite.)
+
+Individual:
+
+   * SPOPS/DBI.pm:
+
+     - Updated id_clause() to call ->sql_quote(). See 'Overall' for
+     notes.
+
+   * SPOPS/ClassFactory/DBI.pm:
+
+     - Updated the generated id_clause() for multifield primary keys
+     to call ->sql_quote(). See 'Overall' for notes.
+
+
 0.57  Sat Feb 23 14:02:22 EST 2002
 
 Overall:

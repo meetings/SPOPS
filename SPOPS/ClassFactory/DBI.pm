@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 1.16 2002/01/08 04:31:53 lachoy Exp $
+# $Id: DBI.pm,v 1.17 2002/03/14 13:39:58 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
@@ -9,7 +9,7 @@ use SPOPS::ClassFactory qw( OK ERROR DONE );
 
 @SPOPS::ClassFactory::DBI::ISA      = ();
 $SPOPS::ClassFactory::DBI::VERSION  = '1.90';
-$SPOPS::ClassFactory::DBI::Revision = substr(q$Revision: 1.16 $, 10);
+$SPOPS::ClassFactory::DBI::Revision = substr(q$Revision: 1.17 $, 10);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 
@@ -124,12 +124,13 @@ my $generic_multifield_etc = <<'MFETC';
     	my @clause     = ();
     	my $table_name = $self->table_name;
     	foreach my $id_field ( %%ID_FIELD_NAME_LIST%% ) {
-                my $use_id_field = ( $opt eq 'noqualify' )
-                                     ? $id_field
-                                     : join( '.', $table_name, $id_field );
-    	        push @clause, join( ' = ', $use_id_field,
-                                           $db->quote( $val{ $id_field },
-                                                       $type_info->{ lc $id_field } ) );
+            my $use_id_field = ( $opt eq 'noqualify' )
+                                 ? $id_field
+                                 : join( '.', $table_name, $id_field );
+    	    push @clause, join( ' = ', $use_id_field,
+		                               $self->sql_quote( $val{ $id_field },
+                                                         $type_info->{ lc $id_field },
+                                                         $db ) );
 	    }
         return join( ' AND ', @clause );
     }
@@ -147,7 +148,9 @@ sub conf_multi_field_key_other {
         return ( OK, undef );
     }
 
-    my $id_object_reference    = join( ', ', map { '$self->{' . $_ . '}' } @{ $id_field } );
+    my $id_object_reference    = join( ', ',
+				       map { '$self->{' . $_ . '}' }
+				           @{ $id_field } );
     my $id_variable_reference  = join( ', ', map { "\$val{$_}" } @{ $id_field } );
     my $id_boolean_reference   = join( ' and ', map { "\$val{$_}" } @{ $id_field } );
     my $id_field_reference     = 'qw( ' . join( ' ', @{ $id_field } ) . ' )';

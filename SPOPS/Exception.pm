@@ -1,6 +1,6 @@
 package SPOPS::Exception;
 
-# $Id: Exception.pm,v 1.5 2002/02/23 04:14:26 lachoy Exp $
+# $Id: Exception.pm,v 1.6 2002/03/14 13:39:09 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Exporter );
@@ -8,7 +8,7 @@ use overload '""' => \&stringify;
 use Devel::StackTrace;
 use SPOPS::Error;
 
-$SPOPS::Exception::VERSION   = substr(q$Revision: 1.5 $, 10);
+$SPOPS::Exception::VERSION   = substr(q$Revision: 1.6 $, 10);
 @SPOPS::Exception::EXPORT_OK = qw( spops_error );
 
 use constant DEBUG => 0;
@@ -361,7 +361,9 @@ L<Devel::StackTrace|Devel::StackTrace>
 
 L<Class::Accessor|Class::Accessor>
 
-L<Exception::Class|Exception::Class> for lots of good ideas.
+L<Exception::Class|Exception::Class> for lots of good ideas -- once we
+get rid of backwards compatibility we will probably switch to using
+this as a base class.
 
 =head1 COPYRIGHT
 

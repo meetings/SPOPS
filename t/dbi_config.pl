@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: dbi_config.pl,v 1.5 2002/02/23 06:04:50 lachoy Exp $
+# $Id: dbi_config.pl,v 1.6 2002/03/14 13:35:01 lachoy Exp $
 
 use strict;
 use DBI;
@@ -17,7 +17,7 @@ my %DRIVERS = (
 my %DRIVER_ACTIONS = ( Sybase => \&sybase_setup,
                        Oracle => \&oracle_setup, );
 
-my %DRIVER_NO_TYPE = ();
+my %DRIVER_NO_TYPE = map { $_ => 1 } qw();
 
 my $SIMPLE_TABLE = <<'SIMPLESQL';
 CREATE TABLE %s (

@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 1.67 2002/02/23 05:39:33 lachoy Exp $
+# $Id: DBI.pm,v 1.68 2002/03/14 13:39:58 lachoy Exp $
 
 use strict;
 use Data::Dumper  qw( Dumper );
@@ -13,7 +13,7 @@ use SPOPS::SQLInterface;
 use SPOPS::Tie    qw( $PREFIX_INTERNAL );
 
 @SPOPS::DBI::ISA       = qw( SPOPS  SPOPS::SQLInterface );
-$SPOPS::DBI::VERSION   = substr(q$Revision: 1.67 $, 10);
+$SPOPS::DBI::VERSION   = substr(q$Revision: 1.68 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -150,10 +150,11 @@ sub id_clause {
     }
 
     my $id_field  = $item->id_field;
-    my $type_info = eval { $item->db_discover_types( $item->base_table,
-                                                     { dbi_type_info => $p->{dbi_type_info},
-                                                       db            => $db,
-                                                       DEBUG         => $p->{DEBUG} } ) };
+    my $type_info = eval { $item->db_discover_types(
+                                   $item->base_table,
+                                   { dbi_type_info => $p->{dbi_type_info},
+                                     db            => $db,
+                                     DEBUG         => $p->{DEBUG} } ) };
 
     # If we cannot get the type via our own system, just guess that the
     # ID field is a number
@@ -166,7 +167,8 @@ sub id_clause {
     my $use_id_field = ( $opt eq 'noqualify' )
                          ? $id_field
                          : join( '.', $item->table_name, $id_field );
-    return join(' = ', $use_id_field, $db->quote( $id, $type_info->{ lc $id_field } ) );
+    return join(' = ', $use_id_field,
+                       $item->sql_quote( $id, $type_info->{ lc $id_field }, $db ) );
 }
 
 
