@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::LDAP;
 
-# $Id: LDAP.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: LDAP.pm,v 2.1 2002/08/21 12:32:21 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-$SPOPS::ClassFactory::LDAP::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::ClassFactory::LDAP::VERSION  = substr(q$Revision: 2.1 $, 10);
 
 
 ########################################
@@ -403,6 +403,8 @@ B<Implement 'fetch_by'>
 Implement 'fetch_by' functionality.
 
 =head1 SEE ALSO
+
+L<SPOPS::Manual::Relationships|SPOPS::Manual::Relationships>
 
 L<SPOPS::LDAP|SPOPS::LDAP>
 

@@ -1,10 +1,10 @@
 # -*-perl-*-
 
-# $Id: 06_ruleset.t,v 1.2 2002/04/23 01:04:30 lachoy Exp $
+# $Id: 06_ruleset.t,v 1.3 2002/08/21 14:36:01 lachoy Exp $
 
 use strict;
 use lib qw( t/ );
-use Test::More tests => 4;
+use Test::More tests => 7;
 
 {
     my %config = (
@@ -31,5 +31,11 @@ use Test::More tests => 4;
 
     my $item = eval { LoopbackTest->new };
     eval { $item->save };
-    is( $item->{id_field}, 'blimey!', "Rule overwrote ID field after save()" );
+    ok( ! $@, "Initial save" );
+    is( $item->{id_field}, 'blimey!', "Rule overwrote ID field after insert save()" );
+
+    $item->{id_field} = "Foo!";
+    eval { $item->save };
+    ok( ! $@, "Update save" );
+    is( $item->{id_field}, "Foo!", "Rule did not overwrite ID field after update save()" );
 }

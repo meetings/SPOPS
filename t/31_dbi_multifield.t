@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 31_dbi_multifield.t,v 2.2 2002/04/11 04:14:56 lachoy Exp $
+# $Id: 31_dbi_multifield.t,v 2.4 2002/08/21 18:13:20 lachoy Exp $
 
 # Almost exactly the same as 30_dbi.t, but here we're testing whether
 # multiple-field primary keys work ok
@@ -57,7 +57,7 @@ END {
     };
     my $class_init_list = eval { SPOPS::Initialize->process({ config => $spops_config }) };
     ok( ! $@, 'Initialize process run' );
-    ok( $class_init_list->[0] eq $SPOPS_CLASS, 'Initialize class' );
+    is( $class_init_list->[0], $SPOPS_CLASS, 'Initialize class' );
 
     check_dbd_compliance( $config, $driver_name, $SPOPS_CLASS );
 
@@ -108,7 +108,7 @@ END {
         my $obj = eval { $SPOPS_CLASS->fetch( "$obj_time,$obj_user", { db => $db, skip_cache => 1 } ) };
         ok( ! $@, 'Fetch object (perform)' );
         if ( $@ ) {
-            warn "Cannot fetch object: $@\n", Dumper( SPOPS::Error->get ), "\n";
+            warn "Cannot fetch object: $@\n";
         }
 
         ok( $obj->{spops_name} eq 'MyProject', 'Fetch object (correct data)' );

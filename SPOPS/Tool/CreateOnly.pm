@@ -1,6 +1,6 @@
 package SPOPS::Tool::CreateOnly;
 
-# $Id: CreateOnly.pm,v 1.1 2002/05/08 03:42:01 lachoy Exp $
+# $Id: CreateOnly.pm,v 1.3 2002/08/21 18:11:42 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
@@ -15,16 +15,18 @@ sub behavior_factory {
 sub generate_persistence_methods {
     my ( $class ) = @_;
     DEBUG && _w( 1, "Generating create-only save() [$class]" );
+    my $first_isa = $class->CONFIG->{isa}->[0];
     no strict 'refs';
     *{ "${class}::save" }   =
           sub {
-              my ( $self, $params ) = @_;
+              my $self = shift;
               if ( $self->is_saved() ) {
-                  warn "Objects in [", ref $self, "] can only be created, ",
-                       "not updated. No changes made.\n";
-                  return $self;
+                  SPOPS::Exception->throw(
+                         "Objects in [", ref $self, "] can only be created, ",
+                         "not updated. No changes made." );
               }
-              return $self->SUPER::save( $params );
+              my $full_method = $first_isa. '::save';
+              return $self->$full_method( @_ );
           };
     return OK;
 }
@@ -32,8 +34,6 @@ sub generate_persistence_methods {
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -57,9 +57,10 @@ SPOPS::Tool::CreateOnly - Make a particular object create-only -- it cannot be u
  my $object = This::Class->fetch( 'prez@whitehouse.gov' );
  $object->{country} = "Time/Warnerland";
 
- # Trying to save the object gives a warning:
+ # Trying to save the object throws an error:
  # "Objects in [This::Class] can only be inserted, not updated. No changes made"
  eval { $object->save };
+ if ( $@ ) { print $@ }
 
  # Instantiate a new object and try to save it...
  my $new_object = This::Class->new({ email    => 'foo@bar.com',
@@ -94,6 +95,8 @@ Nothing known.
 
 =head1 SEE ALSO
 
+L<SPOPS::Manual::ObjectRules|SPOPS::Manual::ObjectRules>
+
 L<SPOPS::ClassFactory|SPOPS::ClassFactory>
 
 =head1 COPYRIGHT
@@ -106,6 +109,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut
-

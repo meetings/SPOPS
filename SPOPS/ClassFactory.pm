@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory;
 
-# $Id: ClassFactory.pm,v 2.1 2002/04/30 03:56:35 lachoy Exp $
+# $Id: ClassFactory.pm,v 2.3 2002/08/21 12:29:07 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -10,7 +10,7 @@ use Data::Dumper  qw( Dumper );
 use SPOPS         qw( _w DEBUG );
 use SPOPS::Exception;
 
-$SPOPS::ClassFactory::VERSION   = substr(q$Revision: 2.1 $, 10);
+$SPOPS::ClassFactory::VERSION   = substr(q$Revision: 2.3 $, 10);
 @SPOPS::ClassFactory::EXPORT_OK = qw( OK DONE NOTIFY ERROR RESTART
                                       FACTORY_METHOD RULESET_METHOD );
 
@@ -452,7 +452,6 @@ sub get_alias_list {
 
 __END__
 
-=pod
 
 =head1 NAME
 
@@ -676,11 +675,7 @@ Returns true if the two are equivalent, false if not.
 
 =head1 BUGS
 
-B<New>
-
-This is a very new process, so if you have problems (functionality or
-backward compatibility) please contact the author or (preferably) the
-mailing list 'openinteract-help@lists.sourceforge.net'.
+None known (beyond being somewhat confusing).
 
 =head1 TO DO
 
@@ -702,5 +697,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut

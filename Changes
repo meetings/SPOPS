@@ -1,5 +1,139 @@
 Revision history for Perl extension SPOPS.
 
+0.65  Wed Aug 21 17:12:34 EDT 2002
+
+Overall:
+
+   - Build process will now run without intervention; DBI and LDAP
+   tests require environment variables being set or running the
+   process manually (perl Makefile.PL MANUAL=1). See 'README' for the
+   environment variables used.
+
+   - Fixed and added lots of documentation on relationships and
+   multifield primary keys, Thanks to Gert Thiel
+   (thiel@baerkatalog.de) for pointing out deficiencies and
+   inconsistencies.
+
+   - Added lots of tests
+
+   - Cleaned up some items from the base SPOPS class
+
+Individual:
+
+   * doc/Manual/Error.pod:
+
+     - Deleted all content with pointer to
+     SPOPS::Manual::Exception. This doc will be removed in a near
+     future release.
+
+   * doc/Manual/Object.pod:
+
+     - Clarified what to use with multifield primary keys.
+
+   * doc/Manual/Relationships.pod:
+
+     - Added tons of documentation and examples. Some of it was pulled
+     from other locations, but most is new.
+
+   * Makefile.PL:
+
+     - Lots of changes so the build process will run without
+     intervention. You can skip the DBI/LDAP tests or specify the
+     relevant information in environment variables. (See 'README' for
+     the environment variables to use.) This should make acme happy :-)
+
+   * SPOPS.pm:
+
+     - Removed the timestamp methods. They never did anything, were
+     marked for removal, and the functionality can be added as a
+     pre_save rule.
+
+     - Added a set_global_debug() method so we can programmatically
+     set debugging.
+
+     - Added documentation for set_global_debug() as well as the _w()
+     and _wm() debugging methods.
+
+     - Remove Storable from ISA and instead create methods 'store',
+     'retrieve' and 'nstore' which just act as delegates for the
+     Storable methods.
+
+     - Rename fetch_determine_limit() to
+     SPOPS::Utility->determine_limit() and modify all uses in the
+     library.
+
+     - All objects returned from new() now have the 'changed' flag
+     explicitly set and the and the 'saved' flag explicitly cleared.
+
+     - Be able to turn on strict field checking for individual objects
+     (pass a 'strict_field => true' to new())
+
+   * SPOPS/ClassFactory/DBI.pm:
+
+     - Enable fetch() to use either an arrayref or a string with
+     multifield primary keys. Thanks to Gert Thiel
+     <thiel@baerkatalog.de> for prompting the change.
+
+   * SPOPS/ClassFactory/DefaultBehavior.pm:
+
+     - Add brief documentation for the different methods.
+
+   * SPOPS/DBI.pm:
+
+     - Update field_update() so it can operate as a class method, and
+     add documentation to match. Thanks to Ray Zimmerman for noting
+     the tangential reference to class method usage in previous docs.
+
+     - Add SET_DEBUG_FETCH() and SET_DEBUG_SAVE() to programmatically
+     set debugging levels.
+
+   * SPOPS/SQLInterface.pm:
+
+     - Add SET_DEBUG_SELECT(), SET_DEBUG_INSERT(), SET_DEBUG_UPDATE()
+     and SET_DEBUG_DELETE() to programmatically set debugging levels.
+
+   * SPOPS/Tool/CreateOnly.pm:
+
+     - Issue a die() rather than a warn() on a save/update.
+
+   * SPOPS/Tool/ReadOnly.pm:
+
+     - Issue a die() rather than a warn() on a save() or remove()
+
+   * t/00_base.t:
+
+     - Add tests for the base SPOPS methods (metadata, constructor,
+     cloning, etc.)
+
+   * t/20_gdbm.t:
+
+     - Separate the tests that were combining different tests in one.
+
+   * t/30_dbi.t:
+
+     - Add tests for field_update() as a class method
+
+   * t/32_dbi_inline_config.t:
+
+     - Add tests for SPOPS::Tool::DBI::Datasource
+
+   * t/33_dbi_discover_field.t:
+
+     - Add tests for SPOPS::Tool::DBI::DiscoverField
+
+   * t/34_dbi_find_defaults.t;
+
+     - Add tests for SPOPS::Tool::DBI::FindDefaults
+
+   * t/50_rule_create_only.t:
+
+     - Add tests for SPOPS::Tool::CreateOnly
+
+   * t/51_rule_read_only.t:
+
+     - Add tests for SPOPS::Tool::ReadOnly
+
+
 0.64  Sun Aug 11 23:08:05 EDT 2002
 
 Individual:

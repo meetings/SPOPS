@@ -2,7 +2,7 @@
 
 SPOPS::Manual::Configuration - Description of variables used in the SPOPS configuration process
 
-=head1 DESCRIPTION
+=head1 SYNOPSIS
 
 This document aims to answer the questions:
 
@@ -27,7 +27,7 @@ How can I add new configuration items?
 
 =back
 
-=head1 GENERAL CONFIGURATION
+=head1 DESCRIPTION
 
 These are variables used in all SPOPS implementations. The name of the
 variable is the key used in the configuration hashref.
@@ -203,8 +203,47 @@ to another. This generally means that the object itself has the
 information in its own properties necessary to fetch one or more
 objects.
 
+Here is a list of possible formats and what results from them:
+
+  1: # Given:
+  2: 'contained' => {
+  3:    class => 'My::ContainedClass',
+  4:    id    => 'contained_id',
+  5: }
+  6: 
+  7: # Basic usage
+  8:    has_a => { class-name => 'id-field' },
+  9:    has_a => { My::ContainedClass => 'contained_id' }
+ 10:    -- Creates method 'contained'
+ 11: 
+ 12: # Other ID field name
+ 13:    has_a => { class-name => 'id-field' },
+ 14:    has_a => { My::ContainedClass => 'original' }
+ 15:    -- Creates method 'original_contained'
+ 16: 
+ 17: # Multiple ID fields
+ 18:    has_a => { class-name => [ 'id-field', 'id-field' ] },
+ 19:    has_a => { My::ContainedClass => [ 'contained_id, 'original' ] }
+ 20:    -- Creates methods 'contained' and 'original_contained'
+ 21: 
+ 22: # Specific method to create and a default 
+ 23:    has_a => { class-name => { method-name => 'id-field' }, 'id-field' },
+ 24:    has_a => { My::ContainedClass =>
+ 25:                     { 'originally_contained_by' => 'original' },
+ 26:                     'contained_id' },
+ 27:    -- Creates methods 'originally_contained_by' and 'contained'
+ 28: 
+ 29: # Specific method to create and multiple other ID fields
+ 30:    has_a => { class-name => { method-name => 'id_field'},
+ 31:                             [ 'id-field', 'id-field' ]    },
+ 32:    has_a => { My::ContainedClass =>
+ 33:                     { 'originally_contained_by' => 'original' },
+ 34:                     [ 'contained_id', 'future' ] }
+ 35:    -- Creates methods 'originally_contained_by', 'contained' and
+ 36:       'future_contained'
+
 See L<SPOPS::Manual::Relationships|SPOPS::Manual::Relationships> for
-more information.
+more information on how this works.
 
 B<fetch_by> (\@) (optional)
 
@@ -304,16 +343,27 @@ complicated processing than this allows, see the docs for details.
 
 B<links_to> (\%) (optional)
 
-The 'links_to' field allows you to specify a SPOPS alias and specify
-which table is used to link the objects:
+The 'links_to' field allows you to specify a SPOPS class and specify
+which table is used to link two objects. Note that this relationship
+assumes a link table that joins two separate tables. When you sever a
+link between two objects, you are only deleting the link rather than
+deleting an object.
 
- { 'SPOPS-class' => 'table_name' }
+Here is a list of possible formats and what results from them:
 
-Note that this relationship assumes a link table that joins two
-separate tables. When you sever a link between two objects, you are
-only deleting the link rather than deleting an object. See
-L<SPOPS::ClassFactory::DBI|SPOPS::ClassFactory::DBI> for another
-proposal.
+  1: # Given:
+  2: 'contained' => {
+  3:    class => 'My::ContainedClass',
+  4:    id    => 'contained_id',
+  5: }
+  6: 
+  7: # Basic usage
+  8:    links_to => { class-name => 'linking-table-name' }
+  9:    links_to => { My::ContainedClass => 'contained_link' }
+ 10:    -- Creates method 'contained', 'contained_add' and 'contained_remove'
+
+See L<SPOPS::Manual::Relationships|SPOPS::Manual::Relationships> for
+more information on how this works.
 
 =head1 SPOPS::LDAP CONFIGURATION
 

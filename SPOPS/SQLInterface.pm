@@ -1,6 +1,6 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 2.2 2002/04/29 12:50:46 lachoy Exp $
+# $Id: SQLInterface.pm,v 2.3 2002/08/21 12:30:34 lachoy Exp $
 
 use strict;
 use Data::Dumper          qw( Dumper );
@@ -9,12 +9,17 @@ use SPOPS                 qw( _w _wm DEBUG );
 use SPOPS::Exception      qw( spops_error );
 use SPOPS::Exception::DBI qw( spops_dbi_error );
 
-$SPOPS::SQLInterface::VERSION = substr(q$Revision: 2.2 $, 10);
+$SPOPS::SQLInterface::VERSION = substr(q$Revision: 2.3 $, 10);
 
-use constant DEBUG_SELECT     => 0;
-use constant DEBUG_INSERT     => 0;
-use constant DEBUG_UPDATE     => 0;
-use constant DEBUG_DELETE     => 0;
+my ( $DEBUG_SELECT, $DEBUG_INSERT, $DEBUG_UPDATE, $DEBUG_DELETE );
+sub DEBUG_SELECT     { return $DEBUG_SELECT }
+sub SET_DEBUG_SELECT { $DEBUG_SELECT = $_[1] }
+sub DEBUG_UPDATE     { return $DEBUG_UPDATE }
+sub SET_DEBUG_UPDATE { $DEBUG_UPDATE = $_[1] }
+sub DEBUG_INSERT     { return $DEBUG_INSERT }
+sub SET_DEBUG_INSERT { $DEBUG_INSERT = $_[1] }
+sub DEBUG_DELETE     { return $DEBUG_DELETE }
+sub SET_DEBUG_DELETE { $DEBUG_DELETE = $_[1] }
 
 my %TYPE_INFO = ();
 
@@ -985,6 +990,46 @@ your object config:
   };
 
 =back
+
+=head2 Debugging Methods
+
+Note: we may scrap these in the future and simply use the global
+C<DEBUG> value exported from L<SPOPS|SPOPS>.
+
+Debugging levels go from 0 to 5, with 5 being the most verbose. The
+reasons for the different levels are unclear.
+
+B<SET_DEBUG_SELECT( $level )>
+
+Sets the debugging value for selecting records.
+
+B<DEBUG_SELECT>
+
+Returns the current debugging value for selecting objects.
+
+B<SET_DEBUG_INSERT( $level )>
+
+Sets the debugging value for inserting records.
+
+B<DEBUG_INSERT>
+
+Returns the current debugging value for inserting objects.
+
+B<SET_DEBUG_UPDATE( $level )>
+
+Sets the debugging value for updating records.
+
+B<DEBUG_UPDATE>
+
+Returns the current debugging value for updating objects.
+
+B<SET_DEBUG_DELETE( $level )>
+
+Sets the debugging value for deleting records.
+
+B<DEBUG_DELETE>
+
+Returns the current debugging value for deleting objects.
 
 =head1 ERROR HANDLING
 

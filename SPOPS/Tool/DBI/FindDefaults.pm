@@ -1,6 +1,6 @@
 package SPOPS::Tool::DBI::FindDefaults;
 
-# $Id: FindDefaults.pm,v 1.1 2002/04/26 15:37:15 lachoy Exp $
+# $Id: FindDefaults.pm,v 1.2 2002/08/21 18:11:42 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
@@ -60,8 +60,6 @@ sub find_defaults {
 
 __END__
 
-=pod
-
 =head1 NAME
 
 SPOPS::Tool::DBI::FindDefaults - Load default values from a particular record
@@ -108,6 +106,8 @@ Nothing known.
 
 =head1 SEE ALSO
 
+L<SPOPS::Manual::ObjectRules|SPOPS::Manual::ObjectRules>
+
 L<SPOPS::ClassFactory|SPOPS::ClassFactory>
 
 POOP Group mailing list thread:
@@ -124,5 +124,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut

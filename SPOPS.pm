@@ -1,26 +1,28 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 2.6 2002/08/12 03:28:11 lachoy Exp $
+# $Id: SPOPS.pm,v 2.11 2002/08/21 21:00:15 lachoy Exp $
 
 use strict;
-use base  qw( Exporter Storable );
+use base  qw( Exporter ); # Class::Observable
 
 use Data::Dumper    qw( Dumper );
 use SPOPS::Exception;
 use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 use SPOPS::Utility  qw();
-use Storable        qw( store retrieve nstore );
 
 $SPOPS::AUTOLOAD  = '';
-@SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
-$SPOPS::VERSION   = '0.64';
-$SPOPS::Revision  = substr(q$Revision: 2.6 $, 10);
+$SPOPS::VERSION   = '0.65';
+$SPOPS::Revision  = substr(q$Revision: 2.11 $, 10);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
 
-use constant DEBUG => 0;
+my ( $DEBUG );
+sub DEBUG            { return $DEBUG }
+sub set_global_debug { $DEBUG = $_[1] }
+
+@SPOPS::EXPORT_OK = qw( _w _wm DEBUG );
 
 
 ########################################
@@ -76,7 +78,7 @@ sub new {
 
     # Setup field checking if specified
 
-    if ( $CONFIG->{strict_field} ) {
+    if ( $CONFIG->{strict_field} || $p->{strict_field} ) {
         my $fields = $class->field;
         if ( keys %{ $fields } ) {
             $params->{field} = [ keys %{ $fields } ];
@@ -154,6 +156,8 @@ sub new {
     }
 
     $self->initialize( $p );
+    $self->has_change;
+    $self->clear_save;
     return $self;
 }
 
@@ -237,9 +241,38 @@ sub CONFIG {
 sub field               { return $_[0]->CONFIG->{field} || {}              }
 sub field_list          { return $_[0]->CONFIG->{field_list} || []         }
 sub id_field            { return $_[0]->CONFIG->{id_field}                 }
-sub timestamp_field     { return $_[0]->CONFIG->{timestamp_field}          }
 sub creation_security   { return $_[0]->CONFIG->{creation_security} || {}  }
 sub no_security         { return $_[0]->CONFIG->{no_security}              }
+
+
+########################################
+# STORABLE SERIALIZATION
+
+sub store {
+    my ( $self, @params ) = @_;
+    die "Not an object!" unless ( ref $self and $self->isa( 'SPOPS' ) );
+    require Storable;
+    return Storable::store( $self, @params );
+}
+
+sub nstore {
+    my ( $self, @params ) = @_;
+    die "Not an object!" unless ( ref $self and $self->isa( 'SPOPS' ) );
+    require Storable;
+    return Storable::nstore( $self, @params );
+}
+
+sub retrieve {
+    my ( $class, @params ) = @_;
+    require Storable;
+    return Storable::retrieve( @params );
+}
+
+sub fd_retrieve {
+    my ( $class, @params ) = @_;
+    require Storable;
+    return Storable::fd_retrieve( @params );
+}
 
 
 ########################################
@@ -259,19 +292,27 @@ sub ruleset_factory {}
 # clarification: $_[0] in the following can be *either* a class or an
 # object; $_[1] is the (optional) hashref passed as the only argument
 
-sub pre_fetch_action    { return $_[0]->ruleset_process_action( 'pre_fetch_action',   $_[1] ) }
-sub post_fetch_action   { return $_[0]->ruleset_process_action( 'post_fetch_action',  $_[1] ) }
-sub pre_save_action     { return $_[0]->ruleset_process_action( 'pre_save_action',    $_[1] ) }
-sub post_save_action    { return $_[0]->ruleset_process_action( 'post_save_action',   $_[1] ) }
-sub pre_remove_action   { return $_[0]->ruleset_process_action( 'pre_remove_action',  $_[1] ) }
+sub pre_fetch_action    { return $_[0]->ruleset_process_action( 'pre_fetch_action', $_[1]   ) }
+sub post_fetch_action   { return $_[0]->ruleset_process_action( 'post_fetch_action', $_[1] ) }
+sub pre_save_action     { return $_[0]->ruleset_process_action( 'pre_save_action', $_[1] ) }
+sub post_save_action    { return $_[0]->ruleset_process_action( 'post_save_action', $_[1] ) }
+sub pre_remove_action   { return $_[0]->ruleset_process_action( 'pre_remove_action', $_[1] ) }
 sub post_remove_action  { return $_[0]->ruleset_process_action( 'post_remove_action', $_[1] ) }
 
+#sub pre_fetch_action    { return shift->notify_observers( 'pre_fetch_action', @_   ) }
+#sub post_fetch_action   { return shift->notify_observers( 'post_fetch_action', @_ ) }
+#sub pre_save_action     { return shift->notify_observers( 'pre_save_action', @_ ) }
+#sub post_save_action    { return shift->notify_observers( 'post_save_action', @_ ) }
+#sub pre_remove_action   { return shift->notify_observers( 'pre_remove_action', @_ ) }
+#sub post_remove_action  { return shift->notify_observers( 'post_remove_action', @_ ) }
 
 # Go through all of the subroutines found in a particular class
 # relating to a particular action
 
 sub ruleset_process_action {
     my ( $item, $action, $p ) = @_;
+    #die "This method is no longer used. Please see SPOPS::Manual::ObjectRules.\n";
+
     $action = lc $action;
     DEBUG() && _w( 1, "Trying to process $action for a",
                       ( ref $item ) ? ref $item : $item, "type of object" );
@@ -303,9 +344,9 @@ sub ruleset_process_action {
 
 # Routines for subclases to override
 
-sub save        {}
-sub fetch       {}
-sub remove      {}
+sub save        { die "Subclass must implement save()\n" }
+sub fetch       { die "Subclass must implement fetch()\n" }
+sub remove      { die "Subclass must implement remove()\n" }
 sub log_action  { return 1 }
 
 # Define methods for implementors to override to do something in case
@@ -320,24 +361,7 @@ sub fail_remove {}
 # SERIALIZATION SUPPORT
 ########################################
 
-# initialize limit tracking vars -- the limit passed in can be:
-# limit => 'x,y'  --> 'offset = x, max = y'
-# limit => 'x'    --> 'max = x'
-
-sub fetch_determine_limit {
-    my ( $class, $limit ) = @_;
-    return ( 0, 0 ) unless ( $limit );
-    my ( $offset, $max );
-    if ( $limit =~ /,/ ) {
-        ( $offset, $max ) = split /\s*,\s*/, $limit;
-        $max += $offset;
-    }
-    else {
-        $max = $limit;
-    }
-    DEBUG() && _w( 1, "Limit set: Start $offset to $max" );
-    return ( $offset, $max );
-}
+sub fetch_determine_limit { return SPOPS::Utility->determine_limit( $_[1] ) }
 
 
 ########################################
@@ -399,38 +423,6 @@ sub saved        { is_saved( @_ ) }
 sub is_saved     { return $_[0]->{ IDX_SAVE() } }
 sub has_save     { $_[0]->{ IDX_SAVE() } = 1 }
 sub clear_save   { $_[0]->{ IDX_SAVE() } = 0 }
-
-
-########################################
-# TIMESTAMP
-########################################
-
-# WARNING: THESE MAY GO AWAY
-
-# returns the timestamp value for this object, if
-# one has been defined
-
-sub timestamp {
-    my ( $self ) = @_;
-    return undef  if ( ! ( ref $self ) );
-    if ( my $ts_field = $self->timestamp_field ) {
-        return $self->{ $ts_field };
-    }
-    return undef;
-}
-
-
-# Pass in a value for a timestamp to check and compare it to what is
-# currently in the object; if there is no timestamp field specified,
-# just return true so everything will continue as normal
-
-sub timestamp_compare {
-    my ( $self, $check ) = @_;
-    if ( my $ts_field = $self->timestamp_field ) {
-        return ( $check eq $self->{ $ts_field } );
-    }
-    return 1;
-}
 
 
 ########################################
@@ -836,9 +828,11 @@ are:
 
 B<strict_field> (bool) (optional)
 
-If set to true, you will use the L<SPOPS::Tie::StrictField|SPOPS::Tie::StrictField> tie
-implementation, which ensures you only get/set properties that exist
-in the field listing.
+If set to true, you will use the
+L<SPOPS::Tie::StrictField|SPOPS::Tie::StrictField> tie implementation,
+which ensures you only get/set properties that exist in the field
+listing. You can also pass a true value in for C<strict_field> in the
+parameters and achieve the same result for this single object
 
 =item *
 
@@ -875,13 +869,20 @@ object is initialized with C<new()>.
 Normally the values of the hashref are the defaults to which you want
 to set the fields. However, there are two special cases of values:
 
-B<'NOW'> This string will insert the current timestamp in the format
+=over 4
+
+=item B<'NOW'>
+
+This string will insert the current timestamp in the format
 C<yyyy-mm-dd hh:mm:ss>.
 
-B<\%> A hashref with the keys 'class' and 'method' will get executed
-as a class method and be passed the name of the field for which we
-want a default. The method should return the default value for this
-field.
+=item B<\%>
+
+A hashref with the keys 'class' and 'method' will get executed as a
+class method and be passed the name of the field for which we want a
+default. The method should return the default value for this field.
+
+=back
 
 One problem with setting default values in your object configuration
 B<and> in your database is that the two may become unsynchronized,
@@ -889,13 +890,15 @@ resulting in many pulled hairs in debugging.
 
 To get around the synchronization issue, you can set this dynamically
 using various methods with
-L<SPOPS::ClassFactory|SPOPS::ClassFactory>. (A sample,
-C<My::DBI::FindDefaults>, is shipped with SPOPS.)
+L<SPOPS::ClassFactory|SPOPS::ClassFactory>. A simple implementation,
+L<SPOPS::Tool::DBI::FindDefaults|SPOPS::Tool::DBI::FindDefaults>, is
+shipped with SPOPS.
 
 =back
 
-Returns on success: a tied hashref object with any passed data
-already assigned.
+Returns on success: a tied hashref object with any passed data already
+assigned. The 'changed' flag is set and the and 'saved' flags is
+cleared on the returned object.
 
 Returns on failure: undef.
 
@@ -1097,27 +1100,9 @@ Example:
    else      { push @object_list, $obj  if ( $obj ) }
  }
 
-B<fetch_determine_limit( $limit )>
+B<fetch_determine_limit()>
 
-This method of the SPOPS parent class supports the C<fetch()>
-implementation of subclasses. It is used to help figure out what
-records to fetch. Pass in a C<$limit> string and get back a two-item
-list with the offset and max.
-
-The C<$limit> string can be in one of two formats:
-
-  'x,y'  --> offset = x, max = y
-  'x'    --> offset = 0, max = x
-
-Example:
-
- $p->{limit} = "20,30";
- my ( $offset, $max ) = $self->fetch_determine_limit( $p->{limit} );
-
- # Offset is 20, max is 30, so you should get back records 20 - 30.
-
-If no C<$limit> is passed in, the values of both items in the
-two-value list are 0.
+This method has been moved to L<SPOPS::Utility|SPOPS::Utility>.
 
 B<save( [ \%params ] )>
 
@@ -1449,24 +1434,51 @@ C<global_datasource_handle> method.
 
 =head2 Timestamp Methods
 
-These might go away.
+These have gone away (you were warned!)
 
-B<timestamp()>
+=head2 Debugging
 
-Returns the value of the timestamp_field for this object, undef if the
-timestamp_field is not defined.
+The main SPOPS class holds a debugging value which is exported so all
+other SPOPS classes refer to it. To set the value, call
+C<set_global_debug()> as a class method:
 
-B<timestamp_compare( $ts_check )>
+ SPOPS->set_global_debug(1);
 
-Returns true if $ts_check matches what is in the object, false
-otherwise.
+Debugging values go from 0 (no debugging) to 4 (maximum verbosity),
+but currently there is not much organization as to what gets a 1, 2 or
+whatever.
 
-B<timestamp_field()> ($)
+B<DEBUG()>
 
-Returns a fieldname used for the timestamp. Having a blank or
-undefined value for this is ok. But if you do define it, your UPDATEs
-will be checked to ensure that the timestamp values match up. If not,
-the system will throw an error. (Note, this is not yet implemented.)
+Reports current debugging level. This is exported by C<SPOPS>, so you
+can do:
+
+ DEBUG && _w( 2, "This is a debugging message" );
+
+And have the C>_w( ... )> not even evaluated if debugging is turned
+off.
+
+B<set_global_debug( $new_level )>
+
+Set the global debugging level to C<$new_level>.
+
+B<_w( $level, @msg )>
+
+Issues a C<warn> if C<$level> is less than or equal to the current
+debugging level as set by C<set_global_debug()>. The warning is
+formatted:
+
+ package::sub (line) >> message
+
+This is exported by SPOPS on demand.
+
+B<_wm( $level, $check_level, @msg )>
+
+Issues a C<warn> if C<$level> is less than or equal to
+C<$check_level>. The warning is formatted the same as the one issued
+by C<_w()>
+
+This is exported by SPOPS on demand.
 
 =head1 NOTES
 

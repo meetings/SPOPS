@@ -41,6 +41,17 @@ L<SPOPS::DBI|SPOPS::DBI>, L<SPOPS::LDAP|SPOPS::LDAP>,
 L<SPOPS::GDBM|SPOPS::GDBM>). Also contains information about
 security-specific configuration items.
 
+=item L<SPOPS::Manual::Relationships|SPOPS::Manual::Relationships>
+
+Shows how to declaratively define different types of relationships
+between SPOPS objects.
+
+=item L<SPOPS::Manual::ObjectRules|SPOPS::Manual::ObjectRules>
+
+Lists the general behaviors that every SPOPS object has, and shows how
+you can use other pre- and post- serialization handlers as well as
+create your own.
+
 =item L<SPOPS::Manual::CodeGeneration|SPOPS::Manual::CodeGeneration>
 
 Shows how the SPOPS classes are created from configuration and how you
@@ -52,12 +63,6 @@ Describes how objects are saved, fetched and removed. Illustrates how
 SPOPS generates keys (if you ask nicely) and caches objects. Also
 describes how to create your own serialization class.
 
-=item L<SPOPS::Manual::ObjectRules|SPOPS::Manual::ObjectRules>
-
-Lists the general behaviors that every SPOPS object has, and shows how
-you can use other pre- and post- serialization handlers as well as
-create your own.
-
 =item L<SPOPS::Manual::Datasource|SPOPS::Manual::Datasource>
 
 Information about how SPOPS uses datasources and how you can make one
@@ -65,7 +70,7 @@ or more datasources available to a number of objects at once.
 
 =item L<SPOPS::Manual::Security|SPOPS::Manual::Security>
 
-Detail about the SPOPS security system.
+Details about the SPOPS security system.
 
 =item L<SPOPS::Manual::Exceptions|SPOPS::Manual::Exceptions>
 
@@ -93,6 +98,9 @@ General object behavior
 
 Initializing objects
 
+This is the most common gateway to SPOPS, so be sure to see how to use
+the C<process()> method.
+
 =over 4
 
 =item L<SPOPS::Initialize|SPOPS::Initialize>
@@ -101,11 +109,18 @@ Initializing objects
 
 Class Factory
 
+This handles the code generation for objects at initialization. It's
+useful for hacking SPOPS.
+
 =over 4
 
 =item L<SPOPS::ClassFactory|SPOPS::ClassFactory>
 
 =item L<SPOPS::ClassFactory::DefaultBehavior|SPOPS::ClassFactory::DefaultBehavior>
+
+=item L<SPOPS::ClassFactory::DBI|SPOPS::ClassFactory::DBI>
+
+=item L<SPOPS::ClassFactory::LDAP|SPOPS::ClassFactory::LDAP>
 
 =back
 
@@ -113,7 +128,13 @@ Error handling
 
 =over 4
 
-=item L<SPOPS::Error|SPOPS::Error>
+=item L<SPOPS::Exception|SPOPS::Exception>
+
+=item L<SPOPS::Exception::DBI|SPOPS::Exception::DBI>
+
+=item L<SPOPS::Exception::LDAP|SPOPS::Exception::LDAP>
+
+=item L<SPOPS::Exception::Security|SPOPS::Exception::Security>
 
 =back
 
@@ -131,19 +152,23 @@ DBI items
 
 =over 4
 
-=item L<SPOPS::ClassFactory::DBI|SPOPS::ClassFactory::DBI>
-
 =item L<SPOPS::DBI|SPOPS::DBI>
 
 =item L<SPOPS::SQLInterface|SPOPS::SQLInterface>
 
+=item L<SPOPS::ClassFactory::DBI|SPOPS::ClassFactory::DBI>
+
+=item L<SPOPS::DBI::InterBase|SPOPS::DBI::InterBase>
+
 =item L<SPOPS::DBI::MySQL|SPOPS::DBI::MySQL>
 
-=item L<SPOPS::DBI::Sybase|SPOPS::DBI::Sybase>
+=item L<SPOPS::DBI::Oracle|SPOPS::DBI::Oracle>
 
 =item L<SPOPS::DBI::Pg|SPOPS::DBI::Pg>
 
-=item L<SPOPS::Iterator::DBI|SPOPS::Iterator::DBI>
+=item L<SPOPS::DBI::SQLite|SPOPS::DBI::SQLite>
+
+=item L<SPOPS::DBI::Sybase|SPOPS::DBI::Sybase>
 
 =item L<SPOPS::Key::DBI::HandleField|SPOPS::Key::DBI::HandleField>
 
@@ -153,19 +178,29 @@ DBI items
 
 =item L<SPOPS::Key::DBI::Sequence|SPOPS::Key::DBI::Sequence>
 
+=item L<SPOPS::Tool::DBI::Datasource|SPOPS::Tool::DBI::Datasource>
+
+=item L<SPOPS::Tool::DBI::DiscoverField|SPOPS::Tool::DBI::DiscoverField>
+
+=item L<SPOPS::Tool::DBI::FindDefaults|SPOPS::Tool::DBI::FindDefaults>
+
+=item L<SPOPS::Iterator::DBI|SPOPS::Iterator::DBI>
+
 =back
 
 LDAP items
 
 =over 4
 
-=item L<SPOPS::ClassFactory::LDAP|SPOPS::ClassFactory::LDAP>
-
-=item L<SPOPS::Iterator::LDAP|SPOPS::Iterator::LDAP>
-
 =item L<SPOPS::LDAP|SPOPS::LDAP>
 
 =item L<SPOPS::LDAP::MultiDatasource|SPOPS::LDAP::MultiDatasource>
+
+=item L<SPOPS::ClassFactory::LDAP|SPOPS::ClassFactory::LDAP>
+
+=item L<SPOPS::Tool::LDAP::Datasource|SPOPS::Tool::LDAP::Datasource>
+
+=item L<SPOPS::Iterator::LDAP|SPOPS::Iterator::LDAP>
 
 =back
 
@@ -175,7 +210,51 @@ Iterators (general)
 
 =item L<SPOPS::Iterator|SPOPS::Iterator>
 
+=item L<SPOPS::Iterator::DBI|SPOPS::Iterator::DBI>
+
+=item L<SPOPS::Iterator::LDAP|SPOPS::Iterator::LDAP>
+
 =item L<SPOPS::Iterator::WrapList|SPOPS::Iterator::WrapList>
+
+=back
+
+Exporting/Importing
+
+=over 4
+
+=item L<SPOPS::Export|SPOPS::Export>
+
+=item L<SPOPS::Export::Object|SPOPS::Export::Object>
+
+=item L<SPOPS::Export::Perl|SPOPS::Export::Perl>
+
+=item L<SPOPS::Export::SQL|SPOPS::Export::SQL>
+
+=item L<SPOPS::Export::XML|SPOPS::Export::XML>
+
+=item L<SPOPS::Export::DBI::Data|SPOPS::Export::DBI::Data>
+
+=item L<SPOPS::Import|SPOPS::Import>
+
+=item L<SPOPS::Import::Object|SPOPS::Import::Object>
+
+=item L<SPOPS::Import::DBI::Table|SPOPS::Import::DBI::Table>
+
+=item L<SPOPS::Import::DBI::Data|SPOPS::Import::DBI::Data>
+
+=item L<SPOPS::Import::DBI::TableTransform|SPOPS::Import::DBI::TableTransform>
+
+=item L<SPOPS::Import::DBI::TableTransform::InterBase|SPOPS::Import::DBI::TableTransform::InterBase>
+
+=item L<SPOPS::Import::DBI::TableTransform::MySQL|SPOPS::Import::DBI::TableTransform::MySQL>
+
+=item L<SPOPS::Import::DBI::TableTransform::Oracle|SPOPS::Import::DBI::TableTransform::Oracle>
+
+=item L<SPOPS::Import::DBI::TableTransform::Pg|SPOPS::Import::DBI::TableTransform::Pg>
+
+=item L<SPOPS::Import::DBI::TableTransform::SQLite|SPOPS::Import::DBI::TableTransform::SQLite>
+
+=item L<SPOPS::Import::DBI::TableTransform::Sybase|SPOPS::Import::DBI::TableTransform::Sybase>
 
 =back
 
@@ -184,6 +263,12 @@ Utilities that might be useful:
 =over 4
 
 =item L<SPOPS::Key::Random|SPOPS::Key::Random>
+
+=item L<SPOPS::Key::UUID|SPOPS::Key::UUID>
+
+=item L<SPOPS::Tool::CreateOnly|SPOPS::Tool::CreateOnly>
+
+=item L<SPOPS::Tool::ReadOnly|SPOPS::Tool::ReadOnly>
 
 =item L<SPOPS::Utility|SPOPS::Utility>
 
@@ -203,7 +288,7 @@ More information about how data are stored in an object
 
 Copyright (c) 2001-2002 Chris Winters. All rights reserved.
 
-Permission is granted to copy, distribute and/or modify this document
+Permission is granted to copy, distribute and::or modify this document
 under the terms of the GNU Free Documentation License, Version 1.1 or
 any later version published by the Free Software Foundation; with no
 Invariant Sections, with no Front-Cover Texts, and with no Back-Cover
@@ -273,8 +358,13 @@ semantics.
 
 =item *
 
+Gert Thiel <thiel@baerkatalog.de> -- prodded better docs for
+multifield primary keys in L<SPOPS::DBI|SPOPS::DBI> and for defining
+and using relationships.
+
+=item *
+
 David Boone <dave@bis.bc.ca> -- prodded the creation of
 L<SPOPS::Initialize|SPOPS::Initialize>.
 
 =back
-

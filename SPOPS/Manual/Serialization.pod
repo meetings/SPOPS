@@ -2,7 +2,7 @@
 
 SPOPS::Manual::Serialization - How SPOPS serializes objects
 
-=head1 DESCRIPTION
+=head1 SYNOPSIS
 
 This part of the SPOPS manual aims to answer the following questions:
 
@@ -26,7 +26,7 @@ How can I lazy-load my fields?
 
 =back
 
-=head1 SERIALIZATION BASICS
+=head1 DESCRIPTION
 
 =head1 CUSTOMIZING SERIALIZATION
 
@@ -164,11 +164,10 @@ L<SPOPS::DBI|SPOPS::DBI>.
 
 =head1 STORABLE SERIALIZATION
 
-Since the main SPOPS class from which all SPOPS objects derive has
-L<Storable|Storable> as a parent, you can call any of the Storable
-methods from any SPOPS object and have a serialized version of your
-object. You can send it over the network, save it for later --
-whatever you like.
+The main L<SPOPS|SPOPS> class from which all SPOPS objects derive has
+the methods C<store()>, C<nstore()>, C<retrieve()> and
+C<fd_retrieve()> acting as delegates for methods of the same name in
+L<Storable|Storable>. (We can add more as needed.)
 
 Example:
 

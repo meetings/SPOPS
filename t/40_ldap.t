@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 40_ldap.t,v 2.1 2002/08/10 13:27:55 lachoy Exp $
+# $Id: 40_ldap.t,v 2.2 2002/08/21 20:52:09 lachoy Exp $
 
 use strict;
 use constant NUM_TESTS => 37;
@@ -34,10 +34,7 @@ END {
 
     do "t/config.pl";
     my $config = _read_config_file() || {};
-    my ( $skip );
-    $skip++ if ( $config->{LDAP_test} ne 'y' );
-    $skip++ unless ( $config->{LDAP_base_dn} and $config->{LDAP_host} );
-    if ( $skip ) {
+    unless ( $config->{LDAP_base_dn} and $config->{LDAP_host} ) {
         print "1..0\n";
         print "Skipping test on this platform\n";
         exit;

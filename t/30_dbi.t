@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 2.8 2002/08/12 03:52:42 lachoy Exp $
+# $Id: 30_dbi.t,v 2.10 2002/08/21 18:12:56 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -9,7 +9,7 @@
 use strict;
 use Data::Dumper qw( Dumper );
 
-use constant NUM_TESTS       => 53;
+use constant NUM_TESTS       => 56;
 use constant TEST_TABLE_NAME => 'spops_test';
 
 my $SPOPS_CLASS = 'DBITest';
@@ -42,14 +42,11 @@ END {
     require Test::More;
     Test::More->import( tests => NUM_TESTS );
 
-    my $driver_name = $config->{DBI_driver};
-
-    my $spops_dbi_driver = get_spops_driver( $config, $driver_name );
-
     # Ensure we can get to SPOPS::Initialize
+    require_ok( 'SPOPS::Initialize' );
 
-    eval { require SPOPS::Initialize };
-    ok( ! $@, 'SPOPS::Initialize load' );
+    my $driver_name = $config->{DBI_driver};
+    my $spops_dbi_driver = get_spops_driver( $config, $driver_name );
 
     # Create the class using SPOPS::Initialize
 
@@ -67,7 +64,7 @@ END {
     };
     my $class_init_list = eval { SPOPS::Initialize->process({ config => $spops_config }) };
     ok( ! $@, 'Initialize process run' );
-    ok( $class_init_list->[0] eq $SPOPS_CLASS, 'Initialize class' );
+    is( $class_init_list->[0], $SPOPS_CLASS, 'Initialize class' );
 
     check_dbd_compliance( $config, $driver_name, $SPOPS_CLASS );
 
@@ -312,6 +309,9 @@ END {
         isnt( $new_obj->{spops_name}, 'FOO!', 'Fetched data proper data for no_insert field' );
     }
 
+    # Fetch an object for updating, change a field and ensure it
+    # didn't change
+
     {
         my $obj = eval { $SPOPS_CLASS->fetch( 4001,
                                               { db => $db, skip_cache => 1 }) };
@@ -325,6 +325,24 @@ END {
                                                   { db => $db, skip_cache => 1 }) };
         ok( ! $@, 'Refetch no_update object' );
         is( $new_obj->{spops_num}, $old_value, 'Old value not overwritten for no_update field' );
+    }
+
+    # Do a class-level field update
+
+    {
+        my $changed = 'Class level update';
+        eval { $SPOPS_CLASS->field_update( { spops_name => $changed },
+                                           { where => 'spops_num = 1066',
+                                             db    => $db } ) };
+        if ( $@ ) { warn $@; }
+        ok( ! $@, 'Class level field update' );
+        my $obj_list = eval { $SPOPS_CLASS->fetch_group({ where => 'spops_num = ?',
+                                                          value => [ 1066 ],
+                                                          db    => $db,
+                                                          skip_cache => 1 }) };
+        ok( ! $@, 'Fetch class level field updated objects' );
+        is( $obj_list->[0]{spops_name}, $changed,
+            'Object updated with class level update value' );
     }
 
 # Future testing ideas:

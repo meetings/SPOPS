@@ -1,15 +1,15 @@
 package SPOPS::GDBM;
 
-# $Id: GDBM.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
+# $Id: GDBM.pm,v 2.1 2002/08/21 18:46:15 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS );
-
 use Data::Dumper  qw( Dumper );
 use GDBM_File;
-use SPOPS         qw( _w DEBUG );
+use SPOPS            qw( _w DEBUG );
+use SPOPS::Exception qw( spops_error );
 
-$SPOPS::GDBM::VERSION = substr(q$Revision: 2.0 $, 10);
+$SPOPS::GDBM::VERSION = substr(q$Revision: 2.1 $, 10);
 
 # Make this the default for everyone -- they can override it
 # themselves...
@@ -17,8 +17,9 @@ $SPOPS::GDBM::VERSION = substr(q$Revision: 2.0 $, 10);
 sub class_initialize {
     my ( $class, $CONFIG ) = @_;
     my $C = $class->CONFIG;
-    if ( ref $C->{field} eq 'HASH' ) {
-        $C->{field_list}  = [ sort{ $C->{field}{$a} <=> $C->{field}{$b} } keys %{ $C->{field} } ];
+    if ( ref $C->{field} eq 'HASH' and ! $C->{field_list} ) {
+        $C->{field_list}  = [ sort{ $C->{field}{$a} <=> $C->{field}{$b} }
+                              keys %{ $C->{field} } ];
     }
     $class->_class_initialize( $CONFIG ); # allow subclasses to do their own thing
 
@@ -64,14 +65,17 @@ sub initialize {
     foreach my $field ( @{ $self->field_list } ) {
         next unless ( $p->{ $field } );
         $self->{ $field } = $p->{ $field };
-        DEBUG && _w( 2, "Initialized ($field) to ($self->{ $field })" );
+        DEBUG && _w( 2, "Initialized [$field] to [$self->{ $field }]" );
     }
     return $self;
 }
 
 # Override this to get the db handle from somewhere else, if necessary
 
-sub global_gdbm_tie { my $item = shift; return $item->global_datasource_handle( @_ ) }
+sub global_gdbm_tie {
+    my $item = shift;
+    return $item->global_datasource_handle( @_ );
+}
 
 sub global_datasource_handle {
     my ( $item, $p ) = @_;
@@ -83,31 +87,32 @@ sub global_datasource_handle {
             $gdbm_filename   = $item->{tmp_gdbm_filename};
         }
         if ( $item->CONFIG->{gdbm_info}{file_fragment} and $p->{directory} ) {
-            DEBUG() && _w( 1, "Found file fragent and directory" );
-            $gdbm_filename ||= join( '/', $p->{directory}, $item->CONFIG->{gdbm_info}{file_fragment} );
+            DEBUG && _w( 1, "Found file fragent and directory" );
+            $gdbm_filename ||= join( '/', $p->{directory},
+                                          $item->CONFIG->{gdbm_info}{file_fragment} );
         }
         $gdbm_filename ||= $item->CONFIG->{gdbm_info}{filename};
         $gdbm_filename ||= $item->global_config->{gdbm_info}{filename};
     }
-    DEBUG() && _w( 1, "Trying file ($gdbm_filename) to connect" );
+    DEBUG && _w( 1, "Trying file ($gdbm_filename) to connect" );
     unless ( $gdbm_filename ) {
-        SPOPS::Exception->throw(
-                    "Insufficient/incorrect information to tie to GDBM file [$gdbm_filename]" );
+        spops_error "Insufficient/incorrect information to tie to ",
+                    "GDBM file [$gdbm_filename]";
     }
 
-    DEBUG() && _w( 2, "Beginning perm: ", defined( $p->{perm} ) ? $p->{perm} : '' );
+    DEBUG && _w( 2, "Beginning perm: ", defined( $p->{perm} ) ? $p->{perm} : '' );
     $p->{perm}   = 'create' unless ( -e $gdbm_filename );
     $p->{perm} ||= 'read';
-    DEBUG() && _w( 2, "Final perm: $p->{perm}" );
+    DEBUG && _w( 2, "Final perm: $p->{perm}" );
 
     my $perm = GDBM_File::GDBM_READER;
     $perm    = GDBM_File::GDBM_WRITER  if ( $p->{perm} eq 'write' );
     $perm    = GDBM_File::GDBM_WRCREAT if ( $p->{perm} eq 'create' );
-    DEBUG() && _w( 1, "Trying to use perm ($perm) to connect" );
+    DEBUG && _w( 1, "Trying to use perm ($perm) to connect" );
     my %db = ();
     tie( %db, 'GDBM_File', $gdbm_filename, $perm, 0666 );
     if ( $p->{perm} eq 'create' && ! -w $gdbm_filename ) {
-        SPOPS::Exception->throw( "Failed to create GDBM file! [$gdbm_filename]" );
+        spops_error "Failed to create GDBM file! [$gdbm_filename]";
     }
 
     return \%db;
@@ -128,7 +133,7 @@ sub object_key {
     my ( $self, $id ) = @_;
     $id ||= $self->id  if ( ref $self );
     unless ( $id ) {
-        SPOPS::Exception->throw( "Cannot create object key without object or id!" );
+        spops_error "Cannot create object key without object or id!";
     }
     my $class = ref $self || $self;
     return join( '--', $class, $id );
@@ -148,7 +153,7 @@ sub _return_structure_for_key {
         $data = eval $item_info;
     }
     if ( $@ ) {
-        SPOPS::Exception->throw( "Cannot rebuild object! Error: $@" );
+        spops_error "Cannot rebuild object! Error: $@";
     }
     return $data;
 }
@@ -180,9 +185,9 @@ sub fetch_group {
     my ( $item, $p ) = @_;
     my $db = $item->global_datasource_handle( $p );
     my $class = ref $item || $item;
-    DEBUG() && _w( 1, "Trying to find keys beginning with ($class)" );
+    DEBUG && _w( 1, "Trying to find keys beginning with ($class)" );
     my @object_keys = grep /^$class/, keys %{ $db };
-    DEBUG() && _w( 2, "Keys found in DB: ", join( ", ", @object_keys ) );
+    DEBUG && _w( 2, "Keys found in DB: ", join( ", ", @object_keys ) );
     my @objects = ();
     foreach my $key ( @object_keys ) {
         my $data = eval { $class->_return_structure_for_key( $key, { db => $db } ) };
@@ -197,21 +202,21 @@ sub fetch_group {
 sub save {
     my ( $self, $p ) = @_;
     $p->{perm} ||= 'write';
-    DEBUG() && _w( 1, "Trying to save a <<", ref $self, ">>" );
+    DEBUG && _w( 1, "Trying to save a <<", ref $self, ">>" );
     my $id = $self->id;
     my $is_add = ( $p->{is_add} or ! $id or $id =~ /^tmp/ );
     unless ( $is_add or $self->changed ) {
-        DEBUG() && _w( 1, "This object exists and has not changed. Exiting." );
+        DEBUG && _w( 1, "This object exists and has not changed. Exiting." );
         return $id;
     }
     return undef unless ( $self->pre_save_action( { is_add => $is_add } ) );
- 
+
     # Build the data and dump to string
 
     my %data = %{ $self };
     local $Data::Dumper::Indent = 0;
     my $obj_string = Data::Dumper->Dump( [ \%data ], [ 'data' ] );
- 
+
     # Save to DB
 
     my $obj_index  = $self->object_key;
@@ -237,8 +242,6 @@ sub remove {
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -433,5 +436,3 @@ it under the same terms as Perl itself.
 Chris Winters  <chris@cwinters.com>
 
 See the L<SPOPS|SPOPS> module for the full author/helper list.
-
-=cut

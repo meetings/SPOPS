@@ -138,9 +138,23 @@ been any modification, the system will save it, otherwise it will not.
 
 As of SPOPS 0.53, L<SPOPS::DBI|SPOPS::DBI> supports multi-field
 primary keys. To use it, you just use an arrayref to represent the ID
-field rather than a string. (Wisenheimers who use an arrayref with one
-element may be shocked that SPOPS finds this attempt to trick it and
-sets the value to the single element.)
+field in the C<id()> method rather than a string. (Wisenheimers who
+use an arrayref with one element may be shocked that SPOPS finds this
+attempt to trick it and sets the value to the single element.)
+
+When using C<fetch()>, you need to represent the ID as a
+comma-separated string similar to that returned by C<id()> in scalar
+context (see below). For example:
+
+ # Configuration
+ myclass => {
+     class => 'My::Customer',
+     id    => [ 'entno', 'custno' ],
+     ...
+ },
+
+ # Fetch object
+ my $cust = My::Customer->fetch( "$entno,$custno" );
 
 On finding multiple ID fields,
 L<SPOPS::ClassFactory::DBI|SPOPS::ClassFactory::DBI> creates new
@@ -156,16 +170,34 @@ In list context, returns the values for the ID fields in order. In
 scalar context, returns the ID values joined by a comma. (This may be
 configurable in the future.)
 
+ my ( $id_val1, $id_val2 ) = $object->id();
+ my $id_string = $object->id();
+ $object->id( [ 'value1', 'value2' ] );
+
 B<id_field()>
 
 In list context, returns an n-element list with the ID fieldnames. In
 scalar context, returns the fieldnames joined by a comma. (This may be
 configurable in the future.)
 
+ my ( $field1, $field2 ) = $object->id_field();
+ my $field_string = $object->id_field();
+
 B<id_clause()>
 
 Returns a full WHERE clause to find this particular record -- used in
-UPDATE and DELETE statements.
+UPDATE and DELETE statements. If you're using as a class method, you
+need to pass in the ID values as an arrayref or as a comma-separated
+string as returned by C<id()> in scalar context.
+
+ my $where = $obj->id_clause();
+ my $sql = "SELECT * FROM foo WHERE $where";
+
+ my $where = $obj_class->id_clause( [ $id_val1, $id_val2 ] );
+ my $sql = "SELECT * FROM foo WHERE $where";
+
+ my $where = $obj_class->id_clause( "$id_val1,$id_val2" );
+ my $sql = "SELECT * FROM foo WHERE $where";
 
 =head2 Lazy Loading
 

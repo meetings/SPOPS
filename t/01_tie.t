@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 01_tie.t,v 2.0 2002/03/19 04:00:07 lachoy Exp $
+# $Id: 01_tie.t,v 2.1 2002/08/21 17:09:02 lachoy Exp $
 
 use strict;
 use Test::More  tests => 21;
@@ -28,9 +28,9 @@ use Test::More  tests => 21;
 
 {
     my ( $obj, $data ) = do_tie({ multivalue => { 'sleepy' => 1, 'dopey' => 2 } });
-    is( $obj->{ IDX_CHANGE() }, 0, 'Initial change flag (multivalue)' );
+    ok( ! $obj->{ IDX_CHANGE() }, 'Initial change flag (multivalue)' );
     $data->{sleepy} = 'sloopy';
-    isnt( $obj->{ IDX_CHANGE() }, 0, 'Modified change flag (multivalue)' );
+    ok( $obj->{ IDX_CHANGE() }, 'Modified change flag (multivalue)' );
     my $info = $data->{sleepy};
     is( scalar @{ $info }, 1, 'Multivalue set (number)' );
     is( $info->[0], 'sloopy',  'Multivalue set (content)' );
@@ -54,9 +54,9 @@ use Test::More  tests => 21;
 
 {
     my ( $obj, $data ) = do_tie({ field_map => { dopey => 'snarly', sleepy => 'smelly' } });
-    is( $obj->{ IDX_CHANGE() }, 0, 'Initial change flag (field map)' );
+    ok( ! $obj->{ IDX_CHANGE() }, 'Initial change flag (field map)' );
     $data->{sleepy} = 'sloopy';
-    isnt( $obj->{ IDX_CHANGE() }, 0, 'Modified change flag (field map)' );
+    ok( $obj->{ IDX_CHANGE() }, 'Modified change flag (field map)' );
     is( $data->{smelly}, 'sloopy', 'Field map (alias set)' );
     $data->{snarly} = 'growl';
     is( $data->{dopey}, 'growl', 'Field map (alias read)' );

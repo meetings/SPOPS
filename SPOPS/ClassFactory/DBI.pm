@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 2.3 2002/04/30 03:57:37 lachoy Exp $
+# $Id: DBI.pm,v 2.6 2002/08/21 14:37:24 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-$SPOPS::ClassFactory::DBI::VERSION  = substr(q$Revision: 2.3 $, 10);
+$SPOPS::ClassFactory::DBI::VERSION  = substr(q$Revision: 2.6 $, 10);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 
@@ -62,7 +62,18 @@ sub conf_multi_field_key_id {
 }
 
 
+# TODO: The explicit 'SPOPS::DBI' method below works, but it ignores
+# anything in ISA between $class and it that might define-and-forward
+# (or override) fetch().
+
 my $generic_multifield_etc = <<'MFETC';
+
+    sub %%CLASS%%::fetch {
+        my ( $class, $id, @params ) = @_;
+        my $id_string = ( ref $id eq 'ARRAY' )
+                          ? join( ',', @{ $id } ) : $id;
+        return $class->SPOPS::DBI::fetch( $id_string, @params );
+    }
 
     sub %%CLASS%%::clone {
         my ( $self, $p ) = @_;
@@ -111,7 +122,10 @@ my $generic_multifield_etc = <<'MFETC';
                                              { dbi_type_info => $p->{dbi_type_info},
                                                db            => $db,
                                                DEBUG         => $p->{DEBUG} } ) };
-        if ( $id ) {
+        if ( $id and ref $id eq 'ARRAY' ) {
+            ( %%ID_FIELD_VARIABLE_LIST%% ) = @{ $id };
+        }
+        elsif ( $id ) {
       	    ( %%ID_FIELD_VARIABLE_LIST%% ) = split /\s*,\s*/, $id;
         }
         else {
@@ -361,69 +375,9 @@ Get the config for C<$class> and find the 'links_to' configuration
 information. If defined, we auto-generate subroutines to implement the
 linking functionality.
 
-Typical configuration:
-
-  my $config = {
-        class    => 'My::SPOPS',
-        isa      => [ 'SPOPS::DBI::Pg', 'SPOPS::DBI' ],
-        links_to => { 'My::Group' => 'link-table' },
-  };
-
-This assumes that 'My::OtherClass' has already been created or will be
-part of the same configuration sent to C<SPOPS::ClassFactory> (or more
-likely C<SPOPS::Initialize>).
-
-All subroutines generated use the alias used by SPOPS for the class
-specified in the key. For instance, in the above configuration example
-we give 'My::Group' as the class specified in the key. So to get the
-alias for this class we do:
-
- my $alias = My::Group->CONFIG->{main_alias};
-
-We then use C<$alias> to define our method names.
-
-The first method generated is simply named C<$alias>. The method
-returns an arrayref of objects that the main object links to. For
-instance:
-
-Example:
-
- # $links_to = 'My::Group' => 'link-table'
- # Alias for 'My::Group' = 'group'
-
- my $object = My::SPOPS->fetch( $id );
- my $group_list = eval { $object->group };
-
-The second is named '${alias}_add' (e.g., 'group_add') and links the
-object to any number of other objects. The return value is the number
-of successful links.
-
-The third is named '${alias}_remove' (e.g., 'group_remove') and
-removes links from the object to any number of other objects. The
-return value is the number of successful removals.
-
-Examples:
-
- # First retrieve all groups
- my $object = My::SPOPS->fetch( $id );
- my $group_list = eval { $object->group };
- print "Group list: ", join( ' // ', map { $_->{group_id} } @{ $group_list } );
-
- >> 2 // 3 // 5
-
- # Now add some more, making the thingy a member of these new groups
-
- my $added = eval { $object->group_add( [ 7, 9, 21, 23 ] ) };
- print "Group list: ", join( ' // ', map { $_->{group_id} } @{ $group_list } );
-
- >> 2 // 3 // 5 // 7 // 9 // 21 // 23
-
- # Now remove two of them
-
- my $removed = eval { $object->group_remove( [ 2, 21 ] ) };
- print "Group list: ", join( ' // ', map { $_->{group_id} } @{ $group_list } );
-
- >> 3 // 5 // 7 // 9 // 23
+Please see
+L<SPOPS::Manual::Relationships|SPOPS::Manual::Relationships> for how
+to configure this and examples of usage.
 
 =head1 TO DO
 

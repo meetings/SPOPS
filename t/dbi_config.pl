@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: dbi_config.pl,v 2.2 2002/04/27 19:08:49 lachoy Exp $
+# $Id: dbi_config.pl,v 2.3 2002/08/21 20:52:09 lachoy Exp $
 
 use strict;
 use DBI qw( SQL_VARCHAR SQL_INTEGER );
@@ -48,8 +48,7 @@ MULTISQL
 sub test_dbi_run {
     do "t/config.pl";
     my $config = _read_config_file();
-    $config->{DBI_test} ||= 'n';
-    if ( $config->{DBI_test} ne 'y' ) {
+    unless ( $config->{DBI_dsn} and $config->{DBI_driver} ) {
         print "1..0\n";
         print "Skipping test on this platform\n";
         exit;

@@ -1,10 +1,30 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: Utility.pm,v 2.1 2002/08/21 12:31:06 lachoy Exp $
 
 use strict;
 
-$SPOPS::Utility::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Utility::VERSION  = substr(q$Revision: 2.1 $, 10);
+
+
+# initialize limit tracking vars -- the limit passed in can be:
+# limit => 'x,y'  --> 'offset = x, max = y'
+# limit => 'x'    --> 'max = x'
+
+sub determine_limit {
+    my ( $class, $limit ) = @_;
+    return ( 0, 0 ) unless ( $limit );
+    my ( $offset, $max );
+    if ( $limit =~ /,/ ) {
+        ( $offset, $max ) = split /\s*,\s*/, $limit;
+        $max += $offset;
+    }
+    else {
+        $max = $limit;
+    }
+    DEBUG() && _w( 1, "Limit set: Start $offset to $max" );
+    return ( $offset, $max );
+}
 
 
 # Return a random code of length $length. If $opt is 'mixed', then the
@@ -141,10 +161,7 @@ sub list_process {
 
 1;
 
-
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -164,6 +181,7 @@ SPOPS::Utility - Utility methods for SPOPS objects
 
  my $now = SPOPS::Utility->now;
  my $random = SPOPS::Utility->generate_random_code( 16 );
+ my ( $lower, $upper ) = SPOPS::Utility->determine_limit( '50,100' );
 
 =head1 DESCRIPTION
 
@@ -175,6 +193,27 @@ focused.
 The different methods are fairly unrelated.
 
 =head1 METHODS
+
+B<determine_limit( $limit )>
+
+This supports the C<fetch()> implementation of SPOPS subclasses. It is
+used to help figure out what records to fetch. Pass in a C<$limit>
+string and get back a two-item list with the offset and max.
+
+The C<$limit> string can be in one of two formats:
+
+  'x,y'  --> offset = x, max = y
+  'x'    --> offset = 0, max = x
+
+Example:
+
+ $p->{limit} = "20,30";
+ my ( $offset, $max ) = SPOPS::Utility->determine_limit( $p->{limit} );
+
+ # Offset is 20, max is 30, so you should get back records 20 - 30.
+
+If no C<$limit> is passed in, the values of both items in the
+two-value list are 0.
 
 B<generate_random_code( $length )>
 

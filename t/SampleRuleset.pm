@@ -1,6 +1,6 @@
 package SampleRuleset;
 
-# $Id: SampleRuleset.pm,v 1.2 2002/04/23 01:04:30 lachoy Exp $
+# $Id: SampleRuleset.pm,v 1.3 2002/08/21 14:36:01 lachoy Exp $
 
 use strict;
 
@@ -14,6 +14,7 @@ sub ruleset_factory {
 
 sub reset_id {
     my ( $self ) = @_;
+    return 1 if ( $self->is_saved );
     my $id_field = $self->id_field;
     $self->{ $id_field } = "blimey!";
     return 1;

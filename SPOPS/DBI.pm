@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 2.12 2002/08/12 03:28:11 lachoy Exp $
+# $Id: DBI.pm,v 2.15 2002/08/21 12:29:51 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -14,12 +14,16 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = substr(q$Revision: 2.12 $, 10);
+$SPOPS::DBI::VERSION = substr(q$Revision: 2.15 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
-use constant DEBUG_FETCH  => 0;
-use constant DEBUG_SAVE   => 0;
+my ( $DEBUG_FETCH, $DEBUG_SAVE );
+sub DEBUG_FETCH     { return $DEBUG_FETCH; }
+sub DEBUG_SAVE      { return $DEBUG_SAVE }
+sub SET_DEBUG_FETCH { $DEBUG_FETCH = $_[1] }
+sub SET_DEBUG_SAVE  { $DEBUG_SAVE = $_[1] }
+
 
 ########################################
 # CONFIGURATION
@@ -253,7 +257,7 @@ sub fetch {
 
     # No ID, no object
 
-    return undef  unless ( defined( $id ) and length( $id ) > 0 and $id !~ /^tmp/ );
+    return undef  unless ( defined( $id ) and $id ne '' and $id !~ /^tmp/ );
 
     # Security violations bubble up to caller
 
@@ -326,7 +330,7 @@ sub fetch_iterator {
     $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Trying to create an Iterator with: ", Dumper( $p ) );
     ( $p->{fields}, $p->{select} ) = $class->_construct_group_select( $p );
     $p->{class}                    = $class;
-    ( $p->{offset}, $p->{max} )    = $class->fetch_determine_limit( $p->{limit} );
+    ( $p->{offset}, $p->{max} )    = SPOPS::Utility->determine_limit( $p->{limit} );
     unless ( ref $p->{id_list} ) {
         $p->{sth} = $class->_execute_multiple_record_query( $p );
     }
@@ -341,7 +345,7 @@ sub fetch_group {
     $p->{DEBUG} ||= DEBUG_FETCH;
     ( $p->{raw_fields}, $p->{select} ) = $class->_construct_group_select( $p );
     my $sth              = $class->_execute_multiple_record_query( $p );
-    my ( $offset, $max ) = $class->fetch_determine_limit( $p->{limit} );
+    my ( $offset, $max ) = SPOPS::Utility->determine_limit( $p->{limit} );
     my @obj_list = ();
 
     my $row_count = 0;
@@ -580,7 +584,7 @@ sub perform_lazy_load {
 
 sub refetch {
 	my ( $self, $fields, $p ) = @_;
-	
+
     # Calling with no fields results in refetching all fields
 	$fields = $self->field_list unless ( $fields );
 
@@ -870,19 +874,31 @@ sub _save_update {
 
 
 sub field_update {
-	my ($self, $fields, $p ) = @_;
-
+	my ( $item, $fields, $p ) = @_;
     unless ( $fields ) {
         spops_error "You must pass some sort of field to update!";
     }
 
+    # This can be called as a class method or as an object method...
+
+    my $is_object = ref $item;
+
+    if ( ! $is_object and ! $p->{where} ) {
+        spops_error "If called as a class method, you must specify filtering ",
+                    "criteria in the 'where' clause";
+    }
+    if ( ! $is_object and ! ref $fields eq 'HASH' ) {
+        spops_error "If called as a class method, you must specify fields and ",
+                    "values as a hashref for the first argument.";
+    }
+
 	my ( %holding, $old );
-	
+
 	# convert to hashref ...
 	if ( ref $fields ) {
 		if (ref $fields eq 'ARRAY') {		## ... from arrayref
             for ( @{ $fields } ) {
-                $holding{ $_ } = $self->{ $_ };
+                $holding{ $_ } = $item->{ $_ };
             }
 		}
         else {							    ## ... no conversion
@@ -890,13 +906,13 @@ sub field_update {
 		}
 	}
     else {    								# ... from scalar
-		$holding{ $fields } = $self->{ $fields };
+		$holding{ $fields } = $item->{ $fields };
 	}
 
     # translate field mapping if available, and ensure that no private
     # fields are used in the update
 
-    my $new = $self->filter_fields( \%holding );
+    my $new = $item->filter_fields( \%holding );
 
 	# set up WHERE clause for 'if_match' option
 
@@ -909,42 +925,44 @@ sub field_update {
             }
 		}
 
-        # take match values from $self
+        # take match values from $item
         else {
             for ( keys %{ $new } ) {
-                $old->{ $_ } = $self->{ $_ };
+                $old->{ $_ } = $item->{ $_ };
             }
 		}
-		
+
 		my @where = ();
-		my $type_info = $self->db_discover_types( $self->table_name, $p );
+		my $type_info = $item->db_discover_types( $item->table_name, $p );
 		while ( my ( $k, $v ) = each %{ $old } ) {
-			$v = $self->sql_quote( $v, $type_info->{ $k }, $p->{db} );
+			$v = $item->sql_quote( $v, $type_info->{ $k }, $p->{db} );
 			push @where, " $k = $v ";
 		}
 		$p->{where} = join( ' AND ', @where );
 	}
 
-	$p->{where} = ( $p->{where} )
-                    ? join( ' AND ', $self->id_clause( undef, undef, $p ), $p->{where} )
-                    : $self->id_clause( undef, undef, $p );
+    if ( $is_object ) {
+        $p->{where} = ( $p->{where} )
+                        ? join( ' AND ', $item->id_clause( undef, undef, $p ), $p->{where} )
+                        : $item->id_clause( undef, undef, $p );
+    }
     for ( keys %{ $new } ) {
         push @{ $p->{field} }, $_;
         push @{ $p->{value} }, $new->{ $_ };
     }
-	$p->{table}		= $self->table_name;
+	$p->{table}		= $item->table_name;
 	$p->{DEBUG}		||= DEBUG_SAVE;
-	$p->{db}		||= $self->global_datasource_handle( $p->{connect_key} );
+	$p->{db}		||= $item->global_datasource_handle( $p->{connect_key} );
 
-	my $rv = $self->db_update( $p );
+	my $rv = $item->db_update( $p );
     $rv = ( $rv != 0 );                 # ...only if >= 1 row is updated
 
 	# update values in object if db_update was successful and we
-	# passed in new values (vs. from object)
+	# passed in new values (vs. from object).
 
-    if ( $rv && ref $fields eq 'HASH' ) {
+    if ( $rv and $is_object and ref $fields eq 'HASH' ) {
         for ( keys %{ $new } ) {
-            $self->{ $_ } = $new->{ $_ };
+            $item->{ $_ } = $new->{ $_ };
         }
     }
 	return $rv;
@@ -1166,6 +1184,35 @@ Examples:
 Returns: arrayref or hashref of filtered fields, depending on the
 input.
 
+B<field_update()>
+
+This method is documented below in L<OBJECT METHODS>, but it has a
+class method aspect to it in addition to the object method.
+
+=head2 Debugging Methods
+
+Note: we may scrap these in the future and simply use the global
+C<DEBUG> value exported from L<SPOPS|SPOPS>.
+
+Debugging levels go from 0 to 5, with 5 being the most verbose. The
+reasons for the different levels are unclear.
+
+B<SET_DEBUG_SAVE( $level )>
+
+Sets the debugging value for saving objects.
+
+B<DEBUG_SAVE>
+
+Returns the current debugging value for saving objects.
+
+B<SET_DEBUG_FETCH( $level )>
+
+Sets the debugging value for fetching objects.
+
+B<DEBUG_FETCH>
+
+Returns the current debugging value for fetching objects.
+
 =head1 DATA ACCESS METHODS
 
 The following methods access configuration information about the class
@@ -1305,6 +1352,20 @@ store, creates an object with the data and returns the object. Any
 failures result in either an L<SPOPS::Exception|SPOPS::Exception> or
 an L<SPOPS::Exception::DBI|SPOPS::Exception::DBI> object being thrown,
 depending on the source of the error.
+
+If C<$id> is blank or begins with 'tmp', C<undef> is returned. Classes
+using multiple primary key fields need to specify the ID as a string
+separated by a comma. For instance, if you had a class specified with:
+
+ myclass => {
+     class => 'My::Customer',
+     id    => [ 'entno', 'custno' ],
+     ...
+ },
+
+Then you would fetch a customer with:
+
+ my $cust = My::Customer->fetch( "$entno,$custno" );
 
 If you have security turned on for the object class, the system will
 first check if the currently-configured user is allowed to fetch the
@@ -1692,15 +1753,20 @@ step we call the method in the parent class.
 
 B<field_update( $fields, \%params )>
 
-Conditionally updates the value(s) of the specified field(s) in the data
-store and in the object if successful. If the C<$fields> argument is a
-scalar or arrayref, the values used to update the fields in the data
-store are taken from the object. If the $fields argument is a hashref,
-then it specifies the fields and the new values. In this case, the
-values in the object are also updated if and only if the update to the
-data store was successful.
+There are two versions of this method: an object method and a class
+method.
 
-E.g.
+I<Object method>
+
+Conditionally updates the value(s) of the specified field(s) in the
+data store and in the object if successful. If the C<$fields> argument
+is a scalar or arrayref, the values used to update the fields in the
+data store are taken from the object. If the C<$fields> argument is a
+hashref, then it specifies the fields and the new values. In this
+case, the values in the object are also updated if and only if the
+update to the data store was successful.
+
+Examples:
 
   $obj->{field1} = $new_value1;
   $obj->field_update( 'field1' );
@@ -1723,7 +1789,6 @@ E.g.
   $obj->field_update( { field1 => $new_value1,
                         field2 => $new_value2 },
                       { where => 'field3 > $val3' } );
-
 
 Parameters:
 
@@ -1752,6 +1817,47 @@ B<where> (scalar) (optional)
 
 If the 'where' parameter is present, it supercedes 'if_match' and
 included in the WHERE clause of the update.
+
+=item *
+
+B<DEBUG> (bool) (optional)
+
+=back
+
+I<Class method>
+
+You can also use this method to update multiple objects at once. This
+goes against the grain of SPOPS since you generally only make changes
+to one object at a time, but it can be very useful.
+
+This differs from the object method in a few ways. First, the
+C<$fields> argument B<must> be a hashref. The method will throw an
+exception otherwise.
+
+Second, you B<must> specify a 'where' clause in the parameters. The
+method will throw an exception otherwise.
+
+Note that this does not update any objects in the cache. (Since there
+is no cache implementation right now, this point is moot but still
+might be worth mentioning for enterprising souls who wish to code a
+cache.)
+
+Example:
+
+ # Update all objects updated on '2002-08-02'
+
+ $class->field_update( { status => 'Active' },
+                       { where => 'created_on = "2002-08-02"' } );
+
+Parameters:
+
+=over 4
+
+=item *
+
+B<where> (scalar)
+
+Clause to specify the objects you wish to update.
 
 =item *
 

@@ -1,6 +1,6 @@
 package SPOPS::LDAP;
 
-# $Id: LDAP.pm,v 2.2 2002/08/10 02:09:13 lachoy Exp $
+# $Id: LDAP.pm,v 2.4 2002/08/21 12:30:10 lachoy Exp $
 
 use strict;
 use base qw( SPOPS );
@@ -12,7 +12,7 @@ use SPOPS            qw( DEBUG _w );
 use SPOPS::Exception::LDAP;
 use SPOPS::Secure    qw( :level );
 
-$SPOPS::LDAP::VERSION   = substr(q$Revision: 2.2 $, 10);
+$SPOPS::LDAP::VERSION   = substr(q$Revision: 2.4 $, 10);
 
 
 ########################################
@@ -246,7 +246,7 @@ sub fetch_iterator {
     require SPOPS::Iterator::LDAP;
     DEBUG && _w( 1, "Trying to create an Iterator with: ", Dumper( $p ) );
     $p->{class}                    = $class;
-    ( $p->{offset}, $p->{max} )    = $class->fetch_determine_limit( $p->{limit} );
+    ( $p->{offset}, $p->{max} )    = SPOPS::Utility->determine_limit( $p->{limit} );
     unless ( ref $p->{id_list} ) {
         $p->{ldap_msg} = $class->_execute_multiple_record_query( $p );
         $class->_check_error( $p->{ldap_msg}, 'fetch_iterator' );
@@ -259,7 +259,7 @@ sub fetch_iterator {
 
 sub fetch_group {
     my ( $class, $p ) = @_;
-    my ( $offset, $max ) = $class->fetch_determine_limit( $p->{limit} );
+    my ( $offset, $max ) = SPOPS::Utility->determine_limit( $p->{limit} );
     my $ldap_msg = $class->_execute_multiple_record_query( $p );
     $class->_check_error( $ldap_msg, 'fetch_group' );
 
@@ -652,8 +652,6 @@ sub build_dn {
 
 __END__
 
-=pod
-
 =head1 NAME
 
 SPOPS::LDAP - Implement object persistence in an LDAP datastore
@@ -895,7 +893,8 @@ Currently we use L<Net::LDAP|Net::LDAP> to interface with the LDAP
 directory, but Perl/C libraries may be faster and provide different
 features. Once this is needed, we will probably need to create
 implementation-specific subclasses. This should not be very difficult
--- the actual calls to C<Net::LDAP> are minimal and straightforward.
+-- the actual calls to L<Net::LDAP|Net::LDAP> are minimal and
+straightforward.
 
 =head1 SEE ALSO
 
@@ -916,5 +915,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut

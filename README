@@ -8,7 +8,7 @@ do the standard:
 
  perl Makefile.PL
  make 
- make test
+ make test (see 'RUNNING TESTS' below)
  make install
 
 Note that the first step will ask you a few questions that determine
@@ -20,6 +20,29 @@ just do:
  perl -MCPAN -e 'install Bundle::SPOPS'
 
 Easy!
+
+
+RUNNING TESTS
+====================
+
+Tests are designed to run without human intervention, although you can
+set parameters if you like: run 'perl Makefile.PL MANUAL=1' for the
+build process to query you.
+
+DBI tests use the following environment variables as specified by DBI:
+
+  DBI_DSN        - (mandatory) DBI:DriverName:xxx 
+  DBI_USER       - (optional) username
+  DBI_PASS       - (optional) password for DBI_USER
+
+LDAP tests use the following environment variables:
+
+  LDAP_BASE_DN   - (mandatory) Base DN of server
+  LDAP_HOST      - (default: localhost) hostname or IP
+  LDAP_PORT      - (default: 389) port number
+  LDAP_BIND_DN   - (optional) DN for authentication
+  LDAP_BIND_PASS - (optional) Password for authentication
+
 
 WHAT IS IT?
 ====================
@@ -68,11 +91,12 @@ my $ID           = 'id';
 my $DSN          = 'DBI:mysql:test';
 my $USER         = 'test';
 my $PASS         = 'test';
-my $SEARCH_FIELD = 'field';
 
 {
-    my $search_value = shift @ARGV;
-    die "Usage $0 search-value\n" unless ( defined $search_value );
+    my ( $search_field, $search_value ) = @ARGV;
+    unless ( defined $search_field and defined $search_value ) {
+        die "Usage $0 search-field search-value\n";
+    }
     my $config = {
       user => {
         class          => 'My::Object',
@@ -87,7 +111,7 @@ my $SEARCH_FIELD = 'field';
                             password => $PASS },
       } };
     SPOPS::Initialize->process({ config => $config });
-    my $iter = My::Object->fetch_iterator({ where => "$SEARCH_FIELD = ?",
+    my $iter = My::Object->fetch_iterator({ where => "$search_field = ?",
                                             value => [ $search_value ] });
     while ( my $o = $iter->get_next ) {
         print "Object: (", $o->id, ")", "\n",
@@ -115,12 +139,22 @@ purpose, let us know!
 WHAT DATABASES ARE SUPPORTED RIGHT NOW?
 ====================
 
-Following is a list of supported databases. Note that ANY DBI database
-should work fine for read-only operations.
+Following is a list of supported databases. Note that *ANY* DBI
+database should work fine for read-only operations -- just use
+'SPOPS::DBI' in the 'isa'.
+
+ * Interbase/FirebirdSQL (using DBD::InterBase and
+   SPOPS::DBD::InterBase)
+
+ * Microsoft SQL Server (using DBD::ODBC and SPOPS::DBI::Sybase)
 
  * MySQL (using DBD::mysql and SPOPS::DBI::MySQL
 
+ * Oracle (using DBD::Oracle and SPOPS::DBI::Oracle)
+
  * PostgreSQL (using DBD::Pg and SPOPS::DBI::Pg)
+
+ * SQLite (using DBD::SQLite and SPOPS::DBI::SQLite)
 
  * Sybase Adaptive Server Enterprise (using DBD::Sybase and
    SPOPS::DBI::Sybase)
@@ -128,17 +162,9 @@ should work fine for read-only operations.
  * Sybase Adaptive Server Anywhere (using DBD::ASAny and
    SPOPS::DBI::Sybase)
 
- * Microsoft SQL Server (using DBD::ODBC and SPOPS::DBI::Sybase)
-
- * Oracle (using DBD::Oracle and SPOPS::DBI::Oracle)
-
- * SQLite (using DBD::SQLite and SPOPS::DBI::SQLite)
-
- * Interbase/FirebirdSQL (using DBD::InterBase and
-   SPOPS::DBD::InterBase)
-
  * ODBC datasources; we have used this to access DB2 on
    an AS/400 for read-only operations and it worked great.
+
 
 We also support:
 
@@ -262,4 +288,4 @@ version 2 of the License (see 'COPYING'), or (at your option) any
 later version.
 
 =========================
-$Id: README,v 2.1 2002/08/11 13:52:12 lachoy Exp $
+$Id: README,v 2.2 2002/08/21 20:51:23 lachoy Exp $

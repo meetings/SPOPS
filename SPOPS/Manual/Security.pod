@@ -2,7 +2,7 @@
 
 SPOPS::Manual::Security - SPOPS security system and how you can customize
 
-=head1 DESCRIPTION
+=head1 SYNOPSIS
 
 This part of the SPOPS manual deals with the last 'S' in SPOPS --
 Security. It is one of the main features that sets SPOPS apart from
@@ -36,7 +36,7 @@ How can I customize security?
 
 =back
 
-=head1 OVERVIEW
+=head1 DESCRIPTION
 
 Security is implemented with a number of methods that are called
 within the SPOPS implementation module. For instance, every time you

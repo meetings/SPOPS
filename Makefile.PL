@@ -1,10 +1,12 @@
-# $Id: Makefile.PL,v 2.1 2002/04/27 19:09:15 lachoy Exp $
+# $Id: Makefile.PL,v 2.4 2002/08/21 21:00:13 lachoy Exp $
+
+# See 'README' for the environment variables we use in builds without
+# intervention.
+#
+# To use manual configuration: 'perl Makefile.PL MANUAL=1'
 
 use strict;
 use ExtUtils::MakeMaker;
-
-# Ask the user for testing configuration information; save it in a
-# file and remove it if asked (since it will contain password info)
 
 my ( $EXTRA_INFO );
 
@@ -20,56 +22,64 @@ $SUPPORTED_DBD_DRIVERS{Sybase} = \&set_sybase_env;
 
 my $CONFIG_FILE = 'spops_test.conf';
 
+# My arguments (so we don't just eat all the ones E::MM might actually
+# want
+my %MY_ARGS = map { $_ => 1 } qw( MANUAL );
+
 {
-    my %OPT = map { $_ => 1 } @ARGV;
-    foreach my $opt_key ( keys %OPT ) {
-        if ( $OPT{ $opt_key } =~ /^\w+=(.*)$/ ) {
-            $OPT{ $opt_key } = $1;
+    # Read in command-line arguments
+
+    my ( %OPT );
+    my @mm_args = ();
+    while ( my $arg = shift @ARGV ) {
+        my ( $k, $v ) = split /\s*=\s*/, $arg, 2;
+        if ( $MY_ARGS{ $k } ) {
+            $OPT{ $k } = $v;
+        }
+        else {
+            push @mm_args, $arg;
         }
     }
+    @ARGV = @mm_args;
 
-    # If the config file already exists, then skip all this goop and write out the Makefile
+    print '=' x 40, "\n",
+          qq(NOTE: Build process changed from 0.64 to 0.65. Default\n),
+          qq(build is now automated. See README for details.\n),
+          '=' x 40, "\n\n";
+
+    # If the config file already exists, then skip all this goop and
+    # write out the Makefile
 
     if ( -f $CONFIG_FILE ) {
-        my $use_existing = ( $OPT{AUTO} )
-                           ? 'y'
-                           : lc get_response( 'You appear to have an existing configuration ' .
-                                              'file. Re-use it? (Y/n)', 'Y' );
+        my $use_existing = ( $OPT{MANUAL} )
+                           ? lc get_response( 'You appear to have an existing configuration ' .
+                                              'file. Re-use it? (Y/n)', 'Y' )
+                           : 'y';
         if ( $use_existing eq 'y' ) {
             write_makefile();
             exit(0);
         }
     }
 
-    my ( $dbi_test, $dbi_driver, $dbi_dsn, $dbi_user, $dbi_password ) = check_dbi();
-    my ( $ldap_test, $ldap_host, $ldap_port, $ldap_base_dn, $ldap_bind_dn, $ldap_password ) = check_ldap();
-    my ( $gdbm_test ) = check_gdbm();
-    my ( $uuid_test ) = check_uuid();
-
-    if ( $dbi_test eq 'n' and $ldap_test eq 'n' and $gdbm_test eq 'n' ) {
-        print "Only the HashFile test will be run.\n";
-        eval { unlink( $CONFIG_FILE ) };
-    }
-    else {
-        open( CONF, "> $CONFIG_FILE" ) || die "Cannot open $CONFIG_FILE for writing! Error: $!";
-        print CONF <<CONFIG;
-DBI_test:      $dbi_test
+    my ( $dbi_driver, $dbi_dsn, $dbi_user, $dbi_password )
+                                        = check_dbi( %OPT );
+    my ( $ldap_host, $ldap_port, $ldap_base_dn, $ldap_bind_dn, $ldap_password )
+                                        = check_ldap( %OPT );
+    open( CONF, "> $CONFIG_FILE" )
+                    || die "Cannot open $CONFIG_FILE for writing! Error: $!";
+    print CONF <<CONFIG;
 DBI_driver:    $dbi_driver
 DBI_dsn:       $dbi_dsn
 DBI_user:      $dbi_user
 DBI_password:  $dbi_password
-LDAP_test:     $ldap_test
 LDAP_host:     $ldap_host
 LDAP_port:     $ldap_port
 LDAP_base_dn:  $ldap_base_dn
 LDAP_bind_dn:  $ldap_bind_dn
 LDAP_bind_password: $ldap_password
-GDBM_test:     $gdbm_test
-UUID_test:     $uuid_test
 $EXTRA_INFO
 CONFIG
-    }
-
+    close( CONF );
     write_makefile();
 }
 
@@ -94,6 +104,7 @@ sub write_makefile {
                         'Class::Accessor'   => 0.17,
                         'Devel::StackTrace' => 0.90,
                         'Class::Factory'    => 0.03,
+                        #'Class::Observable' => 0.03,
                         } );
 }
 
@@ -101,28 +112,49 @@ sub write_makefile {
 # Find out about a DBI test
 
 sub check_dbi {
-    my ( $dbi_test, $dbi_driver, $dbi_dsn, $dbi_user, $dbi_pass );
+    my ( %OPT ) = @_;
     eval { require DBI };
     if ( $@ ) {
         print "You don't appear to have DBI installed; skipping DBI tests.\n";
-        return ( 'n' );
+        return ();
     }
-    $dbi_test  = lc get_response( "Would you like to run tests using DBI? (Y/n)\n", 'Y' );
-    if ( $dbi_test ne 'y' ) {
-        return ( 'n' );
+    if ( $OPT{MANUAL} ) {
+        my $do_test  = lc get_response( "Would you like to run tests using DBI? (Y/n)\n", 'Y' );
+        if ( $do_test ne 'y' ) {
+            print "Skipping DBI tests due to lack of interest.\n";
+            return ();
+        }
+        print "\n";
     }
-    print "\n";
+
     my @dbd_available = ();
     foreach my $dbd ( keys %SUPPORTED_DBD_DRIVERS ) {
         eval "require DBD::$dbd";
         push @dbd_available, $dbd   unless ( $@ );
     }
-    my $dbd_string = join ', ', sort @dbd_available;
-    $dbi_driver = get_response( "Choose a DBI driver to test.\n" .
-                                "(Available in SPOPS and on your system: $dbd_string)\n" );
+
+    my $dbd_available_string = join ', ', sort @dbd_available;
+
+    my $dbi_driver = _get_dbi_driver( $dbd_available_string, %OPT );
     unless ( $dbi_driver ) {
         print "Skipping DBI tests since no driver specified.\n";
-        return ( 'n' );
+        return ();
+    }
+
+    if ( $dbi_driver eq 'ODBC' and ! $OPT{MANUAL} ) {
+        print "Skipping DBI tests: ODBC specification must be run ",
+              "with 'perl Makefile.PL MANUAL=1'\n";
+        return ();
+    }
+
+    my ( $odbc_driver );
+    if ( $dbi_driver eq 'ODBC' ) {
+        print "\n";
+        print "You've chosen ODBC as your DBD. However, SPOPS needs to know\n",
+              "what type of database is working behind the ODBC driver.\n";
+        $odbc_driver = get_response( "Choose a database behind the scenes " .
+                                     "($dbd_available_string)\n" .
+                                     "(MS SQL users should enter 'Sybase')" );
     }
 
     # Use this to ensure the environment is setup properly for the
@@ -131,93 +163,103 @@ sub check_dbi {
     if ( ref $SUPPORTED_DBD_DRIVERS{ $dbi_driver } eq 'CODE' ) {
         $SUPPORTED_DBD_DRIVERS{ $dbi_driver }->();
     }
-    print "\n";
 
-    my ( $odbc_driver );
-    if ( $dbi_driver eq 'ODBC' ) {
-        print "You've chosen ODBC as your DBD. However, SPOPS needs to know ",
-              "what type of database is working behind the ODBC driver.\n";
-        $odbc_driver = get_response( "Choose a database behind the scenes " .
-                                     "(MySQL, Pg, Sybase, Oracle)\n" .
-                                     "(MS SQL users should enter 'Sybase')",
-                                     'Sybase' );
-    }
-    print "\n";
-
-    $dbi_dsn = get_response( "Please enter the tail end of the DSN to use for the driver you chose\n" .
-                             "('DBI:$dbi_driver:' will be prepended unless you specify a full DSN)\n",
-                             $ENV{DBI_DSN} );
+    my $dbi_dsn = _get_dbi_dsn( $dbi_driver, %OPT );
     unless ( $dbi_dsn ) {
         print "Skipping DBI tests since DSN not fully specified\n";
-        return ( 'n' );
+        return ();
     }
-    print "\n";
-    $dbi_dsn = "DBI:$dbi_driver:$dbi_dsn" if ( $dbi_dsn !~ /^dbi/i );
-    $dbi_user = get_response( "Please enter a username to connect to the data source specified.\n" .
-                              "This user should be able to create and remove tables in the database.\n",
-                              $ENV{DBI_USER} );
-    $dbi_pass = get_response( "Please enter the password for user ($dbi_user)\n", $ENV{DBI_PASSWORD} );
-    print "\n";
+    $dbi_dsn = "DBI:$dbi_driver:$dbi_dsn";
+    my $dbi_user = _get_dbi_user( %OPT );
+    my $dbi_pass = _get_dbi_password( $dbi_user, %OPT );
     print "Please note: you might want to remove the file \n",
           "'$CONFIG_FILE' after the tests have run since it \n",
           "contains user/password information.\n\n";
 
     $dbi_driver = $odbc_driver if ( $odbc_driver );
-    return ( 'y', $dbi_driver, $dbi_dsn, $dbi_user, $dbi_pass );
+    return ( $dbi_driver, $dbi_dsn, $dbi_user, $dbi_pass );
+}
+
+sub _get_dbi_driver {
+    my ( $available, %OPT ) = @_;
+    if ( $OPT{MANUAL} ) {
+        return get_response( "Choose a DBI driver to test.\n" .
+                             "(Available in SPOPS and on your system: $available)\n" );
+    }
+    if ( $ENV{DBI_DSN} ) {
+        my ( $driver ) = $ENV{DBI_DSN} =~ /^dbi:(\w*):/i;
+        return $driver;
+    }
+    return $ENV{DBI_DRIVER}
+}
+
+sub _get_dbi_dsn {
+    my ( $dbi_driver, %OPT ) = @_;
+    my ( $given_dsn ) = $ENV{DBI_DSN} =~ /:([^:]*)$/;
+    return $given_dsn unless ( $OPT{MANUAL} );
+    print "\n";
+    return get_response( "Please enter the tail end of the DSN to use\n" .
+                         "for the driver you chose. Enter what would come\n ".
+                         "after 'DBI:$dbi_driver:' in the normal connection.\n",
+                         $given_dsn );
+}
+
+sub _get_dbi_user {
+    my ( %OPT ) = @_;
+    return $ENV{DBI_USER} unless ( $OPT{MANUAL} );
+    print "\n";
+    return get_response( "Please enter a username to connect to the\n" .
+                         "specified data source.This user should be\n" .
+                         "able to create and remove tables in the database.\n",
+                         $ENV{DBI_USER} );
+}
+
+sub _get_dbi_password {
+    my ( $dbi_user, %OPT ) = @_;
+    return $ENV{DBI_PASS} unless ( $OPT{MANUAL} );
+    print "\n";
+    return get_response( "Please enter the password for user ($dbi_user)\n",
+                         $ENV{DBI_PASS} );
 }
 
 
 # Find out whether to run LDAP test
 
 sub check_ldap {
-    my ( $ldap_test, $ldap_host, $ldap_port, $ldap_base_dn, $ldap_bind_dn, $ldap_password );
+    my ( %OPT ) = @_;
     eval { require Net::LDAP };
     if ( $@ ) {
         print "You don't appear to have Net::LDAP installed; skipping LDAP tests.\n";
-        return ( 'n' );
+        return ();
     }
-    $ldap_test = lc get_response( "Would you like to run tests using LDAP? (Y/n)\n", 'Y' );
-    if ( $ldap_test ne 'y' ) {
-        return ( 'n' );
+    unless ( $OPT{MANUAL} ) {
+        my $host = $ENV{LDAP_HOST} || 'localhost';
+        my $port = $ENV{LDAP_PORT} || 389;
+        return ( $host, $port, $ENV{LDAP_BASE_DN},
+                 $ENV{LDAP_BIND_DN}, $ENV{LDAP_BIND_PASS} );
+    }
+
+
+    my $do_test = lc get_response( "Would you like to run tests using LDAP? (Y/n)\n", 'Y' );
+    if ( $do_test ne 'y' ) {
+        print "Skipping LDAP tests due to lack of interest.\n";
+        return ();
     }
     print "\n";
+
     print "We need some information about your LDAP setup to run tests:\n";
-    $ldap_host = lc get_response( "  Host? (localhost)    ", 'localhost' );
-    $ldap_port = lc get_response( "  Port? (389)          ", 389 );
-    $ldap_base_dn = get_response( "  Base DN?             " );
+    my $ldap_host = lc get_response( "  Host? (localhost)    ", 'localhost' );
+    my $ldap_port = lc get_response( "  Port? (389)          ", 389 );
+    my $ldap_base_dn = get_response( "  Base DN?             ", $ENV{LDAP_BASE_DN} );
     print "I will create an OU and entries under ($ldap_base_dn) for testing,\n",
           "and then remove the OU when I'm finished.\n";
-    $ldap_bind_dn = get_response( "  Bind DN? (anonymous) ", 'anonymous bind' );
+    my $ldap_bind_dn = get_response( "  Bind DN? (anonymous) ", 'anonymous bind' );
     $ldap_bind_dn = ( $ldap_bind_dn eq 'anonymous bind' ) ? '' : $ldap_bind_dn;
+    my ( $ldap_password );
     if ( $ldap_bind_dn ) {
         $ldap_password = get_response( "  Bind password?       " );
     }
-    return ( $ldap_test, $ldap_host, $ldap_port, $ldap_base_dn, $ldap_bind_dn, $ldap_password );
-}
-
-
-# Find out about a GDBM test
-
-sub check_gdbm {
-    eval { require GDBM_File };
-    if ( $@ ) {
-        print "You don't appear to have GDBM_File installed, skipping GDBM tests.\n";
-        return ( 'n' );
-    }
-    return 'y';
-}
-
-
-# Find out about UUID test
-
-sub check_uuid {
-    eval { require Data::UUID };
-    if ( $@ ) {
-        print "You don't appear to have Data::UUID installed,\n",
-              "skipping UUID key generation tests\n";
-        return( 'n' );
-    }
-    return 'y';
+    return ( $ldap_host, $ldap_port, $ldap_base_dn, $ldap_bind_dn, $ldap_password );
 }
 
 

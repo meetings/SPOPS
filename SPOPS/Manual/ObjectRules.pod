@@ -2,7 +2,7 @@
 
 SPOPS::Manual::ObjectRules - Use rules to give your object custom behavior
 
-=head1 DESCRIPTION
+=head1 SYNOPSIS
 
 This document aims to answer the questions:
 
@@ -26,7 +26,7 @@ How do I implement a rule?
 
 =back
 
-=head1 RULES AND RULESETS DEFINED
+=head1 DESCRIPTION
 
 When a SPOPS object calls C<save()>, C<fetch()>, or C<remove()>, the
 implementing class (e.g., L<SPOPS::DBI|SPOPS::DBI>) takes care of most

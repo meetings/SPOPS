@@ -114,6 +114,7 @@ eg/My/Group.pm
 eg/My/LDAPConnect.pm
 eg/My/Security.pm
 eg/My/User.pm
+t/00_base.t
 t/01_tie.t
 t/02_tie_strict.t
 t/03_uuid_key.t
@@ -124,7 +125,12 @@ t/10_hash_file.t
 t/20_gdbm.t
 t/30_dbi.t
 t/31_dbi_multifield.t
+t/32_dbi_inline_config.t
+t/33_dbi_discover_field.t
+t/34_dbi_find_defaults.t
 t/40_ldap.t
+t/50_rule_create_only.t
+t/51_rule_read_only.t
 t/config.pl
 t/dbi_config.pl
 t/hash_file_test.perl

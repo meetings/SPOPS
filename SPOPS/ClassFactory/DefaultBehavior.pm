@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 2.1 2002/04/29 12:51:04 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 2.4 2002/08/21 18:11:01 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
-$SPOPS::ClassFactory::DefaultBehavior::VERSION   = substr(q$Revision: 2.1 $, 10);
+$SPOPS::ClassFactory::DefaultBehavior::VERSION   = substr(q$Revision: 2.4 $, 10);
 
 my @PARSE_INTO_HASH = qw( field no_insert no_update skip_undef multivalue );
 
@@ -22,6 +22,8 @@ sub conf_modify_config {
 
     DEBUG() && _w( 1, "Trying to modify configuration for class ($class)" );
     my $CONFIG = $class->CONFIG;
+
+    $CONFIG->{field_list} = [ @{ $CONFIG->{field} } ];
 
     # When we change a listref to a hashref, keep the order
     # by maintaining a count; that way they can be re-ordered
@@ -217,7 +219,7 @@ sub conf_relate_hasa {
         #   has_a => { 'MySPOPS::User' => 'created_by', ... }
 
         my $id_fields = ( ref $CONFIG->{has_a}{ $hasa_class } eq 'ARRAY' )
-                        ? $CONFIG->{has_a}{ $hasa_class } 
+                        ? $CONFIG->{has_a}{ $hasa_class }
                         : [ $CONFIG->{has_a}{ $hasa_class } ];
         my $num_id_fields = scalar @{ $id_fields };
         foreach my $usea_id_info ( @{ $id_fields } ) {
@@ -354,8 +356,6 @@ sub conf_add_rules {
 
 __END__
 
-=pod
-
 =head1 NAME
 
 SPOPS::ClassFactory::DefaultBehavior - Default configuration methods called from SPOPS.pm
@@ -377,15 +377,50 @@ which the behaviors will be installed.
 
 B<conf_modify_config( \%config )>
 
+Set the values from 'field' into 'field_list', and parse the following
+entries from arrayrefs into hashrefs:
+
+ field, no_insert, no_update, skip_undef, multivalue
+
 B<conf_id_method( \%config )>
+
+Generate the C<id()> method.
 
 B<conf_read_code( \%config )>
 
+Reads the entries from C<code_class>, finds them from C<@INC> and
+includes the libraries into the generated package. The value for
+C<code_class> can be a scalar or arrayref.
+
+Example:
+
+ code_class => [ 'My::OtherBehavior', 'My::Neato' ],
+
 B<conf_relate_hasa( \%config )>
+
+Generate any methods used for relating an object to an object it
+contains. (See
+L<SPOPS::Manual::Relationships|SPOPS::Manual::Relationships> for more
+information.)
 
 B<conf_relate_fetchby( \%config )>
 
+Generate a method C<fetch_by_$fieldname> for each entry listed in the
+configuration key 'fetch_by'. The generated method takes a value to
+search in C<$fieldname>.
+
+Example:
+
+ fetch_by => [ 'last_name' ],
+
+would generate a method with the signature:
+
+ sub fetch_by_last_name( $class, $last_name, \%params );
+
 B<conf_add_rules( \%config )>
+
+Adds the rules listed in 'rules_from' and from all entries in the
+C<@ISA> of the class.
 
 =head1 BUGS
 
@@ -409,5 +444,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
-
-=cut
