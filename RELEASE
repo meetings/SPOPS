@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.61 Mon May  6 21:44:57 EDT 2002
+
+  * Quick bugfix release
+
+
 0.60 Mon May  6 08:45:34 EDT 2002
 
   * InterBase (via DBD::InterBase) support added
@@ -122,4 +127,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 2.2 2002/05/06 12:18:58 lachoy Exp $
+$Id: RELEASE,v 2.3 2002/05/07 01:09:46 lachoy Exp $

@@ -1,5 +1,26 @@
 Revision history for Perl extension SPOPS.
 
+0.61  Mon May  6 21:44:57 EDT 2002
+
+Overall:
+
+   * Quick bugfix release: SPOPS::DBI::MySQL quoting fix and warning
+     removed for incorrect EXPORT_OK declaration for
+     SPOPS::Exception::Security
+
+Individual:
+
+   * SPOPS/DBI/MySQL.pm:
+
+     - Override sql_quote() to use the two-argument form of
+     $dbh->quote(). (Thanks to Ray Zimmerman for the pointer.)
+
+   * SPOPS/Exception/Security.pm:
+
+     - Fix typo: $...::EXPORT_OK -> @...::EXPORT_OK. (Thanks to Ray
+     Zimmerman for the spot.)
+
+
 0.60  Mon May  6 08:45:34 EDT 2002
 
 Overall:

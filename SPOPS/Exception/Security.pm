@@ -1,13 +1,13 @@
 package SPOPS::Exception::Security;
 
-# $Id: Security.pm,v 2.1 2002/04/29 12:51:19 lachoy Exp $
+# $Id: Security.pm,v 2.2 2002/05/06 19:17:53 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
 use SPOPS::Secure qw( :verbose :level );
 
-$SPOPS::Exception::Security::VERSION   = substr(q$Revision: 2.1 $, 10);
-$SPOPS::Exception::Security::EXPORT_OK = qw( spops_security_error );
+$SPOPS::Exception::Security::VERSION   = substr(q$Revision: 2.2 $, 10);
+@SPOPS::Exception::Security::EXPORT_OK = qw( spops_security_error );
 
 my @FIELDS = qw( security_required security_found );
 SPOPS::Exception::Security->mk_accessors( @FIELDS );
@@ -56,6 +56,7 @@ SPOPS::Exception::Security - SPOPS exception with extra security parameters
          print "Required security: ", $@->security_required, "\n",
                "Found security: ", $@->security_found, "\n";
      }
+ }
 
 =head1 DESCRIPTION
 

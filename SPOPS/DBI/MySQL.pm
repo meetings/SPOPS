@@ -1,15 +1,24 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: MySQL.pm,v 2.1 2002/05/06 16:12:48 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK NOTIFY );
 use SPOPS::Key::DBI::HandleField;
 
-$SPOPS::DBI::MySQL::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::DBI::MySQL::VERSION  = substr(q$Revision: 2.1 $, 10);
 
 sub sql_current_date  { return 'NOW()' }
+
+sub sql_quote {
+    my ( $class, $value, $type, $db ) = @_;
+    $db ||= $class->global_datasource_handle;
+    unless ( ref $db ) {
+        SPOPS::Exception->throw( "No database handle could be found!" );
+    }
+    return $db->quote( $value, $type );
+}
 
 
 # Backward compatibility (basically) -- you just have to set a true
