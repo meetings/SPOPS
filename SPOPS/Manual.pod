@@ -307,7 +307,7 @@ about how the module has evolved.
 
 =head1 COPYRIGHT
 
-Copyright (c) 2001-2002 Chris Winters. All rights reserved.
+Copyright (c) 2001-2004 Chris Winters. All rights reserved.
 
 Permission is granted to copy, distribute and::or modify this document
 under the terms of the GNU Free Documentation License, Version 1.1 or
@@ -335,6 +335,12 @@ development from its inception.
 Ray Zimmerman E<lt>rz10@cornell.eduE<gt> -- had offered tons of great design
 ideas and general help, pushing SPOPS into new domains. Too much to
 list here.
+
+=item *
+
+Simon Ilyushchenko E<lt>simonf@cshl.eduE<gt> -- real-world usage
+advice, work on improving the object linking semantics, lots of little
+items.
 
 =item *
 

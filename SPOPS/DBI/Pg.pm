@@ -1,15 +1,16 @@
 package SPOPS::DBI::Pg;
 
-# $Id: Pg.pm,v 3.4 2004/01/10 02:21:40 lachoy Exp $
+# $Id: Pg.pm,v 3.5 2004/03/19 02:49:33 lachoy Exp $
 
 use strict;
-use Log::Log4perl qw( get_logger );
+use Log::Log4perl    qw( get_logger );
 use SPOPS;
+use SPOPS::Exception qw( spops_error );
 
-$SPOPS::DBI::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
-use constant PG_SEQUENCE_NEXT    => "NEXTVAL( '%s' )";
-use constant PG_SEQUENCE_CURRENT => "SELECT CURRVAL( '%s' )";
+use constant PG_SEQUENCE_NEXT    => q{SELECT NEXTVAL( '%s' )};
+use constant PG_SEQUENCE_CURRENT => q{SELECT CURRVAL( '%s' )};
 
 my $log = get_logger();
 
@@ -21,13 +22,25 @@ sub pre_fetch_id {
     my ( $seq_name );
     return undef unless ( $item->CONFIG->{increment_field} );
     return undef unless ( $seq_name = $item->CONFIG->{sequence_name} );
-    return sprintf( PG_SEQUENCE_NEXT, $seq_name );
+    my ( $sth );
+    eval {
+        $sth = $p->{db}->prepare( sprintf( PG_SEQUENCE_NEXT, $seq_name ) );
+        $sth->execute;
+    };
+    if ( $@ ) {
+        spops_error "Failed to retrieve ID from sequence '$seq_name': $@";
+    }
+    return ( $sth->fetchrow_arrayref->[0], undef );
 }
 
 
 sub post_fetch_id {
     my ( $item, $p ) = @_;
     return undef unless ( $item->CONFIG->{increment_field} );
+    return undef if ( $item->CONFIG->{sequence_name} );
+
+    # If it's a SERIAL datatype try to fetch the value just inserted
+
     my $seq_name = $item->CONFIG->{sequence_name}
                    || join( '_', $item->CONFIG->{base_table},
                                  $item->CONFIG->{id_field},
@@ -85,9 +98,8 @@ or
    id int not null primary key,
    ...
  );
-
+ 
  CREATE SEQUENCE myobject_sequence;
-
 
 You must to let this module know if you are using this option by
 setting in your class configuration the key 'increment_field' to a
@@ -153,25 +165,12 @@ If 'increment_field' is not set we do not fetch an ID. If
 'sequence_name' is not also set we do not fetch an ID, assuming that
 you have defined the ID field using the 'SERIAL' datatype.
 
+Otherwise we go ahead and fetch an ID from the specified sequence.
+
 B<post_fetch_id( \%params )>
 
-Retrieve the value just put into the database for the ID field. To use
-this you must in the configuration for your object set
-'increment_field' to a true value and either specify a 'sequence_name'
-or use the SERIAL-default name of:
-
-  <table_name>_<id_field_name>_seq
-
-This is the sequence created by default when you use the 'SERIAL'
-datatype.
-
-=head1 BUGS
-
-None known.
-
-=head1 TO DO
-
-Nothing known.
+If you are using a SERIAL column (indicated by no 'sequence_name') we
+fetch the value used by the database for this sequence.
 
 =head1 SEE ALSO
 

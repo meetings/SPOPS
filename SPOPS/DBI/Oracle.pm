@@ -1,15 +1,16 @@
 package SPOPS::DBI::Oracle;
 
-# $Id: Oracle.pm,v 3.4 2004/01/06 21:25:55 lachoy Exp $
+# $Id: Oracle.pm,v 3.5 2004/03/19 02:49:33 lachoy Exp $
 
 use strict;
+use SPOPS::Exception qw( spops_error );
 use SPOPS::Utility;
 
-$SPOPS::DBI::Oracle::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::Oracle::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 sub sql_current_date  { return SPOPS::Utility->now() }
 
-use constant ORA_SEQUENCE_NEXT    => '%s.NextVal';
+use constant ORA_SEQUENCE_NEXT    => 'SELECT %s.NextVal FROM dual';
 use constant ORA_SEQUENCE_CURRENT => 'SELECT %s.CurrVal FROM dual';
 
 sub pre_fetch_id {
@@ -17,18 +18,20 @@ sub pre_fetch_id {
     my ( $seq_name );
     return undef unless ( $item->CONFIG->{increment_field} );
     return undef unless ( $seq_name = $item->CONFIG->{sequence_name} );
-    return sprintf( ORA_SEQUENCE_NEXT, $seq_name );
+    my ( $sth );
+    eval {
+        $sth = $p->{db}->prepare( sprintf( ORA_SEQUENCE_NEXT, $seq_name ) );
+        $sth->execute;
+    };
+    if ( $@ ) {
+        spops_error "Failed to retrieve ID from sequence '$seq_name': $@";
+    }
+    return ( $sth->fetchrow_arrayref->[0], undef );
 }
 
 
 sub post_fetch_id {
-    my ( $item, $p ) = @_;
-    my ( $seq_name );
-    return undef unless ( $item->CONFIG->{increment_field} );
-    return undef unless ( $seq_name = $item->CONFIG->{sequence_name} );
-    my $sth = $p->{db}->prepare( sprintf( ORA_SEQUENCE_CURRENT, $seq_name ) );
-    $sth->execute;
-    return ($sth->fetchrow_array)[0];
+    return undef;
 }
 
 1;
@@ -70,12 +73,7 @@ retrieve the next ID value.
 
 B<pre_fetch_id>
 
-Returns the Oracle command for retrieving the next value from a
-sequence. This gets put directly into the INSERT statement.
-
-B<post_fetch_id>
-
-Retrieves the value just inserted from a sequence.
+Fetch the data from the specified sequence and return it.
 
 B<sql_quote>
 

@@ -1,5 +1,15 @@
 Revision history for Perl extension SPOPS.
 
+0.83  Thu Mar 18 21:37:13 EST 2004
+
+Overall:
+
+ * Fix the sequence usage in SPOPS::DBI::Pg and
+   SPOPS::DBI::Oracle. Fetch the sequence value beforehand instead of
+   inserting the sequence retrieval and getting the value after the
+   insert.
+
+
 0.82  Mon Mar 15 23:03:29 EST 2004
 
 Overall:
@@ -13,6 +23,7 @@ Individual:
 
    - We want to go ahead and fetch the ID after the row has been
    inserted...
+
 
 0.81  Mon Mar 15 08:13:46 EST 2004
 
