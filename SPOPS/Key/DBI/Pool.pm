@@ -1,13 +1,13 @@
 package SPOPS::Key::DBI::Pool;
 
-# $Id: Pool.pm,v 1.7 2001/06/03 22:43:34 lachoy Exp $
+# $Id: Pool.pm,v 1.8 2001/07/08 20:02:35 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
 @SPOPS::Key::DBI::Pool::ISA      = ();
 $SPOPS::Key::DBI::Pool::VERSION  = '1.7';
-$SPOPS::Key::DBI::Pool::Revision = substr(q$Revision: 1.7 $, 10);
+$SPOPS::Key::DBI::Pool::Revision = substr(q$Revision: 1.8 $, 10);
 
 
 # Ensure only PRE_fetch_id works.
@@ -18,53 +18,53 @@ sub post_fetch_id { return undef }
 # Do the work
 
 sub pre_fetch_id  {
-  my ( $class, $p ) = @_;
+    my ( $class, $p ) = @_;
 
-  my $pool_sql = eval { $class->CONFIG->{pool_sql} };
-  unless ( $pool_sql ) {
-    my $msg   = 'Cannot retrieve ID to insert record';
-    SPOPS::Error->set({ 
+    my $pool_sql = eval { $class->CONFIG->{pool_sql} };
+    unless ( $pool_sql ) {
+        my $msg   = 'Cannot retrieve ID to insert record';
+        SPOPS::Error->set({ 
              user_msg   => $msg, 
              type       => 'db',
              system_msg => "No SQL specified in the configuration of ($class) using the key 'pool_sql'",
              method     => 'pre_fetch_id' });
-    die $msg;
-  }  
-  DEBUG() && _w( 1, "Getting ID with SQL:\n$pool_sql" );
+        die $msg;
+    }  
+    DEBUG() && _w( 1, "Getting ID with SQL:\n$pool_sql" );
  
-  my $params = { sql => $pool_sql, db => $p->{db} };
-  my $values = eval { $class->CONFIG->{pool_value} };
-  my $quote  = eval { $class->CONFIG->{pool_quote} };
+    my $params = { sql => $pool_sql, db => $p->{db} };
+    my $values = eval { $class->CONFIG->{pool_value} };
+    my $quote  = eval { $class->CONFIG->{pool_quote} };
 
-  if ( $values ) {
-    my  $value_type = ref $values;
-    if ( $value_type ne 'ARRAY' and $value_type ) {
-      my $msg   = 'Cannot retrieve ID to insert record';
-      SPOPS::Error->set({ 
-               user_msg   => $msg, 
-               type       => 'db',
-               system_msg => "Configuration key 'pool_value' in ($class) must be a scalar or arrayref.",
-               method     => 'pre_fetch_id' });
-      die $msg;
+    if ( $values ) {
+        my  $value_type = ref $values;
+        if ( $value_type ne 'ARRAY' and $value_type ) {
+            my $msg   = 'Cannot retrieve ID to insert record';
+            SPOPS::Error->set({ 
+                 user_msg   => $msg, 
+                 type       => 'db',
+                 system_msg => "Configuration key 'pool_value' in ($class) must be a scalar or arrayref.",
+                 method     => 'pre_fetch_id' });
+            die $msg;
+        }
+
+        my $list_values = ( $value_type eq 'ARRAY' ) ? $values : [ $values ];
+        if ( $quote ) {
+            $params->{sql} = sprintf( $params->{sql}, @{ $list_values } );
+        }
+        else {
+            $params->{value} = $list_values;
+        }
     }
 
-    my $list_values = ( $value_type eq 'ARRAY' ) ? $values : [ $values ];
-    if ( $quote ) {
-      $params->{sql} = sprintf( $params->{sql}, @{ $list_values } );
-    }
-    else {
-      $params->{value} = $list_values;
-    }
-  }
-
-  $params->{return} = 'single';
-  my $row = eval { SPOPS::SQLInterface->db_select( $params ) };
-  if ( $@ ) { 
-    $SPOPS::Error::user_msg = 'Cannot retrieve ID to insert record';
-    die $SPOPS::Error::user_msg;
-  }   
-  DEBUG() && _w( 1, "Returned <<$row->[0]>> for ID" );
-  return $row->[0];
+    $params->{return} = 'single';
+    my $row = eval { SPOPS::SQLInterface->db_select( $params ) };
+    if ( $@ ) { 
+        $SPOPS::Error::user_msg = 'Cannot retrieve ID to insert record';
+        die $SPOPS::Error::user_msg;
+    }   
+    DEBUG() && _w( 1, "Returned <<$row->[0]>> for ID" );
+    return $row->[0];
 }
 
 1;

@@ -1,18 +1,18 @@
 package SPOPS::DBI::Sybase;
 
-# $Id: Sybase.pm,v 1.6 2001/06/03 22:43:34 lachoy Exp $
+# $Id: Sybase.pm,v 1.7 2001/07/11 03:52:35 lachoy Exp $
 
 use strict;
 use SPOPS::Key::DBI::Identity;
 
 @SPOPS::DBI::Sybase::ISA      = ();
 $SPOPS::DBI::Sybase::VERSION  = '1.7';
-$SPOPS::DBI::Sybase::Revision = substr(q$Revision: 1.6 $, 10);
+$SPOPS::DBI::Sybase::Revision = substr(q$Revision: 1.7 $, 10);
 
 sub sql_quote {
-  my ( $class, $value, $type, $db ) = @_;
-  $db ||= $class->global_db_handle;
-  return $db->quote( $value, $type );
+    my ( $class, $value, $type, $db ) = @_;
+    $db ||= $class->global_db_handle;
+    return $db->quote( $value, $type );
 }
 
 sub sql_current_date  { return 'GETDATE()' }
@@ -23,9 +23,9 @@ sub sql_current_date  { return 'GETDATE()' }
 # 'increment_field' to true.
 
 sub post_fetch_id { 
-  my ( $item, @args ) = @_;
-  return undef unless ( $item->CONFIG->{increment_field} or $item->CONFIG->{syb_identity} );
-  return SPOPS::Key::DBI::Identity::post_fetch_id( $item, @args );
+    my ( $item, @args ) = @_;
+    return undef unless ( $item->CONFIG->{increment_field} or $item->CONFIG->{syb_identity} );
+    return SPOPS::Key::DBI::Identity::post_fetch_id( $item, @args );
 }
 
 
@@ -80,7 +80,11 @@ the DBI-E<gt>quote call.
 
 =head1 BUGS
 
+None known.
+
 =head1 TO DO
+
+Nothing known.
 
 =head1 SEE ALSO
 
@@ -96,5 +100,7 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
+
+See the L<SPOPS> module for the full author list.
 
 =cut

@@ -1,6 +1,6 @@
 package SPOPS::DBI::MySQL;
 
-# $Id: MySQL.pm,v 1.7 2001/06/03 22:43:34 lachoy Exp $
+# $Id: MySQL.pm,v 1.8 2001/07/11 03:52:35 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
@@ -8,7 +8,7 @@ use SPOPS::Key::DBI::HandleField;
 
 @SPOPS::DBI::MySQL::ISA      = ();
 $SPOPS::DBI::MySQL::VERSION  = '1.7';
-$SPOPS::DBI::MySQL::Revision = substr(q$Revision: 1.7 $, 10);
+$SPOPS::DBI::MySQL::Revision = substr(q$Revision: 1.8 $, 10);
 
 sub sql_current_date  { return 'NOW()' }
 
@@ -19,11 +19,11 @@ sub sql_current_date  { return 'NOW()' }
 # SPOPS::Key::DBI::HandleField.
 
 sub post_fetch_id { 
-  my ( $item, @args ) = @_;
-  return undef unless ( $item->CONFIG->{increment_field} );
-  $item->CONFIG->{handle_field} ||= 'mysql_insertid';
-  DEBUG() && _w( 1, "Setting to handle field: $item->CONFIG->{handle_field}" );
-  return SPOPS::Key::DBI::HandleField::post_fetch_id( $item, @args );
+    my ( $item, @args ) = @_;
+    return undef unless ( $item->CONFIG->{increment_field} );
+    $item->CONFIG->{handle_field} ||= 'mysql_insertid';
+    DEBUG() && _w( 1, "Setting to handle field: $item->CONFIG->{handle_field}" );
+    return SPOPS::Key::DBI::HandleField::post_fetch_id( $item, @args );
 }
 
 1;

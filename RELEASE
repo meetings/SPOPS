@@ -1,6 +1,11 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.41
+
+  * Added SPOPS::Iterator and implementation SPOPS::Iterator::DBI to
+    deal with large resultsets in a sane manner.
+
 0.40  Sun Jun 10 14:50:20 EDT 2001
 
   * Upgraders need to rename two fields in 'sys_security', both of
@@ -33,4 +38,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 1.4 2001/06/10 18:35:51 lachoy Exp $
+$Id: RELEASE,v 1.5 2001/07/08 21:47:08 lachoy Exp $

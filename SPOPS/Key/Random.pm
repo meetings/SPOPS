@@ -1,23 +1,23 @@
 package SPOPS::Key::Random;
 
-# $Id: Random.pm,v 1.8 2001/06/03 22:43:34 lachoy Exp $
+# $Id: Random.pm,v 1.9 2001/07/08 20:02:35 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
 @SPOPS::Key::Random::ISA      = ();
 $SPOPS::Key::Random::VERSION  = '1.7';
-$SPOPS::Key::Random::Revision = substr(q$Revision: 1.8 $, 10);
+$SPOPS::Key::Random::Revision = substr(q$Revision: 1.9 $, 10);
 
 
 use constant DEFAULT_WIDTH => 8;
 
 sub pre_fetch_id  { 
-  my ( $class, $p ) = @_;
-  my $width = $p->{width} || $class->CONFIG->{id_width} || DEFAULT_WIDTH;
-  my $code =  $class->generate_random_code( $width );
-  DEBUG() && _w( 1, "Created insert ID ($code)" );
-  return $code; 
+    my ( $class, $p ) = @_;
+    my $width = $p->{width} || $class->CONFIG->{id_width} || DEFAULT_WIDTH;
+    my $code =  $class->generate_random_code( $width );
+    DEBUG() && _w( 1, "Created insert ID ($code)" );
+    return $code; 
 }
 
 sub post_fetch_id { return undef }

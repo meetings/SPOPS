@@ -1,6 +1,6 @@
 package SPOPS::Tie::StrictField;
 
-# $Id: StrictField.pm,v 1.8 2001/06/05 13:37:25 lachoy Exp $
+# $Id: StrictField.pm,v 1.9 2001/07/11 03:52:35 lachoy Exp $
 
 use strict;
 use Carp       qw( carp );
@@ -9,7 +9,7 @@ use SPOPS::Tie qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP
 
 @SPOPS::Tie::StrictField::ISA      = qw( SPOPS::Tie );
 $SPOPS::Tie::StrictField::VERSION  = '1.7';
-$SPOPS::Tie::StrictField::Revision = substr(q$Revision: 1.8 $, 10);
+$SPOPS::Tie::StrictField::Revision = substr(q$Revision: 1.9 $, 10);
 
 *_w    = *SPOPS::_w;
 *DEBUG = *SPOPS::DEBUG;
@@ -23,38 +23,38 @@ my %FIELDS = ();
 # checked
 
 sub _field_check {
-  my ( $class, $base_class, $p ) = @_;
-  if ( $base_class and ref $p->{field} eq 'ARRAY' ) {
-    unless ( ref $FIELDS{ $base_class } eq 'HASH' ) {
-      foreach my $key ( @{ $p->{field} } ) {
-        $FIELDS{ $base_class }->{ lc $key } = 1;
-      }   
+    my ( $class, $base_class, $p ) = @_;
+    if ( $base_class and ref $p->{field} eq 'ARRAY' ) {
+        unless ( ref $FIELDS{ $base_class } eq 'HASH' ) {
+            foreach my $key ( @{ $p->{field} } ) {
+                $FIELDS{ $base_class }->{ lc $key } = 1;
+            }   
+        }
+        return 1;
     }
-    return 1;
-  }
-  return 0;
+    return 0;
 }
 
 
 # Return true if we can fetch (is a valid field), false if not
 
 sub _can_fetch {
-  my ( $self, $key ) = @_;
-  return 1 unless ( $self->{ IDX_CHECK_FIELDS() } );
-  return 1 if ( $FIELDS{ $self->{class} }->{ lc $key } );
-  carp "ERROR: Cannot retrieve field ($key): it is not a valid field";
-  return undef;
+    my ( $self, $key ) = @_;
+    return 1 unless ( $self->{ IDX_CHECK_FIELDS() } );
+    return 1 if ( $FIELDS{ $self->{class} }->{ lc $key } );
+    carp "ERROR: Cannot retrieve field ($key): it is not a valid field";
+    return undef;
 }
 
 
 # Return true if we can store (is a valid field), false if not
 
 sub _can_store {
-  my ( $self, $key, $value ) = @_;
-  return 1 unless ( $self->{ IDX_CHECK_FIELDS() } );
-  return 1 if ( $FIELDS{ $self->{class} }->{ lc $key } );
-  carp "ERROR: Cannot set value for field ($key): it is not a valid field";
-  return undef;
+    my ( $self, $key, $value ) = @_;
+    return 1 unless ( $self->{ IDX_CHECK_FIELDS() } );
+    return 1 if ( $FIELDS{ $self->{class} }->{ lc $key } );
+    carp "ERROR: Cannot set value for field ($key): it is not a valid field";
+    return undef;
 
 }
 
@@ -62,25 +62,25 @@ sub _can_store {
 # data; use the object methods for the other information.
 
 sub EXISTS {
-  my ( $self, $key ) = @_;
-  return $self->SUPER::EXISTS( $key ) unless ( $self->{ IDX_CHECK_FIELDS() } );
-  DEBUG() && _w( 3, " tie: Checking for existence of ($key)\n" );
-  if ( $FIELDS{ $self->{class} }->{ lc $key } ) { 
-    return exists $self->{ IDX_DATA() }->{ lc $key };
-  }
-  carp "Cannot check existence for field ($key): it is not a valid field";
+    my ( $self, $key ) = @_;
+    return $self->SUPER::EXISTS( $key ) unless ( $self->{ IDX_CHECK_FIELDS() } );
+    DEBUG() && _w( 3, " tie: Checking for existence of ($key)\n" );
+    if ( $FIELDS{ $self->{class} }->{ lc $key } ) { 
+        return exists $self->{ IDX_DATA() }->{ lc $key };
+    }
+    carp "Cannot check existence for field ($key): it is not a valid field";
 }
 
 
 sub DELETE {
-  my ( $self, $key ) = @_;
-  return $self->SUPER::DELETE( $key ) unless ( $self->{ IDX_CHECK_FIELDS() } );
-  DEBUG() && _w( 3, " tie: Clearing value for ($key)\n" );
-  if ( $FIELDS{ $self->{class} }->{ lc $key } ) { 
-    $self->{ IDX_DATA() }->{ lc $key } = undef;
-    $self->{ IDX_CHANGE() }++;
-  }
-  carp "Cannot remove data for field ($key): it is not a valid field";
+    my ( $self, $key ) = @_;
+    return $self->SUPER::DELETE( $key ) unless ( $self->{ IDX_CHECK_FIELDS() } );
+    DEBUG() && _w( 3, " tie: Clearing value for ($key)\n" );
+    if ( $FIELDS{ $self->{class} }->{ lc $key } ) { 
+        $self->{ IDX_DATA() }->{ lc $key } = undef;
+        $self->{ IDX_CHANGE() }++;
+    }
+    carp "Cannot remove data for field ($key): it is not a valid field";
 }
 
 1;

@@ -1,6 +1,6 @@
 package SPOPS::HashFile;
 
-# $Id: HashFile.pm,v 1.6 2001/06/03 22:43:34 lachoy Exp $
+# $Id: HashFile.pm,v 1.8 2001/07/20 02:24:14 lachoy Exp $
 
 use strict;
 use SPOPS;
@@ -8,18 +8,18 @@ use Data::Dumper;
 
 @SPOPS::HashFile::ISA       = qw( SPOPS );
 $SPOPS::HashFile::VERSION   = '1.7';
-$SPOPS::HashFile::Revision  = substr(q$Revision: 1.6 $, 10);
+$SPOPS::HashFile::Revision  = substr(q$Revision: 1.8 $, 10);
 
 # Just grab the tied hash from the SPOPS::TieFileHash
 
 sub new {
-  my ( $pkg, $p ) = @_;
-  my $class = ref $pkg || $pkg;
-  my ( %data );
-  my $int = tie %data, 'SPOPS::TieFileHash', $p->{filename}, $p->{perm};
-  my $object = bless( \%data, $class );
-  $object->initialize( $p );
-  return $object;
+    my ( $pkg, $p ) = @_;
+    my $class = ref $pkg || $pkg;
+    my ( %data );
+    my $int = tie %data, 'SPOPS::TieFileHash', $p->{filename}, $p->{perm};
+    my $object = bless( \%data, $class );
+    $object->initialize( $p );
+    return $object;
 }
 
 # Subclasses can override
@@ -27,20 +27,20 @@ sub new {
 sub initialize { return 1; }
 
 sub class_initialize {
-  my ( $class, $CONF ) = @_;
-  return $class->_class_initialize( $CONF );
+    my $class = shift;
+    return $class->_class_initialize( @_ );
 }
 
 
 # Just pass on the parameters to 'new'
 
 sub fetch {
-  my ( $class, $filename, $p ) = @_;
-  $p ||= {};
-  return undef unless ( $class->pre_fetch_action( $filename, $p ) );
-  my $object = $class->new( { filename => $filename, %{ $p } } );
-  return undef unless( $object->post_fetch_action( $filename, $p ) );
-  return $object;
+    my ( $class, $filename, $p ) = @_;
+    $p ||= {};
+    return undef unless ( $class->pre_fetch_action( $filename, $p ) );
+    my $object = $class->new( { filename => $filename, %{ $p } } );
+    return undef unless( $object->post_fetch_action( $filename, $p ) );
+    return $object;
 }
 
 
@@ -48,54 +48,54 @@ sub fetch {
 # dump out the data to the file.
 
 sub save {
-  my ( $self, $p ) = @_;
-  my $obj = tied %{ $self };
-  unless ( $obj->{perm} eq 'write' ) {
-    die "Cannot save $obj->{filename}: it was opened as read-only.\n";
-  }
-  unless ( $obj->{filename} ) {
-    die "Cannot save data: the filename has been erased. Did you assign an empty hash to the object?\n";
-  }
-  if ( -f $obj->{filename} ) {
-    rename( $obj->{filename}, "$obj->{filename}.old" ) 
-          || die "Cannot rename old file to make room for new one. Error: $!";
-  }
-  return undef unless ( $self->pre_save_action( $p ) );
-  my %data = %{ $obj->{data} };
-  $p->{dumper_level} ||= 2;
-  local $Data::Dumper::Indent = $p->{dumper_level};
-  my $string = Data::Dumper->Dump( [ \%data ], [ 'data' ] ); 
-  eval { open( INFO, "> $obj->{filename}" ) || die $! };
-  if ( $@ ) {
-    rename( "$obj->{filename}.old", $obj->{filename} ) 
-          || die "Cannot open file for writing (reason: $@ ) and ",
-                 "cannot move backup file to original place. Reason: $!";
-    die "Cannot open file for writing. Backup file restored. Error: $@";
-  }
-  print INFO $string;
-  close( INFO );
-  if ( -f "$obj->{filename}.old" ) {
-    unlink( "$obj->{filename}.old" ) 
-          || warn "Cannot remove the old data file. It still lingers in $obj->{filename}.old....\n";
-  }
-  return undef unless ( $self->post_save_action( $p ) );
-  return 1;
+    my ( $self, $p ) = @_;
+    my $obj = tied %{ $self };
+    unless ( $obj->{perm} eq 'write' ) {
+        die "Cannot save $obj->{filename}: it was opened as read-only.\n";
+    }
+    unless ( $obj->{filename} ) {
+        die "Cannot save data: the filename has been erased. Did you assign an empty hash to the object?\n";
+    }
+    if ( -f $obj->{filename} ) {
+        rename( $obj->{filename}, "$obj->{filename}.old" ) 
+              || die "Cannot rename old file to make room for new one. Error: $!";
+    }
+    return undef unless ( $self->pre_save_action( $p ) );
+    my %data = %{ $obj->{data} };
+    $p->{dumper_level} ||= 2;
+    local $Data::Dumper::Indent = $p->{dumper_level};
+    my $string = Data::Dumper->Dump( [ \%data ], [ 'data' ] ); 
+    eval { open( INFO, "> $obj->{filename}" ) || die $! };
+    if ( $@ ) {
+        rename( "$obj->{filename}.old", $obj->{filename} ) 
+              || die "Cannot open file for writing (reason: $@ ) and ",
+                     "cannot move backup file to original place. Reason: $!";
+        die "Cannot open file for writing. Backup file restored. Error: $@";
+    }
+    print INFO $string;
+    close( INFO );
+    if ( -f "$obj->{filename}.old" ) {
+        unlink( "$obj->{filename}.old" ) 
+              || warn "Cannot remove the old data file. It still lingers in $obj->{filename}.old....\n";
+    }
+    return undef unless ( $self->post_save_action( $p ) );
+    return $self;
 }
 
 
 sub remove {
-  my ( $self, $p ) = @_;
-  my $obj = tied %{ $self };
-  unless ( $obj->{perm} eq 'write' ) {
-    die "Cannot save $obj->{filename}: it was opened as read-only.\n";
-  }
-  unless ( $obj->{filename} ) {
-    die "Cannot save data: the filename has been erased. Did you assign an empty hash to the object?\n";
-  }
-  return undef unless ( $self->pre_remove_action( $p ) );
-  my $rv = %{ $self } = ();
-  return undef unless ( $self->post_remove_action( $p ) );
-  return $rv;
+    my ( $self, $p ) = @_;
+    my $obj = tied %{ $self };
+    unless ( $obj->{perm} eq 'write' ) {
+        die "Cannot save $obj->{filename}: it was opened as read-only.\n";
+    }
+    unless ( $obj->{filename} ) {
+        die "Cannot save data: the filename has been erased. Did you assign an empty hash to the object?\n";
+    }
+    return undef unless ( $self->pre_remove_action( $p ) );
+    my $rv = %{ $self } = ();
+    return undef unless ( $self->post_remove_action( $p ) );
+    return $rv;
 }
 
 
@@ -103,13 +103,13 @@ sub remove {
 # values to override the ones from the old object
 
 sub clone {
-  my ( $self, $p ) = @_;
-  $p->{filename} ||= tied %{ $self }->{filename};
-  my $new = $self->new( { filename => $p->{filename}, perm => $p->{perm} } ); 
-  while ( my ( $k, $v ) = each %{ $self } ) {
-    $new->{ $k } = $p->{ $k } || $v;
-  }
-  return $new;
+    my ( $self, $p ) = @_;
+    $p->{filename} ||= tied %{ $self }->{filename};
+    my $new = $self->new( { filename => $p->{filename}, perm => $p->{perm} } ); 
+    while ( my ( $k, $v ) = each %{ $self } ) {
+        $new->{ $k } = $p->{ $k } || $v;
+    }
+    return $new;
 }
 
 
@@ -119,7 +119,7 @@ package SPOPS::TieFileHash;
 use strict;
 
 @SPOPS::TieFileHash::ISA       = ();
-$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.8 $ =~ /(\d+)\.(\d+)/);
 
 # These are all very standard routines for a tied hash; more info: see
 # 'perldoc Tie::Hash'
@@ -130,102 +130,110 @@ $SPOPS::TieFileHash::VERSION   = sprintf("%d.%02d", q$Revision: 1.6 $ =~ /(\d+)\
 # object, and the 'data' key holds the actual information
 
 sub TIEHASH {
-  my ( $class, $filename, $perm ) = @_;
-  $perm ||= 'read';
-  if ( $perm !~ /^(read|write|new|write\-new)$/ ) {
-    die "Valid permissions: read | write | new | write-new (Value: $perm)\n";
-  }
-  unless ( $filename ) {
-    die "You must pass a filename to use for reading and writing.\n";
-  }
-  my $file_exists = ( -f $filename ) ? 1 : 0;
-  unless ( $file_exists ) {
-    if ( $perm eq 'write-new' or $perm eq 'new' ) {
-      $perm = 'new';
+    my ( $class, $filename, $perm ) = @_;
+    $perm ||= 'read';
+    if ( $perm !~ /^(read|write|new|write\-new)$/ ) {
+        die "Valid permissions: read | write | new | write-new (Value: $perm)\n";
+    }
+    unless ( $filename ) {
+        die "You must pass a filename to use for reading and writing.\n";
+    }
+    my $file_exists = ( -f $filename ) ? 1 : 0;
+    unless ( $file_exists ) {
+        if ( $perm eq 'write-new' or $perm eq 'new' ) {
+            $perm = 'new';
+        }
+        else {
+            die "Cannot create object without existing file or 'new' permission (File: $filename; Permission: $perm)\n";
+        }
+    }
+    if ( $perm eq 'write-new' ) { $perm = 'write' }
+    
+    my $data = undef;
+    if ( $file_exists ) {
+        open( PD, $filename ) || die "Cannot open ($filename). Reason: $!";
+        local $/ = undef;
+        my $info = <PD>;
+        close( PD );
+
+        # Note that we create the SIG{__WARN__} handler here to trap any
+        # messages that might be sent to STDERR; we want to capture the
+        # message and send it along in a 'die' instead
+        
+        {
+            local $SIG{__WARN__} = sub { return undef };
+            no strict 'vars';
+            $data = eval $info;
+        }
+        die "Error reading in perl code: $@"  if ( $@ );
     }
     else {
-      die "Cannot create object without existing file or 'new' permission (File: $filename; Permission: $perm)\n";
+        $data = {};
+        $perm = 'write';
     }
-  }
-  if ( $perm eq 'write-new' ) { $perm = 'write' }
-
-  my $data = undef;
-  if ( $file_exists ) {
-    open( PD, $filename ) || die "Cannot open ($filename). Reason: $!";
-    local $/ = undef;
-    my $info = <PD>;
-    close( PD );
-
-    # Note that we create the SIG{__WARN__} handler here to trap any
-    # messages that might be sent to STDERR; we want to capture the
-    # message and send it along in a 'die' instead
-
-    {
-      local $SIG{__WARN__} = sub { return undef };
-      no strict 'vars';
-      $data = eval $info;
-    }
-    die "Error reading in perl code: $@"  if ( $@ );
-  }
-  else {
-    $data = {};
-    $perm = 'write';
-  }
-  return bless({ data     => $data,
-                 filename => $filename,
-                 perm     => $perm }, $class );
+    return bless({ data     => $data,
+                   filename => $filename,
+                   perm     => $perm }, $class );
 }
+
 
 sub FETCH  { 
-  my ( $self, $key ) = @_;
-  return undef unless $key;
-  return $self->{data}->{ $key }; 
+    my ( $self, $key ) = @_;
+    return undef unless $key;
+    return $self->{data}->{ $key }; 
 }
+
 
 sub STORE  { 
-  my ( $self, $key, $value ) = @_; 
-  return undef unless $key; 
-  return $self->{data}->{ $key } = $value; 
+    my ( $self, $key, $value ) = @_; 
+    return undef unless $key; 
+    return $self->{data}->{ $key } = $value; 
 }
 
-sub EXISTS { my ( $self, $key ) = @_;  
-return undef unless $key; 
-return exists $self->{data}->{ $key }; 
+
+sub EXISTS {
+    my ( $self, $key ) = @_;  
+    return undef unless $key; 
+    return exists $self->{data}->{ $key }; 
 }
+
 
 sub DELETE { 
-  my ( $self, $key ) = @_; 
-  return undef unless $key; 
-  return delete $self->{data}->{ $key }; 
+    my ( $self, $key ) = @_; 
+    return undef unless $key; 
+    return delete $self->{data}->{ $key }; 
 }
+
 
 # This allows people to do '%{ $obj } = ();' and remove the object; is
 # this too easy to mistakenly do? I don't think so.
 
 sub CLEAR {
-  my ( $self ) = @_;
-  if ( $self->{perm} ne 'write' ) {
-    die "Cannot remove $self->{filename}; permission set to read-only.\n";
-  }
-  unlink( $self->{filename} ) 
-        || die "Cannot remove file $self->{filename}. Reason: $!";
-  $self->{data} = undef;
-  $self->{perm} = undef;
+    my ( $self ) = @_;
+    if ( $self->{perm} ne 'write' ) {
+        die "Cannot remove $self->{filename}; permission set to read-only.\n";
+    }
+    unlink( $self->{filename} ) 
+          || die "Cannot remove file $self->{filename}. Reason: $!";
+    $self->{data} = undef;
+    $self->{perm} = undef;
 }
+
 
 sub FIRSTKEY {
-  my ( $self ) = @_;
-  keys %{ $self->{data} };
-  my $first_key = each %{ $self->{data} };
-  return undef unless ( $first_key );
-  return $first_key;
+    my ( $self ) = @_;
+    keys %{ $self->{data} };
+    my $first_key = each %{ $self->{data} };
+    return undef unless ( $first_key );
+    return $first_key;
 }
 
+
 sub NEXTKEY {
-  my ( $self ) = @_;
-  my $next_key = each %{ $self->{data} };
-  return undef unless ( $next_key );
-  return $next_key;
+    my ( $self ) = @_;
+    my $next_key = each %{ $self->{data} };
+    return undef unless ( $next_key );
+    return $next_key;
 }
 
 

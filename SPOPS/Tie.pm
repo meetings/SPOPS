@@ -1,6 +1,6 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 1.10 2001/06/05 13:36:49 lachoy Exp $
+# $Id: Tie.pm,v 1.11 2001/07/11 03:52:34 lachoy Exp $
 
 use strict;
 use vars  qw( $PREFIX_TEMP $PREFIX_INTERNAL );
@@ -13,7 +13,7 @@ require Exporter;
                              IDX_CHECK_FIELDS IDX_LAZY_LOADED
                              $PREFIX_TEMP $PREFIX_INTERNAL );
 $SPOPS::Tie::VERSION   = '1.7';
-$SPOPS::Tie::Revision  = substr(q$Revision: 1.10 $, 10);
+$SPOPS::Tie::Revision  = substr(q$Revision: 1.11 $, 10);
 
 use constant IDX_DATA          => '_collection_data';
 use constant IDX_CHANGE        => '_changed';
@@ -42,22 +42,22 @@ $PREFIX_INTERNAL   = '_internal';
 # any temporary data that lives only for the object's lifetime.
 
 sub TIEHASH {
-  my ( $class, $base_class, $p ) = @_;
+    my ( $class, $base_class, $p ) = @_;
 
-  # If we haven't already stored the fields associated with
-  # this class, do so
+    # If we haven't already stored the fields associated with
+    # this class, do so
 
-  my $HAS_FIELD = $class->_field_check( $base_class, $p );
-  return bless ({ class              => $base_class, 
-                  IDX_TEMP()         => {},
-                  IDX_INTERNAL()     => {},
-                  IDX_CHANGE()       => 0, 
-                  IDX_SAVE()         => 0,
-                  IDX_DATA()         => {},
-                  IDX_IS_LAZY_LOAD() => $p->{is_lazy_load},
-                  IDX_LAZY_LOADED()  => {},
-                  IDX_LAZY_LOAD_SUB()=> $p->{lazy_load_sub},
-                  IDX_CHECK_FIELDS() => $HAS_FIELD }, $class );
+    my $HAS_FIELD = $class->_field_check( $base_class, $p );
+    return bless ({ class              => $base_class, 
+                    IDX_TEMP()         => {},
+                    IDX_INTERNAL()     => {},
+                    IDX_CHANGE()       => 0, 
+                    IDX_SAVE()         => 0,
+                    IDX_DATA()         => {},
+                    IDX_IS_LAZY_LOAD() => $p->{is_lazy_load},
+                    IDX_LAZY_LOADED()  => {},
+                    IDX_LAZY_LOAD_SUB()=> $p->{lazy_load_sub},
+                    IDX_CHECK_FIELDS() => $HAS_FIELD }, $class );
 }
 
 sub _field_check { return undef; }
@@ -66,48 +66,48 @@ sub _field_check { return undef; }
 # set and do the appropriate action.
 
 sub FETCH {
-  my ( $self, $key ) = @_;
-  DEBUG() && _w( 3, " tie: Trying to retrieve value for ($key)\n" );
-  return $self->{ IDX_CHANGE() }                if ( $key eq IDX_CHANGE );
-  return $self->{ IDX_SAVE() }                  if ( $key eq IDX_SAVE );
-  return $self->{ IDX_TEMP() }->{ lc $key }     if ( $key =~ /^$PREFIX_TEMP/ );
-  return $self->{ IDX_INTERNAL() }->{ lc $key } if ( $key =~ /^$PREFIX_INTERNAL/ );
-  return undef unless ( $self->_can_fetch( $key ) );
-  if ( $self->{ IDX_IS_LAZY_LOAD() } and 
-       ! $self->{ IDX_LAZY_LOADED() }->{ $key } ) {
-    $self->_lazy_load( $key );
-  }
-  return $self->{ IDX_DATA() }->{ lc $key };
+    my ( $self, $key ) = @_;
+    DEBUG() && _w( 3, " tie: Trying to retrieve value for ($key)\n" );
+    return $self->{ IDX_CHANGE() }                if ( $key eq IDX_CHANGE );
+    return $self->{ IDX_SAVE() }                  if ( $key eq IDX_SAVE );
+    return $self->{ IDX_TEMP() }->{ lc $key }     if ( $key =~ /^$PREFIX_TEMP/ );
+    return $self->{ IDX_INTERNAL() }->{ lc $key } if ( $key =~ /^$PREFIX_INTERNAL/ );
+    return undef unless ( $self->_can_fetch( $key ) );
+    if ( $self->{ IDX_IS_LAZY_LOAD() } and 
+         ! $self->{ IDX_LAZY_LOADED() }->{ $key } ) {
+        $self->_lazy_load( $key );
+    }
+    return $self->{ IDX_DATA() }->{ lc $key };
 }
 
 sub _can_fetch { return 1; }
 
 sub _lazy_load {
-  my ( $self, $key ) = @_;
-  unless ( ref $self->{ IDX_LAZY_LOAD_SUB() } eq 'CODE' ) {
-    die "Lazy loading activated but no load function specified!\n";
-  }
-  DEBUG() && _w( 1, "Trying to lazy load ($key) since the loaded is:",
-                    $self->{ IDX_LAZY_LOADED() }->{ $key } );
-  $self->{ IDX_DATA() }->{ lc $key } = 
+    my ( $self, $key ) = @_;
+    unless ( ref $self->{ IDX_LAZY_LOAD_SUB() } eq 'CODE' ) {
+        die "Lazy loading activated but no load function specified!\n";
+    }
+    DEBUG() && _w( 1, "Trying to lazy load ($key) since the loaded is:",
+                      $self->{ IDX_LAZY_LOADED() }->{ $key } );
+    $self->{ IDX_DATA() }->{ lc $key } = 
                     $self->{ IDX_LAZY_LOAD_SUB() }->( $self->{class}, 
                                                       $self->{ IDX_DATA() }, 
                                                       $key );
-  $self->{ IDX_LAZY_LOADED() }->{ $key }++;  
+    $self->{ IDX_LAZY_LOADED() }->{ $key }++;  
 }
 
 # Similar to FETCH
 
 sub STORE {
-  my ( $self, $key, $value ) = @_;
-  DEBUG() && _w( 3,  " tie: Trying to store in ($key) value ($value)\n" );
-  return $self->{ IDX_CHANGE() } = $value                if ( $key eq IDX_CHANGE );
-  return $self->{ IDX_SAVE() } = $value                  if ( $key eq IDX_SAVE );
-  return $self->{ IDX_TEMP() }->{ lc $key } = $value     if ( $key =~ /^$PREFIX_TEMP/ );
-  return $self->{ IDX_INTERNAL() }->{ lc $key } = $value if ( $key =~ /^$PREFIX_INTERNAL/ );
-  return undef unless ( $self->_can_store( $key, $value ) );
-  $self->{ IDX_CHANGE() }++;
-  return $self->{ IDX_DATA() }->{ lc $key } = $value;
+    my ( $self, $key, $value ) = @_;
+    DEBUG() && _w( 3,  " tie: Trying to store in ($key) value ($value)\n" );
+    return $self->{ IDX_CHANGE() } = $value                if ( $key eq IDX_CHANGE );
+    return $self->{ IDX_SAVE() } = $value                  if ( $key eq IDX_SAVE );
+    return $self->{ IDX_TEMP() }->{ lc $key } = $value     if ( $key =~ /^$PREFIX_TEMP/ );
+    return $self->{ IDX_INTERNAL() }->{ lc $key } = $value if ( $key =~ /^$PREFIX_INTERNAL/ );
+    return undef unless ( $self->_can_store( $key, $value ) );
+    $self->{ IDX_CHANGE() }++;
+    return $self->{ IDX_DATA() }->{ lc $key } = $value;
 }
 
 sub _can_store { return 1; }
@@ -117,18 +117,18 @@ sub _can_store { return 1; }
 # data; use the object methods for the other information.
 
 sub EXISTS {
-  my ( $self, $key ) = @_;
-  DEBUG() && _w( 3, " tie: Checking for existence of ($key)\n" );
-  return exists $self->{ IDX_DATA() }->{ lc $key };
-  carp "Cannot check existence for field ($key): it is not a valid field";
+    my ( $self, $key ) = @_;
+    DEBUG() && _w( 3, " tie: Checking for existence of ($key)\n" );
+    return exists $self->{ IDX_DATA() }->{ lc $key };
+    carp "Cannot check existence for field ($key): it is not a valid field";
 }
 
 
 sub DELETE {
-  my ( $self, $key ) = @_;
-  DEBUG() && _w( 3, " tie: Clearing value for ($key)\n" );
-  $self->{ IDX_DATA() }->{ lc $key } = undef;
-  $self->{ IDX_CHANGE() }++;
+    my ( $self, $key ) = @_;
+    DEBUG() && _w( 3, " tie: Clearing value for ($key)\n" );
+    $self->{ IDX_DATA() }->{ lc $key } = undef;
+    $self->{ IDX_CHANGE() }++;
 }
 
 
@@ -136,8 +136,8 @@ sub DELETE {
 # nothing bad happens, it's just a no-op
 
 sub CLEAR {
-  my ( $self ) = @_;
-  carp 'Trying to clear object through hash means failed; use object interface';
+    my ( $self ) = @_;
+    carp 'Trying to clear object through hash means failed; use object interface';
 }
 
 
@@ -146,21 +146,21 @@ sub CLEAR {
 # the meta-data being tracked. This is a feature.
 
 sub FIRSTKEY {
-  my ( $self ) = @_;
-  DEBUG() && _w( 3, " tie: Finding first key in data object\n" );
-  keys %{ $self->{ IDX_DATA() } };
-  my $first_key = each %{ $self->{ IDX_DATA() } };
-  return undef unless defined $first_key;
-  return $first_key;
+    my ( $self ) = @_;
+    DEBUG() && _w( 3, " tie: Finding first key in data object\n" );
+    keys %{ $self->{ IDX_DATA() } };
+    my $first_key = each %{ $self->{ IDX_DATA() } };
+    return undef unless defined $first_key;
+    return $first_key;
 }
 
 
 sub NEXTKEY {
-  my ( $self ) = @_;
-  DEBUG() && _w( 3, " tie: Finding next key in data object\n" );
-  my $next_key = each %{ $self->{ IDX_DATA() } };
-  return undef unless defined $next_key;
-  return $next_key;
+    my ( $self ) = @_;
+    DEBUG() && _w( 3, " tie: Finding next key in data object\n" );
+    my $next_key = each %{ $self->{ IDX_DATA() } };
+    return undef unless defined $next_key;
+    return $next_key;
 }
 
 1;

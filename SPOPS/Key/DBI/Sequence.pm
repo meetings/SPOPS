@@ -1,13 +1,13 @@
 package SPOPS::Key::DBI::Sequence;
 
-# $Id: Sequence.pm,v 1.7 2001/06/10 18:22:49 lachoy Exp $
+# $Id: Sequence.pm,v 1.8 2001/07/08 20:02:35 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
 @SPOPS::Key::DBI::Sequence::ISA      = ();
 $SPOPS::Key::DBI::Sequence::VERSION  = '1.7';
-$SPOPS::Key::DBI::Sequence::Revision = substr(q$Revision: 1.7 $, 10);
+$SPOPS::Key::DBI::Sequence::Revision = substr(q$Revision: 1.8 $, 10);
 
 # Default SELECT statement to use to retrieve the sequence -- you can
 # override this in your config or in the parameters passed to
@@ -24,32 +24,32 @@ sub pre_fetch_id { return retrieve_sequence( @_ ) }
 # other classes can use this one without having to put it in an 'isa'
 
 sub retrieve_sequence {
-  my ( $item, $p ) = @_;
-  $p ||= {};
+    my ( $item, $p ) = @_;
+    $p ||= {};
 
-  my $sequence_name = $p->{sequence_name} || $item->CONFIG->{sequence_name};
-  unless ( $sequence_name ) {
-    my $class_name = ( ref $item ) ? ref $item : $item;
-    _w( 0, "Cannot retrieve sequence without a sequence name! No sequence",
-           "name found in parameter or in object configuration. (Object: $class_name)" );
-    return undef;
-  }
+    my $sequence_name = $p->{sequence_name} || $item->CONFIG->{sequence_name};
+    unless ( $sequence_name ) {
+        my $class_name = ( ref $item ) ? ref $item : $item;
+        _w( 0, "Cannot retrieve sequence without a sequence name! No sequence",
+               "name found in parameter or in object configuration. (Object: $class_name)" );
+        return undef;
+    }
 
-  $p->{db} ||= $item->global_db_handle();
-  return undef unless ( ref $p->{db} );
+    $p->{db} ||= $item->global_db_handle();
+    return undef unless ( ref $p->{db} );
 
-  DEBUG() && _w( 2, "Trying to get value from sequence ($sequence_name)" );
-  my $sequence_call  = $p->{sequence_call} || $item->CONFIG->{sequence_call} || SEQUENCE_CALL;
-  my $sql = sprintf( $sequence_call, $sequence_name );
-  DEBUG() && _w( 2, "SQL used to retrieve sequence:\n$sql" );
-  my ( $sth );
-  eval { 
-    $sth = $p->{db}->prepare( $sql );
-    $sth->execute;
-  };
-  die "Cannot retrieve value from sequence $sequence_name : $@" if ( $@ );
-  my ( $id ) = $sth->fetchrow_array;
-  return $id;
+    DEBUG() && _w( 2, "Trying to get value from sequence ($sequence_name)" );
+    my $sequence_call  = $p->{sequence_call} || $item->CONFIG->{sequence_call} || SEQUENCE_CALL;
+    my $sql = sprintf( $sequence_call, $sequence_name );
+    DEBUG() && _w( 2, "SQL used to retrieve sequence:\n$sql" );
+    my ( $sth );
+    eval { 
+        $sth = $p->{db}->prepare( $sql );
+        $sth->execute;
+    };
+    die "Cannot retrieve value from sequence $sequence_name : $@" if ( $@ );
+    my ( $id ) = $sth->fetchrow_array;
+    return $id;
 }
 
 # Ensure only pre_fetch_id is called

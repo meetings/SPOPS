@@ -1,6 +1,6 @@
 package SPOPS::DBI::Pg;
 
-# $Id: Pg.pm,v 1.8 2001/06/05 13:39:24 lachoy Exp $
+# $Id: Pg.pm,v 1.9 2001/07/11 03:52:35 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
@@ -8,14 +8,14 @@ use SPOPS::Key::DBI::Sequence;
 
 @SPOPS::DBI::Pg::ISA      = ();
 $SPOPS::DBI::Pg::VERSION  = '1.7';
-$SPOPS::DBI::Pg::Revision = substr(q$Revision: 1.8 $, 10);
+$SPOPS::DBI::Pg::Revision = substr(q$Revision: 1.9 $, 10);
 
 
 sub sql_quote {
-  my ( $class, $value, $type, $db ) = @_;
-  $db ||= $class->global_db_handle;
-  die "No database handle could be found!" unless ( ref $db );
-  return $db->quote( $value, $type );
+    my ( $class, $value, $type, $db ) = @_;
+    $db ||= $class->global_db_handle;
+    die "No database handle could be found!" unless ( ref $db );
+    return $db->quote( $value, $type );
 }
 
 
@@ -23,23 +23,23 @@ sub sql_current_date  { return 'CURRENT_TIMESTAMP()' }
 
 
 sub pre_fetch_id {
-  my ( $item, $p ) = @_;
-  return undef if     ( $item->CONFIG->{increment_field} );
-  return undef unless ( $p->{sequence_name} = $item->CONFIG->{sequence_name} );
-  return SPOPS::Key::DBI::Sequence::retrieve_sequence( $item, $p );
+    my ( $item, $p ) = @_;
+    return undef if     ( $item->CONFIG->{increment_field} );
+    return undef unless ( $p->{sequence_name} = $item->CONFIG->{sequence_name} );
+    return SPOPS::Key::DBI::Sequence::retrieve_sequence( $item, $p );
 }
 
 
 sub post_fetch_id {
-  my ( $item, $p ) = @_;
-  return undef unless ( $item->CONFIG->{increment_field} );
-  unless ( $p->{sequence_name} ) {
-    $p->{sequence_name} = join( '_', $item->CONFIG->{base_table}, $item->CONFIG->{id_field}, 'seq' );
-  }
-  $p->{sequence_call} = q{ SELECT currval( '%s' ) };
-  DEBUG() && _w( 1, "Using sequence name of ($p->{sequence_name}) and ",
-                  "call of ($p->{sequence_call}) for Pg SERIAL field." );
-  return SPOPS::Key::DBI::Sequence::retrieve_sequence( $item, $p );
+    my ( $item, $p ) = @_;
+    return undef unless ( $item->CONFIG->{increment_field} );
+    unless ( $p->{sequence_name} ) {
+        $p->{sequence_name} = join( '_', $item->CONFIG->{base_table}, $item->CONFIG->{id_field}, 'seq' );
+    }
+    $p->{sequence_call} = q{ SELECT currval( '%s' ) };
+    DEBUG() && _w( 1, "Using sequence name of ($p->{sequence_name}) and ",
+                      "call of ($p->{sequence_call}) for Pg SERIAL field." );
+    return SPOPS::Key::DBI::Sequence::retrieve_sequence( $item, $p );
 }
 
 1;

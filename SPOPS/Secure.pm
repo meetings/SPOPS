@@ -1,6 +1,6 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 1.14 2001/06/07 01:58:55 lachoy Exp $
+# $Id: Secure.pm,v 1.16 2001/07/11 03:52:34 lachoy Exp $
 
 use strict;
 use vars         qw( $EMPTY );
@@ -9,7 +9,7 @@ require Exporter;
 
 @SPOPS::Secure::ISA      = qw( Exporter );
 $SPOPS::Secure::VERSION  = '1.7';
-$SPOPS::Secure::Revision = substr(q$Revision: 1.14 $, 10);
+$SPOPS::Secure::Revision = substr(q$Revision: 1.16 $, 10);
 
 # Stuff for security constants and exporting
 
@@ -78,652 +78,654 @@ my $INITIAL_SECURITY_DEFAULT = SEC_LEVEL_NONE;
 # least a permission for the WORLD scope
 
 sub check_security {
-  my ( $class, $p ) = @_;
-  my $sec_info = $p->{sec_info};
-  unless ( $sec_info ) {
-    DEBUG() && _w( 1, "Retrieving security information." );
-    $p->{user} = shift @{ $p->{user} }   if ( ref $p->{user} eq 'ARRAY' );
+    my ( $class, $p ) = @_;
+    my $sec_info = $p->{sec_info};
+    unless ( $sec_info ) {
+        DEBUG() && _w( 1, "Retrieving security information." );
+        $p->{user} = shift @{ $p->{user} }   if ( ref $p->{user} eq 'ARRAY' );
 
-    # Retrieve security. If a subclass wants to implement a different
-    # way of implementing security, this is the method to override.
+        # Retrieve security. If a subclass wants to implement a different
+        # way of implementing security, this is the method to override.
 
-    $sec_info = eval { $class->get_security( $p ) };
-    if ( $@ ) {
-      $SPOPS::Error::user_msg = "Cannot retrieve security settings for " .
-                                "checking. (Trying to check $class)";
-      my $ei = SPOPS::Error->get;
-      _w( 0, "Error found trying to retreive security settings: $@\n", 
-             Dumper( SPOPS::Error->get ) );
-      die $SPOPS::Error::user_msg;
+        $sec_info = eval { $class->get_security( $p ) };
+        if ( $@ ) {
+            $SPOPS::Error::user_msg = "Cannot retrieve security settings for " .
+                                      "checking. (Trying to check $class)";
+            my $ei = SPOPS::Error->get;
+            _w( 0, "Error found trying to retreive security settings: $@\n", 
+                   Dumper( SPOPS::Error->get ) );
+            die $SPOPS::Error::user_msg;
+        }
     }
-  }
 
-  DEBUG() && _w( 1, "Security information:\n", Dumper( $sec_info ) );
+    DEBUG() && _w( 1, "Security information:\n", Dumper( $sec_info ) );
 
-  # If a user security level exists, return it
+    # If a user security level exists, return it
 
-  if ( my $user_level = $sec_info->{ SEC_SCOPE_USER() } ) {
-    DEBUG() && _w( 1, "Return level ($user_level) at scope USER." );
-    return $user_level;
-  }
+    if ( my $user_level = $sec_info->{ SEC_SCOPE_USER() } ) {
+        DEBUG() && _w( 1, "Return level ($user_level) at scope USER." );
+        return $user_level;
+    }
 
-  # Go through the groups; if there are groups, we return the highest
-  # level among them.
+    # Go through the groups; if there are groups, we return the highest
+    # level among them.
 
-  my $group_max = undef;
-  foreach my $gid ( keys %{ $sec_info->{ SEC_SCOPE_GROUP() } } ) {
-    my $group_level = $sec_info->{ SEC_SCOPE_GROUP() }->{ $gid } ;
-    $group_max = ( $group_level > $group_max ) ? $group_level : $group_max;
-    DEBUG() && _w( 1, "Level of GROUP ($gid) is ($group_level)" );
-  }
-  return $group_max  if ( $group_max );
+    my $group_max = undef;
+    foreach my $gid ( keys %{ $sec_info->{ SEC_SCOPE_GROUP() } } ) {
+        my $group_level = $sec_info->{ SEC_SCOPE_GROUP() }->{ $gid } ;
+        $group_max = ( $group_level > $group_max ) ? $group_level : $group_max;
+        DEBUG() && _w( 1, "Level of GROUP ($gid) is ($group_level)" );
+    }
+    return $group_max  if ( $group_max );
 
-  my $world_level = $sec_info->{ SEC_SCOPE_WORLD() };
-  DEBUG() && _w( 1,  "Return level ($world_level) at scope WORLD" );
-  return $world_level;
+    my $world_level = $sec_info->{ SEC_SCOPE_WORLD() };
+    DEBUG() && _w( 1,  "Return level ($world_level) at scope WORLD" );
+    return $world_level;
 }
 
 
 # Returns hashref
 
 sub get_security {
-  my ( $item, $p ) = @_;
+    my ( $item, $p ) = @_;
 
-  # Since we can pass in the class/oid, those take precedence
-  my $object_id = $p->{oid} || $p->{object_id};
-  my ( $class, $oid ) = $item->_get_object_info_for_security( 
+    # Since we can pass in the class/oid, those take precedence
+
+    my $object_id = $p->{oid} || $p->{object_id};
+    my ( $class, $oid ) = $item->_get_object_info_for_security( 
                                              $p->{class}, $object_id );
-  DEBUG() && _w( 1, "Checking security for $class ($oid) with:\n", Dumper( $p ) );
+    DEBUG() && _w( 1, "Checking security for $class ($oid) with:\n", Dumper( $p ) );
 
-  my ( $user, $group_list ) = $item->get_security_scopes( $p );
+    my ( $user, $group_list ) = $item->get_security_scopes( $p );
 
-  if ( my $security_info = $item->_check_superuser( $user, $group_list ) ) {
-    DEBUG() && _w( 1, "Superuser is logged in, can do anything" );
-    return $security_info;
-  }
+    if ( my $security_info = $item->_check_superuser( $user, $group_list ) ) {
+        DEBUG() && _w( 1, "Superuser is logged in, can do anything" );
+        return $security_info;
+    }
 
-  my $sec_obj_class = $p->{security_object_class} || 
-                      $item->global_security_object_class;
-  DEBUG() && _w( 1, "Using security object ($sec_obj_class)" );
-  my $sec_listing = eval { $sec_obj_class->fetch_by_object( 
+    my $sec_obj_class = $p->{security_object_class} || 
+                        $item->global_security_object_class;
+    DEBUG() && _w( 1, "Using security object ($sec_obj_class)" );
+    my $sec_listing = eval { $sec_obj_class->fetch_by_object( 
                                            $class, 
                                            { object_id => $oid, 
                                              user      => $user,
                                              group     => $group_list } ) };
-  if ( $@ ) {
-    $SPOPS::Error::user_msg = 'Cannot retrieve security listing';
-    _w( 0, "Error retrieving security listing: $@" );
-    die $SPOPS::Error::user_msg;
-  }
-  return $sec_listing || \%{ $EMPTY };
+    if ( $@ ) {
+        $SPOPS::Error::user_msg = 'Cannot retrieve security listing';
+        _w( 0, "Error retrieving security listing: $@" );
+        die $SPOPS::Error::user_msg;
+    }
+    return $sec_listing || \%{ $EMPTY };
 }
 
 
 
 sub get_security_scopes {
-  my ( $item, $p ) = @_;
-  my $user       = undef;
-  my $group_list = [];
+    my ( $item, $p ) = @_;
+    my $user       = undef;
+    my $group_list = [];
 
-  DEBUG() && _w( 1, "Checking security scopes with:\n", Dumper( $p ) );
+    DEBUG() && _w( 1, "Checking security scopes with:\n", Dumper( $p ) );
 
-  # If both user and group(s) are passed in, we need to modify the
-  # group list to include the groups that the user belongs to as well
-  # as the groups specified
+    # If both user and group(s) are passed in, we need to modify the
+    # group list to include the groups that the user belongs to as well
+    # as the groups specified
 
-  if ( $p->{user} and $p->{group} ) {
-    DEBUG() && _w( 1, "Both user and group were specified." );
-    $user       = $p->{user};
-    $group_list = eval { $p->{user}->group; };   
-    _w( 0, "Cannot fetch groups from user record: $@." ) if ( $@ );
-    my @extra_group = ( ref $p->{group} eq 'ARRAY' ) 
-                        ? @{ $p->{group} } : ( $p->{group} );
-    push @{ $group_list }, @extra_group;
-  }
-
-  # The default (no user, no group) is just to get the user and its
-  # groups
-
-  elsif ( ! $p->{user} and ! $p->{group} ) {
-    DEBUG() && _w( 1, "Neither user/group specified, using logins." );
-    $user       = $item->global_user_current;
-    $group_list = $item->global_group_current;
-
-    # If no user or group was passed in, and we cannot retrieve
-    # a user object with the global_user_current call, then
-    # all we want to get is the WORLD security level, which
-    # means we can skip the user/group_list stuff altogether
-
-    # NOTE: even tho it doesn't appear, there IS a dependency between
-    # the next two clauses; that is, you *MUST NOT* check to see if 
-    # $user->{user_id} == 1 if there actually is no user. Otherwise
-    # perl will autovivify a hashref in $R->{auth}->{user} which 
-    # will throw a 800-pound monkey wrench into operations.
-    # We really need to look into that, it's quite brittle.
-
-    unless ( $user ) {
-      DEBUG() && _w( 1, "No user or groups found." );
-      $user       = undef;
-      $group_list = undef;
+    if ( $p->{user} and $p->{group} ) {
+        DEBUG() && _w( 1, "Both user and group were specified." );
+        $user       = $p->{user};
+        $group_list = eval { $p->{user}->group; };   
+        _w( 0, "Cannot fetch groups from user record: $@." ) if ( $@ );
+        my @extra_group = ( ref $p->{group} eq 'ARRAY' ) 
+                            ? @{ $p->{group} } : ( $p->{group} );
+        push @{ $group_list }, @extra_group;
     }
-  }
 
-  # If we were given a user to check, base the group_list around the
-  # groups the user belongs to
+    # The default (no user, no group) is just to get the user and its
+    # groups
 
-  elsif ( $p->{user} ) {
-    DEBUG() && _w( 1, "Only user specified; using user's groups." );
-    $user       = $p->{user};
-    $group_list = eval { $p->{user}->group; };
-    _w( 0, "Cannot fetch groups from user record: $@." ) if ( $@ );
-  }
+    elsif ( ! $p->{user} and ! $p->{group} ) {
+        DEBUG() && _w( 1, "Neither user/group specified, using logins." );
+        $user       = $item->global_user_current;
+        $group_list = $item->global_group_current;
 
-  # Otherwise, the group list is based on whatever was passed in
+        # If no user or group was passed in, and we cannot retrieve
+        # a user object with the global_user_current call, then
+        # all we want to get is the WORLD security level, which
+        # means we can skip the user/group_list stuff altogether
 
-  elsif ( $p->{group} ) {
-    DEBUG() && _w( 1, "Only group specified." );
-    $group_list = ( ref $p->{group} eq 'ARRAY' ) 
-                    ? $p->{group}: [ $p->{group} ];
-  }
-  return ( $user, $group_list );
+        # NOTE: even tho it doesn't appear, there IS a dependency between
+        # the next two clauses; that is, you *MUST NOT* check to see if 
+        # $user->{user_id} == 1 if there actually is no user. Otherwise
+        # perl will autovivify a hashref in $R->{auth}->{user} which 
+        # will throw a 800-pound monkey wrench into operations.
+        # We really need to look into that, it's quite brittle.
+
+        unless ( $user ) {
+            DEBUG() && _w( 1, "No user or groups found." );
+            $user       = undef;
+            $group_list = undef;
+        }
+    }
+
+    # If we were given a user to check, base the group_list around the
+    # groups the user belongs to
+
+    elsif ( $p->{user} ) {
+        DEBUG() && _w( 1, "Only user specified; using user's groups." );
+        $user       = $p->{user};
+        $group_list = eval { $p->{user}->group; };
+        _w( 0, "Cannot fetch groups from user record: $@." ) if ( $@ );
+    }
+
+    # Otherwise, the group list is based on whatever was passed in
+
+    elsif ( $p->{group} ) {
+        DEBUG() && _w( 1, "Only group specified." );
+        $group_list = ( ref $p->{group} eq 'ARRAY' ) 
+                        ? $p->{group}: [ $p->{group} ];
+    }
+    return ( $user, $group_list );
 }
 
 
 sub set_security {
-  my ( $item, $p ) = @_;
-  my $sec_obj_class = $p->{security_object_class} || 
-                      $item->global_security_object_class;
+    my ( $item, $p ) = @_;
+    my $sec_obj_class = $p->{security_object_class} || 
+                        $item->global_security_object_class;
 
-  my $level = $p->{level} || $p->{security_level};
+    my $level = $p->{level} || $p->{security_level};
 
-  # First ensure that both a level is specified...
+    # First ensure that both a level is specified...
 
-  unless ( $level ) {
-    my $msg = 'Set security failed';
-    SPOPS::Error->set({ user_msg   => $msg,
-                        type       => 'security',
-                        system_msg => 'No permissions scalar/hashref passed in.',
-                        method     => 'set_security' });
-    die $msg;
-  }
+    unless ( $level ) {
+        my $msg = 'Set security failed';
+        SPOPS::Error->set({ user_msg   => $msg,
+                            type       => 'security',
+                            system_msg => 'No permissions scalar/hashref passed in.',
+                            method     => 'set_security' });
+        die $msg;
+    }
 
-  # ...and that a scope is specified
+    # ...and that a scope is specified
+    
+    unless ( $p->{scope} ) {
+        my $msg = 'Set security failed';
+        SPOPS::Error->set({ user_msg   => $msg, 
+                            type       => 'security',
+                            system_msg => 'No scope passed in.',
+                            method     => 'set_security' });
+        die $msg;
+    }
 
-  unless ( $p->{scope} ) {
-    my $msg = 'Set security failed';
-    SPOPS::Error->set({ user_msg   => $msg, 
-                        type       => 'security',
-                        system_msg => 'No scope passed in.',
-                        method     => 'set_security' });
-    die $msg;
-  }
+    # Since we can pass in the class/oid, those take precedence
 
-  # Since we can pass in the class/oid, those take precedence
-
-  my $object_id = $p->{oid} || $p->{object_id};
-  my ( $class, $oid ) = $item->_get_object_info_for_security( 
+    my $object_id = $p->{oid} || $p->{object_id};
+    my ( $class, $oid ) = $item->_get_object_info_for_security( 
                                              $p->{class}, $object_id );
-  DEBUG() && _w( 1, "Checking security for $class ($oid)" );
+    DEBUG() && _w( 1, "Checking security for $class ($oid)" );
 
-  # If we were passed a particular scope, just return
-  # the results of updating that information
+    # If we were passed a particular scope, just return
+    # the results of updating that information
 
-  unless ( ref $p->{scope} ) {
-    if ( $p->{scope} eq SEC_SCOPE_WORLD ) {
-      my $rv = eval { $item->set_item_security({ 
+    unless ( ref $p->{scope} ) {
+        if ( $p->{scope} eq SEC_SCOPE_WORLD ) {
+            my $rv = eval { $item->set_item_security({ 
                                class          => $class, 
                                object_id      => $oid, 
                                security_level => $level,
                                scope          => $p->{scope}, 
                                scope_id       => $p->{scope_id} } ) };
-      if ( $@ ) {
-        $SPOPS::Error::user_msg = 'Cannot set security';
-        die $SPOPS::Error::user_msg;
-      }
-      return $rv;
-    }
+            if ( $@ ) {
+                $SPOPS::Error::user_msg = 'Cannot set security';
+                die $SPOPS::Error::user_msg;
+            }
+            return $rv;
+        }
 
-    # For user/group, we can pass in multiple items for which we want to
-    # set security acting upon a particular class/object; the test for this
-    # is if $level is a hashref.
+        # For user/group, we can pass in multiple items for which we
+        # want to set security acting upon a particular class/object;
+        # the test for this is if $level is a hashref.
 
-    elsif ( $p->{scope} eq SEC_SCOPE_GROUP or $p->{scope} eq SEC_SCOPE_USER ) {
-      if ( ref $level eq 'HASH' ) {
-        my $rv = eval { $item->set_multiple_security({ 
+        elsif ( $p->{scope} eq SEC_SCOPE_GROUP or $p->{scope} eq SEC_SCOPE_USER ) {
+            if ( ref $level eq 'HASH' ) {
+                my $rv = eval { $item->set_multiple_security({ 
                                  class          => $class, 
                                  object_id      => $oid, 
                                  security_level => $level,
                                  scope          => $p->{scope} } ) };
-        if ( $@ ) {
-          $SPOPS::Error::user_msg = 'Cannot set security';
-          die $SPOPS::Error::user_msg;
-        }
-        return $rv;
-      }
-      my $rv = eval { $item->set_item_security({ 
+                if ( $@ ) {
+                    $SPOPS::Error::user_msg = 'Cannot set security';
+                    die $SPOPS::Error::user_msg;
+                }
+                return $rv;
+            }
+            my $rv = eval { $item->set_item_security({ 
                                class          => $class, 
                                object_id      => $oid, 
                                security_level => $level,
                                scope          => $p->{scope}, 
                                scope_id       => $p->{scope_id} } ) };
-      if ( $@ ) {
-        $SPOPS::Error::user_msg = 'Cannot set security';
-        die $SPOPS::Error::user_msg;
-      }
-      return $rv;
-    }
-    my $msg = 'Set security failed';
-    SPOPS::Error->set({ user_msg   => $msg, 
-                        type       => 'security',
-                        system_msg => 'Unrecognized scope passed in',
-                        extra      => { scope => $p->{scope} } });
-    die $msg;
-  }
-
-  # If we've made it here, the scope should be a reference. But if
-  # it's not an arrayref, we have a problem
-
-  if ( ref $p->{scope} ne 'ARRAY' ) {
-    my $msg = 'Set security failed';
-    SPOPS::Error->set({ user_msg   => $msg, 
-                        type       => 'security',
-                        system_msg => 'Unrecognized scope passed in',
-                        extra      => { scope => $p->{scope} } });
-    die $msg;
-  }
-
-  # If level is not a hashref (since we are using multiple scopes) 
-  # at this point, we have a problem
-
-  if ( ref $level ne 'HASH' ) {
-    my $msg = 'Set security failed';
-    SPOPS::Error->set({ user_msg   => $msg, 
-                        type       => 'security',
-                        system_msg => 'Multiple SCOPE arguments but param security_level not a hashref.',
-                        extra      => { level => $level } });
-    die $msg;
-  }
-
-  # If we were passed multiple scope entries, go through each one
-  # and total up the items changed for return. Note that we no
-  # longer have a need for scope_id (for user/group) since that logic
-  # is embedded within the level hashref
-
-  # Note that *removing* security must be done outside this routine.
-  # That is, you can't simply pass a full list of 'new' security
-  # options for a particular object/class and expect this method to
-  # sort them out for you
-
-  my $total = scalar @{ $p->{scope} };
-  my $count = 0;
-  my @error_list;
-
- SCOPE:
-  foreach my $scope ( @{ $p->{scope} } ) {
-    if ( $scope eq SEC_SCOPE_WORLD ) {
-      $count += eval { $item->set_item_security({ 
-                                class          => $class, 
-                                object_id      => $oid, 
-                                scope          => $scope, 
-                                security_level => $level->{ $scope } }) };
-      if ( $@ ) { 
-        push @error_list, $class->_assemble_error_message( scalar @error_list + 1 );
-      }
-    }
-    elsif ( $scope eq SEC_SCOPE_GROUP or $scope eq SEC_SCOPE_USER ) {
-      $count += eval { $item->set_multiple_security({ 
-                                class          => $class, 
-                                object_id      => $oid, 
-                                scope          => $scope, 
-                                security_level => $level->{ $scope } }) };
-      if ( $@ ) {
-        push @error_list, $SPOPS::Error::system_msg;
-      }
+            if ( $@ ) {
+                $SPOPS::Error::user_msg = 'Cannot set security';
+                die $SPOPS::Error::user_msg;
+            }
+            return $rv;
+        }
+        my $msg = 'Set security failed';
+        SPOPS::Error->set({ user_msg   => $msg, 
+                            type       => 'security',
+                            system_msg => 'Unrecognized scope passed in',
+                            extra      => { scope => $p->{scope} } });
+        die $msg;
     }
 
-    _w( 0, "Cannot set security for scope <$scope> since it is not a WORLD/USER/GROUP" );
-  }
-  if ( scalar @error_list ) {
-    $SPOPS::Error::system_msg = join "\n\n", @error_list;
-   die 'Set security failed for one or more items';
-  }
-  return 1;
+    # If we've made it here, the scope should be a reference. But if
+    # it's not an arrayref, we have a problem
+
+    if ( ref $p->{scope} ne 'ARRAY' ) {
+        my $msg = 'Set security failed';
+        SPOPS::Error->set({ user_msg   => $msg, 
+                            type       => 'security',
+                            system_msg => 'Unrecognized scope passed in',
+                            extra      => { scope => $p->{scope} } });
+        die $msg;
+    }
+
+    # If level is not a hashref (since we are using multiple scopes)
+    # at this point, we have a problem
+
+    if ( ref $level ne 'HASH' ) {
+        my $msg = 'Set security failed';
+        SPOPS::Error->set({ user_msg   => $msg, 
+                            type       => 'security',
+                            system_msg => 'Multiple SCOPE arguments but param security_level not a hashref.',
+                            extra      => { level => $level } });
+        die $msg;
+    }
+
+    # If we were passed multiple scope entries, go through each one
+    # and total up the items changed for return. Note that we no
+    # longer have a need for scope_id (for user/group) since that logic
+    # is embedded within the level hashref
+
+    # Note that *removing* security must be done outside this routine.
+    # That is, you can't simply pass a full list of 'new' security
+    # options for a particular object/class and expect this method to
+    # sort them out for you
+
+    my $total = scalar @{ $p->{scope} };
+    my $count = 0;
+    my @error_list;
+
+SCOPE:
+    foreach my $scope ( @{ $p->{scope} } ) {
+        if ( $scope eq SEC_SCOPE_WORLD ) {
+            $count += eval { $item->set_item_security({ 
+                                  class          => $class, 
+                                  object_id      => $oid, 
+                                  scope          => $scope, 
+                                  security_level => $level->{ $scope } }) };
+            if ( $@ ) { 
+                push @error_list, $class->_assemble_error_message( scalar @error_list + 1 );
+            }
+        }
+        elsif ( $scope eq SEC_SCOPE_GROUP or $scope eq SEC_SCOPE_USER ) {
+            $count += eval { $item->set_multiple_security({ 
+                                  class          => $class, 
+                                  object_id      => $oid, 
+                                  scope          => $scope, 
+                                  security_level => $level->{ $scope } }) };
+            if ( $@ ) {
+                push @error_list, $SPOPS::Error::system_msg;
+            }
+        }
+
+        _w( 0, "Cannot set security for scope <$scope> since it is not a WORLD/USER/GROUP" );
+    }
+    if ( scalar @error_list ) {
+        $SPOPS::Error::system_msg = join "\n\n", @error_list;
+        die 'Set security failed for one or more items';
+    }
+    return 1;
 }
 
 
 sub set_item_security {
-  my ( $item, $p ) = @_;
+    my ( $item, $p ) = @_;
 
-  my $level = $p->{level} || $p->{security_level};
+    my $level = $p->{level} || $p->{security_level};
 
-  # Since we can pass in the class/oid, those take precedence
+    # Since we can pass in the class/oid, those take precedence
 
-  my $object_id = $p->{oid} || $p->{object_id};
-  my ( $class, $oid ) = $item->_get_object_info_for_security( 
+    my $object_id = $p->{oid} || $p->{object_id};
+    my ( $class, $oid ) = $item->_get_object_info_for_security( 
                                              $p->{class}, $object_id );
-  DEBUG() && _w( 1, "Modifying scope $p->{scope} ($p->{scope_id}) for ",
-                  "$class ($oid) with $level" );
+    DEBUG() && _w( 1, "Modifying scope $p->{scope} ($p->{scope_id}) for ",
+                      "$class ($oid) with $level" );
 
-  my $sec_obj_class = $p->{security_object_class} || 
-                      $item->global_security_object_class;
-  my $obj = eval { $sec_obj_class->fetch_match( 
+    my $sec_obj_class = $p->{security_object_class} || 
+                        $item->global_security_object_class;
+    my $obj = eval { $sec_obj_class->fetch_match( 
                                         $class, 
                                         { object_id => $oid, 
                                           scope     => $p->{scope}, 
                                           scope_id  => $p->{scope_id} }) };
-  if ( $@ ) { 
-    _w( 0, "Error found trying to match parametersto an existing object\n",
-           "Error: ($@) $SPOPS::Error::system_msg" );
-  }
+    if ( $@ ) { 
+        _w( 0, "Error found trying to match parametersto an existing object\n",
+               "Error: ($@) $SPOPS::Error::system_msg" );
+    }
 
-  unless ( $obj ) {
-    DEBUG() && _w( 1, "Current object does not exist. Creating one." );
-    $obj = $sec_obj_class->new({ class     => $class, 
-                                 object_id => $oid, 
-                                 scope     => $p->{scope}, 
-                                 scope_id  => $p->{scope_id} });
-  }
+    unless ( $obj ) {
+        DEBUG() && _w( 1, "Current object does not exist. Creating one." );
+        $obj = $sec_obj_class->new({ class     => $class, 
+                                     object_id => $oid, 
+                                     scope     => $p->{scope}, 
+                                     scope_id  => $p->{scope_id} });
+    }
 
-  # if there is no change, we're done
+    # if there is no change, we're done
 
-  return 1 if ( $obj->{security_level} == $level );  
+    return 1 if ( $obj->{security_level} == $level );  
 
-  # Otherwise set the level and save, letting any errors from the save
-  # bubble up
+    # Otherwise set the level and save, letting any errors from the
+    # save bubble up
 
-  $obj->{security_level} = $level;
-  return $obj->save;
+    $obj->{security_level} = $level;
+    return $obj->save;
 }
 
 
 sub set_multiple_security {
-  my ( $item, $p ) = @_;
+    my ( $item, $p ) = @_;
 
-  # Since we can pass in the class/oid, those take precedence
+    # Since we can pass in the class/oid, those take precedence
 
-  my $object_id = $p->{oid} || $p->{object_id};
-  my ( $class, $oid ) = $item->_get_object_info_for_security( 
+    my $object_id = $p->{oid} || $p->{object_id};
+    my ( $class, $oid ) = $item->_get_object_info_for_security( 
                                              $p->{class}, $object_id );
-  DEBUG() && _w( 1, "Setting multiple security for $class ($oid) and ",
-                  "scope $p->{scope}." );
+    DEBUG() && _w( 1, "Setting multiple security for $class ($oid) and ",
+                      "scope $p->{scope}." );
 
-  my $sec_obj_class = $p->{security_object_class} || 
-                      $item->global_security_object_class;
+    my $sec_obj_class = $p->{security_object_class} || 
+                        $item->global_security_object_class;
 
-  my $level = $p->{level} || $p->{security_level};
+    my $level = $p->{level} || $p->{security_level};
 
-  # Remove any entries for superuser/admin
+    # Remove any entries for superuser/admin
 
-  delete $level->{1};
+    delete $level->{1};
 
-  # Count up the number of modifications we are making -- if there are 
-  # none then we're done
+    # Count up the number of modifications we are making -- if there
+    # are none then we're done
 
-  return 1 unless ( scalar keys %{ $level } );
-  my @error_list = ();
+    return 1 unless ( scalar keys %{ $level } );
+    my @error_list = ();
 
- ITEM:
-  foreach my $id ( keys %{ $level } ) {
-    DEBUG() && _w( 1, "Setting ID $id to $level->{$id}" );
-    eval { $item->set_item_security({ class          => $class, 
-                                      object_id      => $oid, 
-                                      scope          => $p->{scope},
-                                      scope_id       => $id, 
-                                      security_level => $level->{ $id } }) };
-    if ( $@ ) { 
-      push @error_list, $class->_assemble_error_message( scalar @error_list + 1 );
+ITEM:
+    foreach my $id ( keys %{ $level } ) {
+        DEBUG() && _w( 1, "Setting ID $id to $level->{$id}" );
+        eval { $item->set_item_security({ class          => $class, 
+                                          object_id      => $oid, 
+                                          scope          => $p->{scope},
+                                          scope_id       => $id, 
+                                          security_level => $level->{ $id } }) };
+        if ( $@ ) { 
+            push @error_list, $class->_assemble_error_message( scalar @error_list + 1 );
+        }
     }
-  }
 
-  if ( scalar @error_list ) {
-    $SPOPS::Error::system_msg = join "\n\n", @error_list;
-    die 'Set security failed for one or more items';
-  }
-  return 1;
+    if ( scalar @error_list ) {
+        $SPOPS::Error::system_msg = join "\n\n", @error_list;
+        die 'Set security failed for one or more items';
+    }
+    return 1;
 }
 
 
 
 sub remove_item_security {
-  my ( $item, $p ) = @_;  
-  if ( $p->{scope} ne SEC_SCOPE_WORLD and $p->{scope_id} == 1 ) {
-    _w( 0, "Will not remove security with scope $p->{scope} ($p>{scope_id}) - admin." );
-    return undef;
-  }
+    my ( $item, $p ) = @_;  
+    if ( $p->{scope} ne SEC_SCOPE_WORLD and $p->{scope_id} == 1 ) {
+        _w( 0, "Will not remove security with scope $p->{scope} ($p>{scope_id}) - admin." );
+        return undef;
+    }
 
-  # Since we can pass in the class/oid, those take precedence
-  my $object_id = $p->{oid} || $p->{object_id};  
-  my ( $class, $oid ) = $item->_get_object_info_for_security( 
+    # Since we can pass in the class/oid, those take precedence
+
+    my $object_id = $p->{oid} || $p->{object_id};  
+    my ( $class, $oid ) = $item->_get_object_info_for_security( 
                                              $p->{class}, $object_id );
-  DEBUG() && _w( 1, "Removing security for $class ($oid) with ",
-                  "scope $p->{scope} ($p->{scope_id})" );
+    DEBUG() && _w( 1, "Removing security for $class ($oid) with ",
+                      "scope $p->{scope} ($p->{scope_id})" );
 
-  my $sec_obj_class = $p->{security_object_class} || 
-                      $item->global_security_object_class;
-  my $obj = eval { $sec_obj_class->fetch_match( 
+    my $sec_obj_class = $p->{security_object_class} || 
+                        $item->global_security_object_class;
+    my $obj = eval { $sec_obj_class->fetch_match( 
                                      $class, 
                                      { object_id => $oid, 
                                        scope     => $p->{scope}, 
                                        scope_id  => $p->{scope_id} }) };
-  if ( $@ ) {
-    _w( 0, "Error found trying to match parameters to an existing object\n",
-           "Error: $@->{error}\nSQL: $@->{sql}" );
-  }
-  unless ( $obj ) {
-    _w( 0, "Security object does not exist with parameters, so we cannot remove it." );
-    return undef;
-  }
+    if ( $@ ) {
+        _w( 0, "Error found trying to match parameters to an existing object\n",
+               "Error: $@->{error}\nSQL: $@->{sql}" );
+    }
+    unless ( $obj ) {
+        _w( 0, "Security object does not exist with parameters, so we cannot remove it." );
+        return undef;
+    }
 
-  # Let error trickle up
+    # Let error trickle up
 
-  my $rv = eval { $obj->remove };
-  if ( $@ ) {
-    $SPOPS::Error::user_msg = 'Cannot remove security setting for object';
-    die $SPOPS::Error::user_msg;
-  }
-  return $rv;
+    my $rv = eval { $obj->remove };
+    if ( $@ ) {
+        $SPOPS::Error::user_msg = 'Cannot remove security setting for object';
+        die $SPOPS::Error::user_msg;
+    }
+    return $rv;
 }
 
 
 sub _get_object_info_for_security {
-  my ( $item, $class, $id ) = @_;
-  $id ||= '0';
-  return ( $class, $id )          if ( $class );
-  return ( ref $item, $item->id ) if ( ref $item ); 
-  return ( $item, $id );
+    my ( $item, $class, $id ) = @_;
+    $id ||= '0';
+    return ( $class, $id )          if ( $class );
+    return ( ref $item, $item->id ) if ( ref $item ); 
+    return ( $item, $id );
 }
 
 
 # See if this is uid=1 or is a member of gid=1
 
 sub _check_superuser {
-  my ( $item, $user,  $group_list ) = @_;
-  return undef unless ( $user or $group_list );
-  my %allow_all = %{ $EMPTY }; 
-  $allow_all{ SEC_SCOPE_USER() } = SEC_LEVEL_WRITE;
+    my ( $item, $user,  $group_list ) = @_;
+    return undef unless ( $user or $group_list );
+    my %allow_all = %{ $EMPTY }; 
+    $allow_all{ SEC_SCOPE_USER() } = SEC_LEVEL_WRITE;
  
-  if ( ref $user and $user->{user_id} == 1 ) {
-    DEBUG() && _w( 1, "User is superuser, checking ($item)" );
-    return \%allow_all;
-  }
-  if ( ref $group_list eq 'ARRAY' ) {
-    foreach my $group ( @{ $group_list } ) {
-      return \%allow_all if ( $group->{group_id} == 1 );
+    if ( ref $user and $user->{user_id} == 1 ) {
+        DEBUG() && _w( 1, "User is superuser, checking ($item)" );
+        return \%allow_all;
     }
-  }
-  return undef;
+    if ( ref $group_list eq 'ARRAY' ) {
+        foreach my $group ( @{ $group_list } ) {
+            return \%allow_all if ( $group->{group_id} == 1 );
+        }
+    }
+    return undef;
 }
 
 
 sub create_initial_security {
-  my ( $item, $p ) = @_;
+    my ( $item, $p ) = @_;
 
-  # Since we can pass in the class/oid, those take precedence
+    # Since we can pass in the class/oid, those take precedence
 
-  my $object_id = $p->{oid} || $p->{object_id};
-  my ( $class, $oid ) = $item->_get_object_info_for_security( 
+    my $object_id = $p->{oid} || $p->{object_id};
+    my ( $class, $oid ) = $item->_get_object_info_for_security( 
                                         $p->{class}, $object_id );
-  DEBUG() && _w( 1, "Setting initial security for $class ($oid)" );
+    DEBUG() && _w( 1, "Setting initial security for $class ($oid)" );
 
-  # \%init describes the initial security to create for this object;
-  # note that \%init may describe code to execute or it may simply
-  # describe a level to denote
+    # \%init describes the initial security to create for this object;
+    # note that \%init may describe code to execute or it may simply
+    # describe a level to denote
 
-  my $init = $class->creation_security;
-  return undef unless ( ref $init and scalar keys %{ $init } );
+    my $init = $class->creation_security;
+    return undef unless ( ref $init and scalar keys %{ $init } );
 
-  # Get the current user and groups
+    # Get the current user and groups
 
-  my $user  = $class->global_user_current;
-  my $group = $class->global_group_current;
+    my $user  = $class->global_user_current;
+    my $group = $class->global_group_current;
 
-  my @error_list = ();
+    my @error_list = ();
 
-  # \%level holds the actual security settings for this object
+    # \%level holds the actual security settings for this object
 
-  my $level = {};
+    my $level = {};
 
-  # If our level assignment looks like this:
-  # creation_security => {
-  #  code => [ 'MyApp::SecurityPolicy' => 'handler' ] },
-  # },
-  # 
-  # Then we execute "MyApp::SecurityPolicy->handler( \% ), passing the
-  # parameters class and oid (for the object), $user (current user
-  # object) and $group (arrayref of groups the user belongs to)
-  # 
+    # If our level assignment looks like this:
+    # creation_security => {
+    #  code => [ 'MyApp::SecurityPolicy' => 'handler' ] },
+    # },
+    # 
+    # Then we execute "MyApp::SecurityPolicy->handler( \% ), passing the
+    # parameters class and oid (for the object), $user (current user
+    # object) and $group (arrayref of groups the user belongs to)
+    # 
 
-  # The code should return a hashref of either scope => SEC_LEVEL_* (in
-  # the case of USER and WORLD) or scope => { scope_id => SEC_LEVEL* }
-  # (in the case of GROUP). If an 'undef' is passed for a scope then
-  # that scope will not be processed. For example:
-  #
-  # return { u => undef,
-  #          g => { $main_gid => SEC_LEVEL_READ, $admin_gid => SEC_LEVEL_WRITE },
-  #          w => SEC_LEVEL_NONE };
+    # The code should return a hashref of either scope => SEC_LEVEL_* (in
+    # the case of USER and WORLD) or scope => { scope_id => SEC_LEVEL* }
+    # (in the case of GROUP). If an 'undef' is passed for a scope then
+    # that scope will not be processed. For example:
+    #
+    # return { u => undef,
+    #          g => { $main_gid => SEC_LEVEL_READ, $admin_gid => SEC_LEVEL_WRITE },
+    #          w => SEC_LEVEL_NONE };
 
-  if ( ref $init->{code} eq 'ARRAY' ) {
-    my ( $pkg, $method ) = @{ $init->{code} };
-    DEBUG() && _w( 1, "$pkg\-\>$method being executed for security" );
-    $level = eval { $pkg->$method({ class     => $class, 
-                                    object_id => $oid,
-                                    user      => $user, 
-                                    group     => $group }) };
-    if ( $@ ) {
-      push @error_list, $class->_assemble_error_message( scalar @error_list + 1 );
-      _w( 0, "ERROR trying to execute code: $@" );
+    if ( ref $init->{code} eq 'ARRAY' ) {
+        my ( $pkg, $method ) = @{ $init->{code} };
+        DEBUG() && _w( 1, "$pkg\-\>$method being executed for security" );
+        $level = eval { $pkg->$method({ class     => $class, 
+                                        object_id => $oid,
+                                        user      => $user, 
+                                        group     => $group }) };
+        if ( $@ ) {
+            push @error_list, $class->_assemble_error_message( scalar @error_list + 1 );
+            _w( 0, "ERROR trying to execute code: $@" );
+        }
+        DEBUG() && _w( 1, "Result of code:\n", Dumper( $level ) );
     }
-    DEBUG() && _w( 1, "Result of code:\n", Dumper( $level ) );
-  }
 
-  # Go through each scope specified in the init and evaluate the
-  # specification for initial security. 
+    # Go through each scope specified in the init and evaluate the
+    # specification for initial security. 
 
-  else {
+    else {
 
-   # Create a list of the group_id for ez-reference
+        # Create a list of the group_id for ez-reference
 
-    my @gid = map { $_->{group_id} } @{ $group };
+        my @gid = map { $_->{group_id} } @{ $group };
 
-  SCOPE:
-    foreach my $scope ( keys %{ $init } ) {
-      my $todo = $init->{ $scope };
-      next unless ( $todo );
-      DEBUG() && _w( 1, "Determining security level for $scope" );
+SCOPE:
+        foreach my $scope ( keys %{ $init } ) {
+            my $todo = $init->{ $scope };
+            next unless ( $todo );
+            DEBUG() && _w( 1, "Determining security level for $scope" );
 
-      # If our level assignment looks like this:
-      # creation_security => {
-      #  ...,
-      #  g => { 3 => WRITE },
-      #  ...,
-      # },
-      # 
-      # Then we want to do the assignments for the IDs in that scope
-
-      if ( ref $todo eq 'HASH' ) {
-        $level->{ $scope } = { map { $_ => $LEVEL_VERBOSE{ uc $todo->{$_} } } 
-                               keys %{ $todo } };
-     }
+            # If our level assignment looks like this:
+            # creation_security => {
+            #  ...,
+            #  g => { 3 => WRITE },
+            #  ...,
+            # },
+            # 
+            # Then we want to do the assignments for the IDs in that scope
+            
+            if ( ref $todo eq 'HASH' ) {
+                $level->{ $scope } = { map { $_ => $LEVEL_VERBOSE{ uc $todo->{$_} } } 
+                                           keys %{ $todo } };
+            }
      
-     # Otherwise it will look like this:
-     # creation_security => {
-     #  ...,
-     #  g => 'WRITE',
-     #  ...,
-     # },
-     # 
-     # Which means we'd want to apply WRITE for all the groups
-     # this user belongs to. Be careful with this! (remember that 'public'
-     # is a group, too).
+            # Otherwise it will look like this:
+            # creation_security => {
+            #  ...,
+            #  g => 'WRITE',
+            #  ...,
+            # },
+            # 
+            # Which means we'd want to apply WRITE for all the groups
+            # this user belongs to. Be careful with this! (remember that 'public'
+            # is a group, too).
 
-      else {
-        $level->{w} = $LEVEL_VERBOSE{ uc $todo }                        if ( $scope eq 'w' );
-        $level->{u} = { $user->id() => $LEVEL_VERBOSE{ uc $todo } }     if ( $scope eq 'u' );
-        $level->{g} = { map { $_ => $LEVEL_VERBOSE{ uc $todo } } @gid } if ( $scope eq 'g' );
-      }
+            else {
+                $level->{w} = $LEVEL_VERBOSE{ uc $todo }                        if ( $scope eq 'w' );
+                $level->{u} = { $user->id() => $LEVEL_VERBOSE{ uc $todo } }     if ( $scope eq 'u' );
+                $level->{g} = { map { $_ => $LEVEL_VERBOSE{ uc $todo } } @gid } if ( $scope eq 'g' );
+            }
+        }
+        DEBUG() && _w( 1, "Level assigned:\n", Dumper( $level ) );
     }
-    DEBUG() && _w( 1, "Level assigned:\n", Dumper( $level ) );
-  }
 
-  # Now that \%level is all setup, process it
+    # Now that \%level is all setup, process it
 
- # Ensure that this is a *$class* (this was the focus of bugs earlier,
- # exhibited by something in the sys_security table that looks like
- # "This::Class=HASH(0x8bb7028)"
+    # Ensure that this is a *$class* (this was the focus of bugs earlier,
+    # exhibited by something in the sys_security table that looks like
+    # "This::Class=HASH(0x8bb7028)"
 
-  my $obj_class = ref $class || $class;
+    my $obj_class = ref $class || $class;
 
-  # First do WORLD 
+    # First do WORLD 
 
-  $level->{w} ||= $INITIAL_SECURITY_DEFAULT;
-  eval { $class->set_item_security({ 
+    $level->{w} ||= $INITIAL_SECURITY_DEFAULT;
+    eval { $class->set_item_security({ 
                    class          => $obj_class, 
                    object_id      => $oid, 
                    security_level => $level->{w},
                    scope          => SEC_SCOPE_WORLD }) };
-  if ( $@ ) {
-    push @error_list, $class->_assemble_error_message( scalar @error_list + 1 );
-  }
-  DEBUG() && _w( 1, "Set initial security for WORLD to $level" );
+    if ( $@ ) {
+        push @error_list, $class->_assemble_error_message( scalar @error_list + 1 );
+    }
+    DEBUG() && _w( 1, "Set initial security for WORLD to $level" );
 
-  # Doing the user and group perms is identical, so we don't 
-  # need to partition by scope for them 
+    # Doing the user and group perms is identical, so we don't 
+    # need to partition by scope for them 
 
-  # Note that we're relying on the fact that u => SEC_SCOPE_USER and 
-  # g  => SEC_SCOPE_GROUP; if this changes we'll have to do a little
-  # mapping from the scopes in $level to the actual scope values
+    # Note that we're relying on the fact that u => SEC_SCOPE_USER and 
+    # g  => SEC_SCOPE_GROUP; if this changes we'll have to do a little
+    # mapping from the scopes in $level to the actual scope values
 
-  foreach my $scope ( ( SEC_SCOPE_USER, SEC_SCOPE_GROUP ) ) {
-    foreach my $id ( keys %{ $level->{ $scope } } ) {
-      eval { $class->set_item_security({ 
+    foreach my $scope ( ( SEC_SCOPE_USER, SEC_SCOPE_GROUP ) ) {
+        foreach my $id ( keys %{ $level->{ $scope } } ) {
+            eval { $class->set_item_security({ 
                        class          => $obj_class, 
                        object_id      => $oid, 
                        security_level => $level->{ $scope }->{ $id },
                        scope          => $scope, 
                        scope_id       => $id }) };
-      if ( $@ ) {
-        push @error_list, $class->_assemble_error_message( scalar @error_list + 1 );
-      }
-      DEBUG() && _w( 1, "Set initial security for $scope ($id) to $level->{$id}" );
+            if ( $@ ) {
+                push @error_list, $class->_assemble_error_message( scalar @error_list + 1 );
+            }
+            DEBUG() && _w( 1, "Set initial security for $scope ($id) to $level->{$id}" );
+        }
     }
-  }
 
-  if ( scalar @error_list ) {
-    $SPOPS::Error::system_msg = join "\n\n", @error_list;
-    _w( 0, $SPOPS::Error::system_msg );
-    die 'Set initial security failed for one or more items';
-  }
-  return 1;
+    if ( scalar @error_list ) {
+        $SPOPS::Error::system_msg = join "\n\n", @error_list;
+        _w( 0, $SPOPS::Error::system_msg );
+        die 'Set initial security failed for one or more items';
+    }
+    return 1;
 } 
 
 
 sub _assemble_error_message {
-  my ( $class, $count ) = @_;
-  my $value_list = ( ref $SPOPS::Error::extra->{value} ) 
-                     ? join( ' // ', @{ $SPOPS::Error::extra->{value} } )
-                     : 'none reported';
-  return qq(Error $count\n$@\n$SPOPS::Error::system_msg\n) .
-         qq(SQL: $SPOPS::Error::extra->{sql}\nValues: $value_list);
+    my ( $class, $count ) = @_;
+    my $value_list = ( ref $SPOPS::Error::extra->{value} ) 
+                       ? join( ' // ', @{ $SPOPS::Error::extra->{value} } )
+                       : 'none reported';
+    return qq(Error $count\n$@\n$SPOPS::Error::system_msg\n) .
+           qq(SQL: $SPOPS::Error::extra->{sql}\nValues: $value_list);
 }
 
 1;
@@ -1059,7 +1061,7 @@ Examples:
  );
  my $rv = $item->set_security( scope => SEC_SCOPE_USER,
                                level => \%multiple );
- if ( $rv != scalar( keys %multiple ) ) {
+ if ( $rv != scalar keys %multiple ) {
    # error! security not set properly for all items
  }
 
@@ -1176,12 +1178,19 @@ for that scope will be entered.
 
 Parameters:
 
- class
-   Specify the class you want to use to create the initial security.
+=over 4
 
- oid
-   Specify the object ID you want to use to create the initial
-   security.
+=item *
+
+B<class>: Specify the class you want to use to create the initial
+security.
+
+=item *
+
+B<oid>: Specify the object ID you want to use to create the initial
+security.
+
+=back
 
 =head1 TAGS FOR SCOPE/LEVEL
 
@@ -1195,7 +1204,6 @@ any of your code. If you use the values directly, you will get what is
 coming to you.
 
 You can import individual tags like this:
-
 
  use SPOPS::Secure qw( SEC_SCOPE_WORLD );
 

@@ -1,6 +1,6 @@
 package SPOPS::Configure::DBI;
 
-# $Id: DBI.pm,v 1.8 2001/06/06 06:15:54 lachoy Exp $
+# $Id: DBI.pm,v 1.11 2001/07/11 03:52:35 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
@@ -8,9 +8,9 @@ use SPOPS::Configure;
 
 @SPOPS::Configure::DBI::ISA      = qw( SPOPS::Configure );
 $SPOPS::Configure::DBI::VERSION  = '1.7';
-$SPOPS::Configure::DBI::Revision = substr(q$Revision: 1.8 $, 10);
+$SPOPS::Configure::DBI::Revision = substr(q$Revision: 1.11 $, 10);
 
-# 
+
 # EVAL'D SUBROUTINES
 #
 # This is the routine we'll be putting in the namespace of all the
@@ -44,7 +44,7 @@ my $generic_linksto = <<'LINKSTO';
       }
       return \@obj;
     }
-     
+
     sub %%CLASS%%::%%LINKSTO_ALIAS%%_add {
       my ( $self, $link_id_list, $p ) = @_;
 
@@ -78,7 +78,7 @@ my $generic_linksto = <<'LINKSTO';
       }
       return $added;
     }
-     
+
     sub %%CLASS%%::%%LINKSTO_ALIAS%%_remove {
       my ( $self, $link_id_list, $p ) = @_;
 
@@ -124,51 +124,51 @@ LINKSTO
 #
 
 sub create_relationship {
-  my ( $class, $info ) = @_;
-  
-  # Before we do anything, call our parent
-  
-  $class->SUPER::create_relationship( $info );
+    my ( $class, $info ) = @_;
 
-  DEBUG() && _w( 1, "Adding DBI relationships for: ($info->{class})" );
-  
-  # Go through each alias defined in the config
-  # and process DBI-specific stuff
-  
-  my $this_class    = $info->{class};
-  my $this_id_field = $info->{id_field};
-  my $this_alias    = $info->{main_alias};
+    # Before we do anything, call our parent
 
-  # Process the 'links_to' aliases -- pretty straightforward (see pod)
+    $class->SUPER::create_relationship( $info );
 
-  if ( my $links_to = $info->{links_to} ) { 
-    while ( my ( $linksto_class, $table ) = each %{ $links_to } ) {
-      my $linksto_config   = $linksto_class->CONFIG;
-      my $linksto_alias    = $linksto_config->{main_alias};
-      my $linksto_id_field = $linksto_config->{id_field};
-      DEBUG() && _w( 1, "Aliasing $linksto_alias, ${linksto_alias}_add and ",
-                      "${linksto_alias}_remove in $this_class"  );
-      my $linksto_sub = $generic_linksto;
-      $linksto_sub =~ s/%%ID_FIELD%%/$this_id_field/g;
-      $linksto_sub =~ s/%%CLASS%%/$this_class/g;
-      $linksto_sub =~ s/%%LINKSTO_CLASS%%/$linksto_class/g;
-      $linksto_sub =~ s/%%LINKSTO_ALIAS%%/$linksto_alias/g;
-      $linksto_sub =~ s/%%LINKSTO_ID_FIELD%%/$linksto_id_field/g;
-      $linksto_sub =~ s/%%LINKSTO_TABLE%%/$table/g;
-      DEBUG() && _w( 2, "Now going to eval the routine:\n$linksto_sub" );
-      {
-        local $SIG{__WARN__} = sub { return undef };
-        eval $linksto_sub;
-      }
-      if ( $@ ) {
-        die "Cannot eval links_to routines into $this_class\n",
-            "Error: $@\n",
-            "Routines: $linksto_sub";
-      }
+    DEBUG() && _w( 1, "Adding DBI relationships for: ($info->{class})" );
+
+    # Go through each alias defined in the config
+    # and process DBI-specific stuff
+
+    my $this_class    = $info->{class};
+    my $this_id_field = $info->{id_field};
+    my $this_alias    = $info->{main_alias};
+
+    # Process the 'links_to' aliases -- pretty straightforward (see pod)
+
+    if ( my $links_to = $info->{links_to} ) { 
+        while ( my ( $linksto_class, $table ) = each %{ $links_to } ) {
+            my $linksto_config   = $linksto_class->CONFIG;
+            my $linksto_alias    = $linksto_config->{main_alias};
+            my $linksto_id_field = $linksto_config->{id_field};
+            DEBUG() && _w( 1, "Aliasing $linksto_alias, ${linksto_alias}_add and ",
+                              "${linksto_alias}_remove in $this_class"  );
+            my $linksto_sub = $generic_linksto;
+            $linksto_sub =~ s/%%ID_FIELD%%/$this_id_field/g;
+            $linksto_sub =~ s/%%CLASS%%/$this_class/g;
+            $linksto_sub =~ s/%%LINKSTO_CLASS%%/$linksto_class/g;
+            $linksto_sub =~ s/%%LINKSTO_ALIAS%%/$linksto_alias/g;
+            $linksto_sub =~ s/%%LINKSTO_ID_FIELD%%/$linksto_id_field/g;
+            $linksto_sub =~ s/%%LINKSTO_TABLE%%/$table/g;
+            DEBUG() && _w( 2, "Now going to eval the routine:\n$linksto_sub" );
+            {
+                local $SIG{__WARN__} = sub { return undef };
+                eval $linksto_sub;
+            }
+            if ( $@ ) {
+                die "Cannot eval links_to routines into $this_class\n",
+                    "Error: $@\n",
+                    "Routines: $linksto_sub";
+            }
+        }
     }
-  }
-  DEBUG() && _w( 1, "Finished adding DBI relationships for ($info->{class})" );
-  return $this_class;
+    DEBUG() && _w( 1, "Finished adding DBI relationships for ($info->{class})" );
+    return $this_class;
 }
 
 1;
@@ -183,7 +183,14 @@ SPOPS::Configure::DBI - Define additional configuration methods
 
 =head1 SYNOPSIS
 
-  my $init_classes = SPOPS::Configure::DBI->parse_config( { config => $CONFIG->{SPOPS} } );
+ SPOPS::Configure::DBI->create_relationship( $all_spops_conf->{myobject} );
+
+=head IMPORTANT NOTE
+
+SPOPS::Configure and SPOPS::Configure::DBI may be changing radically
+in the near future (July/August 2001). We will try to maintain
+backward compatibility with all changes, but just be aware they are
+coming.
 
 =head1 DESCRIPTION
 
@@ -203,8 +210,8 @@ should be quicker and more efficient. So we will try it this way.
 
 B<create_relationship( $spops_config )>
 
-Get the config and plow through the SPOPS classes, seeing if 
-any of them have the B<links_to> key defined. If so, we 
+Get the config and plow through the SPOPS classes, seeing if
+any of them have the B<links_to> key defined. If so, we
 create three subroutines with the proper info.
 
 The first is named '${links_to}' and simply returns an arrayref
@@ -250,6 +257,42 @@ Examples:
  >> 3 // 5 // 7 // 9 // 23
 
 =head1 CONFIGURATION FIELDS EXPLAINED
+
+B<base_table> ($) (used by SPOPS::DBI)
+
+Table name for data to be stored.
+
+B<sql_defaults> (\@) (used by SPOPS::DBI)
+
+List of fields that have defaults defined in the SQL table. For
+instance:
+
+   active   CHAR(3) DEFAULT 'yes',
+
+After L<SPOPS::DBI> fetches a record, it then checks to see if there
+are any defaults for the record and if so it refetches the object to
+ensure that the data in the object and the data in the database are
+synced.
+
+B<field_alter> (\%) (used by SPOPS::DBI)
+
+Allows you to define different formatting behaviors for retrieving
+fields. For instance, if you want dates formatted in a certain manner
+in MySQL, you can do something like:
+
+ field_alter => { posted_on => q/DATE_FORMAT( posted_on, '%M %e, %Y (%h:%i %p)' )/ }
+
+Which instead of the default time format:
+
+ 2000-09-26 10:29:00
+
+will return something like:
+
+ September 26, 2000 (10:29 AM)
+
+These are typically database-specific.
+
+=head2 Relationship Fields
 
 B<links_to> (\%)
 
@@ -298,8 +341,6 @@ it under the same terms as Perl itself.
 
 Chris Winters  <chris@cwinters.com>
 
-Ray Zimmerman <rz10@cornell.edu> and eliot night <enight@sporks.com>
-found a bug in the '_remove' clause generated, where a database handle
-being passed in was not passed along to the C<id_clause()> methods.
+See the L<SPOPS> module for the full author list.
 
 =cut

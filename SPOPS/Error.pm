@@ -1,13 +1,13 @@
 package SPOPS::Error;
 
-# $Id: Error.pm,v 1.6 2001/06/03 22:43:34 lachoy Exp $
+# $Id: Error.pm,v 1.7 2001/07/11 03:52:34 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
 @SPOPS::Error::ISA      = ();
 $SPOPS::Error::VERSION  = '1.7';
-$SPOPS::Error::Revision = substr(q$Revision: 1.6 $, 10);
+$SPOPS::Error::Revision = substr(q$Revision: 1.7 $, 10);
 
 $SPOPS::Error::user_msg   = undef;
 $SPOPS::Error::system_msg = undef;
@@ -30,43 +30,44 @@ sub clear {
 }
 
 sub get {
-  my ( $class ) = @_;
-  return { user_msg   => $SPOPS::Error::user_msg,
-           system_msg => $SPOPS::Error::system_msg,
-           type       => $SPOPS::Error::type,
-           package    => $SPOPS::Error::package,
-           filename   => $SPOPS::Error::filename,
-           line       => $SPOPS::Error::line,
-           method     => $SPOPS::Error::method,
-           extra      => $SPOPS::Error::extra };
+    my ( $class ) = @_;
+    return { user_msg   => $SPOPS::Error::user_msg,
+             system_msg => $SPOPS::Error::system_msg,
+             type       => $SPOPS::Error::type,
+             package    => $SPOPS::Error::package,
+             filename   => $SPOPS::Error::filename,
+             line       => $SPOPS::Error::line,
+             method     => $SPOPS::Error::method,
+             extra      => $SPOPS::Error::extra };
 }
 
+
 sub set {
-  my ( $class, $p ) = @_;
+    my ( $class, $p ) = @_;
 
-  # First clean everything up
+    # First clean everything up
 
-  $class->clear;
+    $class->clear;
 
- # Then set everything passed in
+    # Then set everything passed in
 
-  {
-    no strict 'refs';
-    foreach my $key ( keys %{ $p } ) {
-      DEBUG() && _w( 1, "Setting error $key to $p->{ $key }" );
-      ${ $class . '::' . $key } = $p->{ $key };
+    {
+        no strict 'refs';
+        foreach my $key ( keys %{ $p } ) {
+            DEBUG() && _w( 1, "Setting error $key to $p->{ $key }" );
+            ${ $class . '::' . $key } = $p->{ $key };
+        }
     }
-  }
 
-  # Set the caller information if the user didn't pass anything in
+    # Set the caller information if the user didn't pass anything in
 
-  unless ( $p->{package} and $p->{filename} and $p->{line} ) {
-    ( $SPOPS::Error::package, 
-      $SPOPS::Error::filename, 
-      $SPOPS::Error::line ) = caller;
-  }
+    unless ( $p->{package} and $p->{filename} and $p->{line} ) {
+        ( $SPOPS::Error::package, 
+          $SPOPS::Error::filename, 
+          $SPOPS::Error::line ) = caller;
+    }
 
-  return $class->get;
+    return $class->get;
 }
 
 1;

@@ -1,5 +1,98 @@
 Revision history for Perl extension SPOPS.
 
+0.41
+
+   Overall:
+
+     - Added iterators to scroll sensibly through resultsets
+
+     - Handful of bugfixes and changes.
+
+     - Removed the previously deprecated SPOPS::DBI::RandomCode; use
+     SPOPS::Key::Random instead
+
+     - Added more tests and new testing scheme
+
+   API CHANGES:
+
+     - The return value of 'save()' is now the object itself rather
+     than the object's ID. This allows you to perform chained method
+     calls like:
+
+       $obj->save()->perform_other_method();
+
+     Or even:
+
+       $film->add_director( 
+                 Director->new({ name => 'Peter Jackson' })->save );
+
+   * SPOPS.pm:
+
+     - Document special lazy loading column group '_id_field'
+
+     - Added 'is_saved()' which returns true if the object has been
+     saved. (Old method 'saved()' is still there but may be removed at
+     a later date.)
+
+     - Moved 'id()' method to be in the auto-generated class.
+
+     - Moved all credits to this file.
+
+   * SPOPS/Configure.pm:
+
+     - Ray Zimmerman <rz10@cornell.edu> caught a little bug in
+     'find_config_class()' that might have prevented
+     'SPOPS::Configure::DBI' from getting invoked properly, which
+     would have almost certainly led to mass hysteria.
+
+     - Ray Zimmerman also caught a typo in the hasa processing.
+
+     - Cleaned up docs.
+
+     - Moved 'id()' method from SPOPS.pm so a subclass won't get a
+     superclass's ID.
+
+   * SPOPS/Configure/DBI.pm:
+
+     - Cleaned up docs.
+
+   * SPOPS/Configure/Ruleset.pm:
+
+     - Cleaned up docs.
+
+   * SPOPS/DBI.pm:
+
+     - Implement special lazy loading column group '_id_field'
+
+     - Added 'fetch_iterator()' method which sets up the information
+     for the iterator (runs the query and gets the statement handle)
+     and returns it.
+
+     - Fixed wrong call in 'remove()' that was supposed to check
+     whether the object had been saved. (Thanks to Ray Zimmerman.)
+
+   * SPOPS/Iterator.pm:
+
+     - Added new class for an Iterator, or an object that allows you
+     to step through a resultset one at a time rather than forcing you
+     to retrieve the entire thing into memory at once. This class
+     defines the interface as well as the state variables and
+     methods. Implementing classes only need to implement three
+     methods to make it work. See docs (which are pretty complete) for
+     more info.
+
+   * SPOPS/Iterator/DBI.pm:
+
+     - Added SPOPS::DBI implementation of iterator.
+
+   * SPOPS/SQLInterface.pm:
+
+     - Allow 'from' to be a scalar in 'db_select()'
+
+     - Add 'group' -- mapping to 'GROUP BY' clause -- as a parameter
+     for 'db_select()'
+
+
 0.40  Sun Jun 10 14:50:20 EDT 2001
 
 Overall: 
@@ -21,7 +114,8 @@ Overall:
      database will thank you, as will your memory in a persistent
      environment. See 'LAZY LOADING' in SPOPS.pm for details. (Please
      note that this is a quite new feature and if you have any
-     problems and/or feedback, share!)
+     problems and/or feedback, share!) (Tip 'o the hat to Class::DBI
+     and Master Schwern for inspiration.)
 
    * Note: To use strict field checking, you need to set
      'strict_field' in your object configuration to a true value.
@@ -129,6 +223,7 @@ Specifics:
 
    * SPOPS/SQLInterface.pm: Documented the value 'sth' for the
      'return' parameter of db_select(). 
+
 
 0.39 Sun Feb 25 13:50:56 EST 2001
 
@@ -239,6 +334,7 @@ Specifics:
      <rik@sumthin.nu> to properly deal with GDBM_WRCREAT permissions
      on new GDBM databases.
 
+
 0.38  Thu Feb  1 00:54:03 EST 2001
 
      Modified format of all files in the module to be more
@@ -252,12 +348,14 @@ Specifics:
      'parse_into_hash' manipulations work as intended in
      SPOPS/Configure.pm.
 
+
 0.37  Wed Jan  3 22:53:46 EST 2001
 
      One small (but important) bugfix: an error in SPOPS::Secure was
      using an object as a classname and instead of putting
      'NS::MyObject' into the 'class' column of the 'sys_security'
      table, it put something like 'NS::MyObject=HASH(0x8b7bb12)'.
+
 
 0.36  Dec 20, 2000
 
@@ -282,6 +380,7 @@ Specifics:
      protected to be an SPOPS object -- you can protect (and check
      on) anything now, as long as you have a consistent categorical
      identifier and a unique identifier for each thing.
+
 
 0.35  Nov 18, 2000
 
@@ -311,6 +410,7 @@ Specifics:
      '$Id' and modified my email from chris@cwinters.com to
      chris@cwinters.com.
 
+
 0.34  Nov 10, 2000
 
      Switched some silly documentation stuff in all the files. Changed
@@ -321,6 +421,7 @@ Specifics:
      added some documentation to that file for the 'fetch_by'
      relationship. Modify SPOPS.pm to only respond to AUTOLOAD
      requests when the thing doing the requesting is an object.
+
 
 0.33  Oct 16, 2000
 
@@ -340,6 +441,7 @@ Specifics:
      localized $SIG{__WARN__} handler to throw out any messages passed
      to STDERR so we can rely on our own error reporting
 
+
 0.32  Sep 27, 2000
 
      Added lots of documentation (including a 'README' file) and made
@@ -357,6 +459,7 @@ Specifics:
 
      Added a couple of examples into the 'eg/' directory.
 
+
 0.31  Sep 26, 2000
 
      Removed the html encoding/decoding stuff from SPOPS.pm. Cleaned
@@ -366,6 +469,7 @@ Specifics:
 
      Added the necessary information to license SPOPS under the
      Artistic/GPL licenses. Woo-hoo!
+
 
 0.30  Sep 15, 2000
 
@@ -383,6 +487,7 @@ Specifics:
      inspection, you can give simple type names in your configuration
      ('int', 'num', 'char', etc.) and SPOPS will translate them to the
      DBI types for you.
+
 
 0.29  Sep 14, 2000
 
@@ -402,6 +507,7 @@ Specifics:
      SPOPS/GDBM.pm and for SPOPS/HashFile.pm. DBI tests are going to
      be a little more difficult...
 
+
 0.28  Sep 11, 2000
 
      Added the 'object_description' method to SPOPS.pm, since we
@@ -418,6 +524,7 @@ Specifics:
      subroutines if the configuration states that there is code behind
      the class.
 
+
 0.27  Aug 28, 2000
 
      Moved all the ruleset initialization configuration actions to
@@ -433,6 +540,7 @@ Specifics:
      eval'd subroutines for such relationships. This probably doesn't
      deserve its own 'version', but we need to get this out for
      something :)
+
 
 0.26  Aug 16, 2000
 
@@ -468,6 +576,7 @@ Specifics:
       to a separate class, which processes it and adds/modifies a
       full-text search engine. Cool stuff :)
 
+
 0.25  Aug 2, 2000
 
       Fixed a long-dormant buglet: this entire time, the
@@ -479,6 +588,7 @@ Specifics:
       and nothing to the others...  Good thing caching isn't activated
       yet :)
 
+
 0.24  Jul 26, 2000
 
       Fixed some typos in SPOPS/Configure/DBI.pm in the eval'd
@@ -489,6 +599,7 @@ Specifics:
       belong. Modified SPOPS/DBI.pm to take the old ID to update by in
       the save() method, so you can update the primary key field and
       still refer to the old ID.
+
 
 0.23  Jul 15, 2000
 
@@ -503,6 +614,7 @@ Specifics:
       function in perl. Also added some documentation to lots of
       modules. Added the module SPOPS/Impl/User.pm as an example of
       what a SPOPS user object looks like and should do.
+
 
 0.22  Jul 14, 2000
 
@@ -520,6 +632,7 @@ Specifics:
       out easily. Modify the SPOPS/Configure/DBI.pm _add and _remove
       aliases to take either a single ID or an arrayref of IDs.
 
+
 0.21  Jun 27, 2000
 
       Updated to put all internal dependencies (like @ISA) into
@@ -532,9 +645,11 @@ Specifics:
       particular record simply isn't found -- for some reason, I
       thought this had been in there since the beginning.
 
+
 0.20  Jun 18, 2000
 
       Paper bag fix in SPOPS/Secure.pm made by renaming a hash. <blush>
+
 
 0.19  Jun 18, 2000
 
@@ -552,6 +667,7 @@ Specifics:
        we going to fetch the object to login before we've logged in
        yet? :)
 
+
 0.18  Jun 14, 2000
 
        Modified how errors are handled within all SPOPS modules. This
@@ -565,6 +681,7 @@ Specifics:
        (versus a hashref) argument for the list of fields it will
        accept.
 
+
 0.17  Jun 13, 2000
 
        Modified all parameters to be passed as hashrefs rather than
@@ -577,6 +694,7 @@ Specifics:
        (again) to not warn with an error if it cannot find a value for
        a 'tmp_' variable. Modified the SPOPS/clone() method to force
        the ID field of the new object to be blank.
+
 
 0.16  Jun 9, 2000
 
@@ -595,6 +713,7 @@ Specifics:
        annoyingly...). Also tested out object security stuff -- works
        pretty well.
 
+
 0.15  Jun 8, 2000
 
         Modified the SQL-generation in SPOPS/Impl/SecurityObj.pm to
@@ -611,6 +730,7 @@ Specifics:
         security now seems to be working well, although more testing
         is certainly required :)
         
+
 0.14  Jun 7, 2000
 
         Allow user to pass information to fetch() method (via both fetch()
@@ -622,12 +742,14 @@ Specifics:
         however); SPOPS/Impl/SecurityObj.pm also had some changes to
         enable it to work with classes
 
+
 0.13  Jun 5, 2000
 
         Added SPOPS/Impl/SecurityObj.pm to the distribution as a DBI-based
         SPOPS object representing security; added methods and documentation
         to SPOPS/Secure.pm; modified SPOPS/Configure.pm to allow multiple
         aliases per type in the 'has_a' descriptor.
+
 
 0.12  May 29, 2000
 
@@ -641,6 +763,7 @@ Specifics:
         thrown in SQLInterface to have the proper type and at least
         some semblance of informative messages.
 
+
 0.11  May 24, 2000
 
         Paper bag fix in SPOPS::Tie (changes weren't being tracked and
@@ -650,9 +773,11 @@ Specifics:
         routine created in SPOPS::Configure and eval'd for has_a now
         only tries a fetch if the ID value exists
 
+
 0.10  May 17, 2000 
 
         Polishing; things basically work
+
 
 0.01  May 12, 2000
 

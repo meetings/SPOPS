@@ -63,7 +63,7 @@ $data = {
                                      }
                          },
           'db_info' => {
-                         'username' => 'cwinters',
+                         'username' => 'foobar',
                          'db_owner' => '',
                          'password' => '',
                          'dsn' => 'DBI:mysql:database=mysql',

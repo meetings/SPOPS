@@ -1,117 +1,49 @@
-# $Id: Makefile.PL,v 1.4 2001/06/03 23:06:19 lachoy Exp $
+# $Id: Makefile.PL,v 1.5 2001/07/20 02:53:29 lachoy Exp $
 
+use strict;
 use ExtUtils::MakeMaker;
 
 # Ask the user for testing configuration information; save it in a
 # file and remove it if asked (since it will contain password info)
 
-my $EXTRA_INFO = '';
+my ( $EXTRA_INFO );
 
-sub _get_response {
- my $msg     = shift;
- my $default = shift;
- print $msg;
- $default = join( ', ', @{ $default } ) if ( ref $default eq 'ARRAY' );
- my $show_default = $default || 'no default';
- print " <$show_default> ";
- my $response = <STDIN>;
- chomp $response;
- $response = $default if ( $response =~ /^\s*$/ );
- return $response;
-}
+ # Available SPOPS DBI drivers (when we start testing with more
+ # databases, we add them here)
 
-sub _set_sybase_env {
- my $syb_set = _get_response( "Current value of SYBASE environment variable: $ENV{SYBASE}. " . 
-                              'Is this correct? (Y/n)', 'Y' );
- if ( $syb_set !~ /\s*y\s*/i ) {
-   my $syb_env = _get_response( 'Enter a value for the SYBASE environment variable', '/opt/sybase' );
-   $EXTRA_INFO .= "ENV_SYBASE:     $syb_env\n";
- }
- print "\n";
-}
+my %SUPPORTED_DBD_DRIVERS = ( mysql  => 1, 
+                              Pg     => 1, 
+                              ASAny  => 1, 
+                              Sybase => \&_set_sybase_env );
 
  # File we write the configuration info to
- my $config_file = 'spops_test.conf';
 
- # Available SPOPS DBI drivers (when we start testing with more databases, 
- # we add them here)
- my %dbd_drivers = ( mysql => 1, ASAny => 1, Pg => 1, Sybase => \&_set_sybase_env );
+my $CONFIG_FILE = 'spops_test.conf';
 
- # Find out about a DBI test
- my ( $dbi_test, $gdbm_test, $dbi_driver, $dbi_dsn, $dbi_user, $dbi_password, $remove_conf );
- eval { require DBI };
- if ( $@ ) {
-   print "You don't appear to have DBI installed; skipping DBI tests.";
-   $dbi_test = 'n';
- }
- else {
-   $dbi_test  = lc _get_response( "Would you like to run tests using DBI? (Y/n)\n", 'Y' );
-   $dbi_test  =~ s/^\s*(\w)\s*$/$1/;
-   $dbi_test  = ( $dbi_test eq 'y' ) ? 'y' : 'n';
-   print "\n";
-   if ( $dbi_test eq 'y' ) {
-     my @dbd_available = ();
-     foreach my $dbd ( keys %dbd_drivers ) {
-       eval "require DBD::$dbd";
-       push @dbd_available, $dbd   unless ( $@ );
-     }
-     my $dbd_string = join ', ', sort @dbd_available;
-     $dbi_driver = _get_response( "Choose a DBI driver to test.\n" .
-                                  "(Available in SPOPS and on your system: $dbd_string)\n" );
-     unless ( $dbi_driver ) {
-       print "Skipping DBI tests since no driver specified.\n";
-       $dbi_test = 'n';
-       goto DBI_DONE;
-     }
-     
-     # Use this to ensure the environment is setup properly for the DBD driver to run
-     $dbd_drivers{ $dbi_driver }->()  if ( ref $dbd_drivers{ $dbi_driver } eq 'CODE' );
-     print "\n";
+{
 
-     $dbi_dsn = _get_response( "Please enter the tail end of the DSN to use for the driver you chose\n" .
-                               "('DBI:$dbi_driver:' will be prepended unless you specify a full DSN)\n",
-                               $ENV{DBI_DSN} );
-     unless ( $dbi_dsn ) {
-       print "Skipping DBI tests since DSN not fully specified\n";
-       $dbi_test = 'n';
-       goto DBI_DONE;
-     }
-     print "\n";
-     $dbi_dsn = "DBI:$dbi_driver:$dbi_dsn" if ( $dbi_dsn !~ /^dbi/i );
-     $dbi_user = _get_response( "Please enter a username to connect to the data source specified.\n" .
-                                "This user should be able to create and remove tables in the database.\n",
-                                $ENV{DBI_USER} );
-     $dbi_password = _get_response( "Please enter the password for user ($dbi_user)\n", $ENV{DBI_PASSWORD} );
-     print "\n";
-     print "Please note: you might want to remove the file \n",
-           "'$config_file' after the tests have run.\n\n";
-   }
- }
+    # If the config file already exists, then skip all this goop and write out the Makefile
 
-DBI_DONE:
+    if ( -f $CONFIG_FILE ) {
+        my $use_existing = lc get_response( 'You appear to have an existing configuration ' .
+                                            'file. Re-use it? (Y/n)', 'Y' );
+        if ( $use_existing eq 'y' ) {
+            write_makefile();
+            exit(0);
+        }
+    }
 
- # Find out about a GDBM test
- eval { require GDBM_File };
- if ( $@ ) {
-  print "You don't appear to have GDBM_File installed, skipping GDBM tests.";
-  $gdbm_test = 'n';
- } 
- else {
-   $gdbm_test = lc _get_response( "Would you like to run tests using GDBM? (Y/n)\n", 'Y' );
-   $gdbm_test =~ s/^\s*(\w)\s*$/$1/;
-   $gdbm_test = ( $gdbm_test eq 'y' ) ? 'y' : 'n';
- }
- print "\n";
+    my ( $dbi_test, $dbi_driver, $dbi_dsn, $dbi_user, $dbi_password ) = check_dbi();
 
- my $write_config = 'y';
- if ( $dbi_test eq 'n' and $gdbm_test eq 'n' ) {
-   print "Only the HashFile test will be run.\n";
-   $write_config = 'n';
- }
+    my ( $gdbm_test ) = check_gdbm(); 
 
- if ( $write_config eq 'y' ) {
-   open( CONF, "> $config_file" ) || die "Cannot open $config_file for writing! Error: $!";
-   print CONF <<CONFIG;
+    if ( $dbi_test eq 'n' and $gdbm_test eq 'n' ) {
+        print "Only the HashFile test will be run.\n";
+        eval { unlink( $CONFIG_FILE ) };
+    }
+    else {
+        open( CONF, "> $CONFIG_FILE" ) || die "Cannot open $CONFIG_FILE for writing! Error: $!";
+        print CONF <<CONFIG;
 DBI_test:     $dbi_test
 DBI_driver:   $dbi_driver
 DBI_dsn:      $dbi_dsn
@@ -120,17 +52,127 @@ DBI_password: $dbi_password
 GDBM_test:    $gdbm_test
 $EXTRA_INFO
 CONFIG
- }
+    }
+
+    write_makefile();
+}
+
+
 
 # See lib/ExtUtils/MakeMaker.pm for details of how to influence
 # the contents of the Makefile that is written.
-WriteMakefile(
-    'NAME'	=> 'SPOPS',
+
+sub write_makefile {
+  WriteMakefile(
+    'NAME'         => 'SPOPS',
     'VERSION_FROM' => 'SPOPS.pm',
-    'AUTHOR' => 'Chris Winters <chris@cwinters.com>',
-    'ABSTRACT' => 'Data abstraction layer used for object persistence and security',
-    'PREREQ_PM' => { 'Storable'     => 1.00,
-                     'Date::Format' => 2.09,
-                     'Data::Dumper' => undef,
-                     'Date::Calc'   => 4.3 },
-);
+    'AUTHOR'       => 'Chris Winters <chris@cwinters.com>',
+    'ABSTRACT'     => 'Data abstraction layer used for object persistence and security',
+    'PREREQ_PM'    => { 'Storable'     => 1.00,
+                        'Test::More'   => 0.07,
+                        'Date::Format' => 2.09,
+                        'Data::Dumper' => undef,
+                        'Date::Calc'   => 4.3 } );
+}
+
+
+# Generic routine to read a response from the command-line (defaults,
+# etc.) Note that return value has whitespace at the end/beginning of
+# the routine trimmed.
+
+sub get_response {
+    my ( $msg, $default ) = @_;
+    print $msg;
+    $default = join( ', ', @{ $default } ) if ( ref $default eq 'ARRAY' );
+    my $show_default = $default || 'no default';
+    print " <$show_default> ";
+    my $response = <STDIN>;
+    chomp $response;
+    $response = $default if ( $response =~ /^\s*$/ );
+    $response =~ s/^\s+//;
+    $response =~ s/\s+$//;
+    return $response;
+}
+
+
+# Set the sybase environment as necessary
+
+sub set_sybase_env {
+    my $syb_set = lc get_response( "Current value of SYBASE environment variable: $ENV{SYBASE}. " . 
+                                   'Is this correct? (Y/n)', 'Y' );
+    if ( $syb_set eq 'y' ) {
+        my $syb_env = get_response( 'Enter a value for the SYBASE environment variable', '/opt/sybase' );
+        $EXTRA_INFO .= "ENV_SYBASE:     $syb_env\n";
+    }
+    print "\n";
+}
+
+
+# Find out about a DBI test
+
+sub check_dbi {
+    my ( $dbi_test, $dbi_driver, $dbi_dsn, $dbi_user, $dbi_pass );
+    eval { require DBI };
+    if ( $@ ) {
+        print "You don't appear to have DBI installed; skipping DBI tests.";
+        return ( 'n' );
+    }
+    $dbi_test  = lc get_response( "Would you like to run tests using DBI? (Y/n)\n", 'Y' );
+    if ( $dbi_test ne 'y' ) {
+        return ( 'n' );
+    }
+    print "\n";
+    my @dbd_available = ();
+    foreach my $dbd ( keys %SUPPORTED_DBD_DRIVERS ) {
+        eval "require DBD::$dbd";
+        push @dbd_available, $dbd   unless ( $@ );
+    }
+    my $dbd_string = join ', ', sort @dbd_available;
+    $dbi_driver = get_response( "Choose a DBI driver to test.\n" .
+                                "(Available in SPOPS and on your system: $dbd_string)\n" );
+    unless ( $dbi_driver ) {
+        print "Skipping DBI tests since no driver specified.\n";
+        return ( 'n' );
+    }
+
+    # Use this to ensure the environment is setup properly for the
+    # DBD driver to run
+
+    if ( ref $SUPPORTED_DBD_DRIVERS{ $dbi_driver } eq 'CODE' ) {
+        $SUPPORTED_DBD_DRIVERS{ $dbi_driver }->();
+    }
+    print "\n";
+
+    $dbi_dsn = get_response( "Please enter the tail end of the DSN to use for the driver you chose\n" .
+                             "('DBI:$dbi_driver:' will be prepended unless you specify a full DSN)\n",
+                             $ENV{DBI_DSN} );
+    unless ( $dbi_dsn ) {
+        print "Skipping DBI tests since DSN not fully specified\n";
+        return ( 'n' );
+    }
+    print "\n";
+    $dbi_dsn = "DBI:$dbi_driver:$dbi_dsn" if ( $dbi_dsn !~ /^dbi/i );
+    $dbi_user = get_response( "Please enter a username to connect to the data source specified.\n" .
+                              "This user should be able to create and remove tables in the database.\n",
+                              $ENV{DBI_USER} );
+    $dbi_pass = get_response( "Please enter the password for user ($dbi_user)\n", $ENV{DBI_PASSWORD} );
+    print "\n";
+    print "Please note: you might want to remove the file \n",
+          "'$CONFIG_FILE' after the tests have run since it \n",
+          "contains user/password information.\n\n";
+    return ( 'y', $dbi_driver, $dbi_dsn, $dbi_user, $dbi_pass );
+}
+
+
+# Find out about a GDBM test
+
+sub check_gdbm {
+    eval { require GDBM_File };
+    if ( $@ ) {
+        print "You don't appear to have GDBM_File installed, skipping GDBM tests.";
+        return ( 'n' );
+    } 
+    my $gdbm_test = lc get_response( "Would you like to run tests using GDBM? (Y/n)\n", 'Y' );
+    print "\n";
+    return ( $gdbm_test );
+}

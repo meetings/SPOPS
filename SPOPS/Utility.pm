@@ -1,6 +1,6 @@
 package SPOPS::Utility;
 
-# $Id: Utility.pm,v 1.5 2001/06/03 22:43:34 lachoy Exp $
+# $Id: Utility.pm,v 1.8 2001/07/19 17:19:50 lachoy Exp $
 
 use strict;
 use Date::Format  qw( time2str );
@@ -8,7 +8,7 @@ use Date::Calc    ();
 
 @SPOPS::Utility::ISA      = qw();
 $SPOPS::Utility::VERSION  = '1.7';
-$SPOPS::Utility::Revision = substr(q$Revision: 1.5 $, 10);
+$SPOPS::Utility::Revision = substr(q$Revision: 1.8 $, 10);
 
 
 # Return a random code of length $length. If $opt is 'mixed', then the
@@ -17,14 +17,14 @@ $SPOPS::Utility::Revision = substr(q$Revision: 1.5 $, 10);
 # Signature: $code = $class->generate_random_code( $length, [ 'mixed' ] );
 
 sub generate_random_code {
-  my ( $class, $length, $opt ) = @_;
-  return undef unless ( $length );
-  if ( $opt eq 'mixed' ) {
-    return join '', map { ( $_ % 2 == 0 )
-                             ? chr( int( rand(26) ) + 65 )
-                             : chr( int( rand(26) ) + 97 ) } ( 1 .. $length );
-  }
-  return join '', map { chr( int( rand(26) ) + 65 ) } ( 1 .. $length );
+    my ( $class, $length, $opt ) = @_;
+    return undef unless ( $length );
+    if ( $opt eq 'mixed' ) {
+        return join '', map { ( $_ % 2 == 0 )
+                              ? chr( int( rand(26) ) + 65 )
+                              : chr( int( rand(26) ) + 97 ) } ( 1 .. $length );
+    }
+    return join '', map { chr( int( rand(26) ) + 65 ) } ( 1 .. $length );
 }
 
 
@@ -33,10 +33,10 @@ sub generate_random_code {
 # Signature: $crypted = $class->crypt_it( $text );
 
 sub crypt_it {
-  my ( $class, $text ) = @_;
-  return undef unless ( $text );
-  my $salt = $class->generate_random_code( 2 );
-  return crypt( $text, $salt );
+    my ( $class, $text ) = @_;
+    return undef unless ( $text );
+    my $salt = $class->generate_random_code( 2 );
+    return crypt( $text, $salt );
 }
 
 
@@ -46,10 +46,10 @@ sub crypt_it {
 #                                            time => $time_in_seconds } ] );
 
 sub now {
-  my ( $class, $p ) = @_;
-  $p->{format} ||= '%Y-%m-%d %T';
-  $p->{time}   ||= time;
-  return time2str( $p->{format}, $p->{time} );
+    my ( $class, $p ) = @_;
+    $p->{format} ||= '%Y-%m-%d %T';
+    $p->{time}   ||= time;
+    return time2str( $p->{format}, $p->{time} );
 }
 
 
@@ -68,44 +68,44 @@ sub today { return $_[0]->now( { format => '%Y-%m-%e' } ); }
 #                                       end   => DATE_FORMAT } );
 
 sub now_between_dates {
-  my ( $class, $p ) = @_;
-  return undef unless ( $p->{begin} or $p->{end} ); 
-  my @now = Date::Calc::Today();
-  my ( $begin_days, $end_days ) = undef;
-  my ( $begin_date, $end_date );
+    my ( $class, $p ) = @_;
+    return undef unless ( $p->{begin} or $p->{end} ); 
+    my @now = Date::Calc::Today();
+    my ( $begin_days, $end_days ) = undef;
+    my ( $begin_date, $end_date );
 
-  if ( $p->{begin} ) {
-    if ( ref $p->{begin} eq 'ARRAY' ) {
-      $begin_date = $p->{begin};
-    }
-    else {
-      @{ $begin_date } = $p->{begin} =~ /^(\d+)\-(\d+)\-(\d+)/;
-    }
+    if ( $p->{begin} ) {
+        if ( ref $p->{begin} eq 'ARRAY' ) {
+            $begin_date = $p->{begin};
+        }
+        else {
+            @{ $begin_date } = $p->{begin} =~ /^(\d+)\-(\d+)\-(\d+)/;
+        }
     
-   # Good result: 1 (meaning 'begin' is one day before 'now')
+        # Good result: 1 (meaning 'begin' is one day before 'now')
 
-    $begin_days = Date::Calc::Delta_Days( @{ $begin_date }, @now );
-    return undef if ( $begin_days < 0 );
-  }
-
-  if ( $p->{end} ) {
-    if ( ref $p->{end} eq 'ARRAY' ) {
-      $end_date = $p->{end};
-    }
-    else {
-      @{ $end_date } = $p->{end} =~ /^(\d+)\-(\d+)\-(\d+)/;
+        $begin_days = Date::Calc::Delta_Days( @{ $begin_date }, @now );
+        return undef if ( $begin_days < 0 );
     }
 
-    # Good result: 1 (meaning 'now' is one day before begin)
+    if ( $p->{end} ) {
+        if ( ref $p->{end} eq 'ARRAY' ) {
+            $end_date = $p->{end};
+        }
+        else {
+            @{ $end_date } = $p->{end} =~ /^(\d+)\-(\d+)\-(\d+)/;
+        }
 
-    $end_days = Date::Calc::Delta_Days( @now, @{ $end_date } );
-    return undef if ( $end_days < 0 );
-  }
-  return 1 unless ( defined $begin_days and defined $end_days );
+        # Good result: 1 (meaning 'now' is one day before begin)
 
-  my $spread_days = Date::Calc::Delta_Days( @{ $begin_date }, @{ $end_date } );
-  return undef if ( $end_days - $begin_days > $spread_days );
-  return 1;
+        $end_days = Date::Calc::Delta_Days( @now, @{ $end_date } );
+        return undef if ( $end_days < 0 );
+    }
+    return 1 unless ( defined $begin_days and defined $end_days );
+    
+    my $spread_days = Date::Calc::Delta_Days( @{ $begin_date }, @{ $end_date } );
+    return undef if ( $end_days - $begin_days > $spread_days );
+    return 1;
 }
 
 
@@ -115,36 +115,37 @@ sub now_between_dates {
 #   remove => \@: items not in \@new but in \@existing  
 
 sub list_process {
-  my ( $class, $exist, $new ) = @_;
+    my ( $class, $exist, $new ) = @_;
 
-  # Create a hash of the existing items
+    # Create a hash of the existing items
 
-  my %existing = map { $_ => 1 } @{ $exist };
-  my ( @k, @a );
+    my %existing = map { $_ => 1 } @{ $exist };
+    my ( @k, @a );
 
-  # Go through the new items...
+    # Go through the new items...
 
-  foreach my $new_id ( @{ $new } ) {
+    foreach my $new_id ( @{ $new } ) {
+
+        #... if it's existing, track it as a keeper and remove it
+        # from the existing pile
+
+        if ( $existing{ $new_id } ) {
+            delete $existing{ $new_id };
+            push @k, $new_id;
+        }
     
-    #... if it's existing, track it as a keeper
-    # and remove it from the existing pile
+        # otherwise, track it as an add
 
-    if ( $existing{ $new_id } ) {
-      delete $existing{ $new_id };
-      push @k, $new_id;
+        else {
+            push @a, $new_id;
+        }
     }
-    
-    # otherwise, track it as an add
-    else {
-      push @a, $new_id;
-    }
-  }
 
-  # now, the only items left in %existing are the ones
-  # that were not specified in the new list; therefore,
-  # these should be removed
+    # now, the only items left in %existing are the ones
+    # that were not specified in the new list; therefore,
+    # these should be removed
 
-  return { add => \@a, keep => \@k, remove => [ keys %existing ] };
+    return { add => \@a, keep => \@k, remove => [ keys %existing ] };
 }
 
 1;
@@ -203,11 +204,17 @@ your needs.
 
 Parameters:
 
- format
-   strftime format
+=over 4
 
- time
-   return of time command (or manipulation thereof); see 'perldoc -f time'
+=item *
+
+B<format>: strftime format
+
+=item *
+
+B<time>: return of time command (or manipulation thereof); see C<perldoc -f time>
+
+=back
 
 B<today()>
 
@@ -259,17 +266,10 @@ Copyright (c) 2001 intes.net, inc.. All rights reserved.
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself.
 
-=head1 MORE INFORMATION
-
-See the website:
-
- http://www.openinteract.org/SPOPS/
-
 =head1 AUTHORS
 
 Chris Winters <chris@cwinters.com>
 
-Christian Lemburg <lemburg@aixonix.de> successfully argued that these
-methods should be removed from SPOPS.pm
+See the L<SPOPS> module for the full author list.
 
 =cut

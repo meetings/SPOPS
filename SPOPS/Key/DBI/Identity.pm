@@ -1,13 +1,13 @@
 package SPOPS::Key::DBI::Identity;
 
-# $Id: Identity.pm,v 1.7 2001/06/03 22:43:34 lachoy Exp $
+# $Id: Identity.pm,v 1.9 2001/07/08 21:12:02 lachoy Exp $
 
 use strict;
 use SPOPS  qw( _w DEBUG );
 
 @SPOPS::Key::DBI::Identity::ISA      = ();
 $SPOPS::Key::DBI::Identity::VERSION  = '1.7';
-$SPOPS::Key::DBI::Identity::Revision = substr(q$Revision: 1.7 $, 10);
+$SPOPS::Key::DBI::Identity::Revision = substr(q$Revision: 1.9 $, 10);
 
 # Ensure only POST_fetch_id used
 
@@ -17,24 +17,24 @@ sub pre_fetch_id  { return undef }
 # Retrieve the IDENTITY value
 
 sub post_fetch_id { 
-  my ( $self, $p ) = @_;
-  eval { $p->{statement}->finish };
-  my $sql = 'SELECT @@IDENTITY';
-  my ( $sth );
-  eval {
-    $sth = $p->{db}->prepare( $sql );
-    $sth->execute;
-  };
+    my ( $self, $p ) = @_;
+    eval { $p->{statement}->finish };
+    my $sql = 'SELECT @@IDENTITY';
+    my ( $sth );
+    eval {
+        $sth = $p->{db}->prepare( $sql );
+        $sth->execute;
+    };
   
-  # Don't clear the error so it will persist from SELECT statement
+    # Don't clear the error so it will persist from SELECT statement
 
-  if ( $@ ) {   
-    $SPOPS::Error::user_msg   = 'Record saved, but ID of record unknown';;
-    die $SPOPS::Error::user_msg;
-  }
-  my $row = $sth->fetchrow_arrayref;
-  DEBUG() && _w( 1, "Found inserted ID ($row->[0])" );
-  return $row->[0];
+    if ( $@ ) {   
+        $SPOPS::Error::user_msg   = 'Record saved, but ID of record unknown';;
+        die $SPOPS::Error::user_msg;
+    }
+    my $row = $sth->fetchrow_arrayref;
+    DEBUG() && _w( 1, "Found inserted ID ($row->[0])" );
+    return $row->[0];
 }
 
 1;
@@ -102,5 +102,7 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
+
+See the L<SPOPS> module for the full author list.
 
 =cut
