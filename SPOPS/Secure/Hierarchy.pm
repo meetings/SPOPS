@@ -1,6 +1,6 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 3.4 2004/05/11 02:09:39 lachoy Exp $
+# $Id: Hierarchy.pm,v 3.5 2004/05/11 04:21:28 lachoy Exp $
 
 use strict;
 use base  qw( Exporter SPOPS::Secure );
@@ -16,7 +16,7 @@ use SPOPS::Secure::Util;
 my $log = get_logger();
 
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
-$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 
@@ -33,7 +33,7 @@ sub get_security {
 
     my ( $class, $oid ) = SPOPS::Secure::Util->find_class_and_oid( $item, $p );
     $log->is_info &&
-        $log->info( "Checking security for $class [$oid]" );
+        $log->info( "Checking security for [$class: $oid]" );
 
     # Punt the request back to our parent if we're getting security
     # explicitly for the ROOT_OBJECT, which generally only happens when
@@ -240,6 +240,12 @@ sub _get_hierarchy_parameters {
 sub _make_check_list {
     my ( $hierarchy_sep, $hierarchy_value ) = @_;
     my @check_list = ( $hierarchy_value );
+
+    # don't get into an infinite loop!
+    unless ( $hierarchy_value =~ m!$hierarchy_sep! ) {
+        return \@check_list;
+    }
+
     while ( $hierarchy_value ) {
         $hierarchy_value =~ s|^(.*)$hierarchy_sep.*$|$1|;
         push @check_list, $hierarchy_value    if ( $hierarchy_value );

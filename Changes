@@ -3,12 +3,25 @@ Revision history for Perl extension SPOPS.
 NOTE: All items with a leading 'SP-###' are issues in the JIRA issue
 tracking system. Learn more at http://jira.openinteract.org/
 
+0.85  Tue May 11 00:19:22 EDT 2004
+
+Overall:
+
+ * Small (but important!) fix for hierarchical security
+
+Individual:
+
+ * SPOPS/Secure/Hierarchy.pm:
+
+   - If there is no hierarchy separator in the value don't go into an
+   infinite loop hoping it will be there someday...
+
 
 0.84  Mon May 10 21:53:04 EDT 2004
 
 Overall:
 
-* Bunch of bugfixes
+ * Bunch of bugfixes
 
 Individual:
 

@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.35 2004/05/11 02:10:41 lachoy Exp $
+# $Id: SPOPS.pm,v 3.36 2004/05/11 04:21:27 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -15,8 +15,8 @@ use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 my $log = get_logger();
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.84';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.35 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.85';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.36 $ =~ /(\d+)\.(\d+)/);
 
 # DEPRECATED
 

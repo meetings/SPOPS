@@ -1,22 +1,22 @@
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         SPOPS
-version:      0.84
+version:      0.85
 version_from: SPOPS.pm
 installdirs:  site
 requires:
-    Devel::StackTrace:             0.9
+    Class::ISA:                    0.32
+    Storable:                      1
+    Class::Fields:                 0.14
+    Class::Factory:                1
     Log::Log4perl:                 0.35
-    Class::Accessor:               0.17
     Class::Date:                   1
     Test::More:                    0.41
-    Storable:                      1
-    Carp::Assert:                  0.17
-    Class::Fields:                 0.14
+    Devel::StackTrace:             0.9
     Data::Dumper:                  2
-    Log::Dispatch:                 2
+    Carp::Assert:                  0.17
     Time::Piece:                   1.07
-    Class::Factory:                1
-    Class::ISA:                    0.32
+    Log::Dispatch:                 2
+    Class::Accessor:               0.17
 
 distribution_type: module
 generated_by: ExtUtils::MakeMaker version 6.12
