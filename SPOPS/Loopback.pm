@@ -1,22 +1,31 @@
 package SPOPS::Loopback;
 
-# $Id: Loopback.pm,v 3.2 2002/09/11 12:45:20 lachoy Exp $
+# $Id: Loopback.pm,v 3.5 2002/09/16 20:35:42 lachoy Exp $
 
 use strict;
 use base qw( SPOPS );
+use Data::Dumper qw( Dumper );
+use SPOPS::Secure qw( :level );
 
-$SPOPS::Loopback::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Loopback::VERSION  = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 
 # Save objects here, indexed by ID.
 
 my %BY_ID = ();
 
 sub fetch {
-    my ( $class, $id ) = @_;
+    my ( $class, $id, $p ) = @_;
     return undef unless ( $class->pre_fetch_action( $id ) );
-    my $object = ( $BY_ID{ $class . $id } )
-                 ? $class->new( $BY_ID{ $class . $id } )
+    my $level = SEC_LEVEL_WRITE;
+    if ( ! $p->{skip_security} and $class->isa( 'SPOPS::Secure' ) ) {
+        $level = $class->check_action_security({ id       => $id,
+                                                 DEBUG    => $p->{DEBUG},
+                                                 required => SEC_LEVEL_READ });
+    }
+    my $object = ( exists $BY_ID{ $class }->{ $id } )
+                 ? $class->new( $BY_ID{ $class }->{ $id } )
                  : $_[0]->new({ id => $id });
+    $object->{tmp_security_level} = $level;
     return undef unless ( $object->post_fetch_action );
     $object->has_save;
     $object->clear_change;
@@ -27,23 +36,25 @@ sub fetch {
 sub fetch_group {
     my ( $class, $params ) = @_;
     $params ||= {};
-    my @data_list = ();
-    if ( scalar keys %BY_ID == 0 ) {
-        @data_list = map { { id => $_ } } ( 1 .. 15 );
+    my @id_list = ();
+    if ( scalar keys %{ $BY_ID{ $class } } == 0 ) {
+        @id_list = ( 1 .. 15 );
     }
     elsif ( $params->{where} ) {
         my ( $field, $value ) = split /\s*=\s*/, $params->{where};
         $value =~ s/[\'\"]//g;
-        foreach my $data ( values %BY_ID ) {
+        my $id_field = $class->id_field;
+        foreach my $id ( sort keys %{ $BY_ID{ $class } } ) {
+            my $data = $BY_ID{ $class }->{ $id };
             if ( exists $data->{ $field } and $data->{ $field } eq $value ) {
-                push @data_list, $data;
+                push @id_list, $id;
             }
         }
     }
     else {
-        @data_list = values %BY_ID;
+        @id_list = sort keys %{ $BY_ID{ $class } }
     }
-    return [ map { $class->new( $_ ) } @data_list ];
+    return [ map { $class->fetch( $_ ) } @id_list ];
 }
 
 
@@ -56,15 +67,27 @@ sub fetch_iterator {
 
 
 sub save {
-    my ( $self ) = @_;
+    my ( $self, $p ) = @_;
+    $p ||= {};
     unless ( $self->pre_save_action({ is_add => $self->is_saved }) ) {
         return undef;
     }
-    unless ( $self->is_saved ) {
+    if ( $self->is_saved ) {
+        if ( ! $p->{skip_security} and $self->isa( 'SPOPS::Secure' ) ) {
+            $self->check_action_security({ DEBUG    => $p->{DEBUG},
+                                           required => SEC_LEVEL_WRITE });
+        }
+    }
+    else {
         $self->id( $self->pre_fetch_id );
         $self->id( $self->post_fetch_id ) unless ( $self->id );
     }
-    $BY_ID{ ref( $self ) . $self->id } = $self->as_data_only;
+    $BY_ID{ ref( $self ) }->{ $self->id } = $self->as_data_only;
+    #warn "Saved new object: ", Dumper( $self ), "\n";
+    unless ( $self->is_saved or $p->{skip_security} ) {
+        #warn "Calling create_initial_security()\n";
+        $self->create_initial_security;
+    }
     return undef unless ( $self->post_save_action );
     $self->has_save;
     $self->clear_change;
@@ -75,7 +98,7 @@ sub save {
 sub remove {
     my ( $self ) = @_;
     return undef unless ( $self->pre_remove_action );
-    delete $BY_ID{ ref( $self ) . $self->id };
+    delete $BY_ID{ ref( $self ) }->{ $self->id };
     return undef unless ( $self->post_remove_action );
     return 1
 }
@@ -83,8 +106,8 @@ sub remove {
 
 sub peek {
     my ( $class, $id, $field ) = @_;
-    return undef unless ( $BY_ID{ $class . $id } );
-    return $BY_ID{ $class . $id }->{ $field }
+    return undef unless ( exists $BY_ID{ $class }->{ $id } );
+    return $BY_ID{ $class }->{ $id }{ $field }
 }
 
 1;

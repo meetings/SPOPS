@@ -72,7 +72,10 @@ SPOPS/Manual/Relationships.pod
 SPOPS/Manual/Security.pod
 SPOPS/Manual/Serialization.pod
 SPOPS/Secure.pm
+SPOPS/Secure/DBI.pm
 SPOPS/Secure/Hierarchy.pm
+SPOPS/Secure/Loopback.pm
+SPOPS/Secure/Util.pm
 SPOPS/SQLInterface.pm
 SPOPS/Tie.pm
 SPOPS/Tie/StrictField.pm
@@ -140,7 +143,10 @@ t/61_export_xml.t
 t/62_export_perl.t
 t/63_export_sql.t
 t/64_export_dbdata.t
+t/80_security.t
+t/81_security_hierarchical.t
 t/config.pl
 t/dbi_config.pl
 t/hash_file_test.perl
 t/SampleRuleset.pm
+t/SecurityCommon.pm

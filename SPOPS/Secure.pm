@@ -1,14 +1,13 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 3.0 2002/08/28 01:16:29 lachoy Exp $
+# $Id: Secure.pm,v 3.4 2002/09/16 20:37:14 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
 use vars  qw( $EMPTY );
-
 use Data::Dumper qw( Dumper );
 
-$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 # Stuff for security constants and exporting
 
@@ -68,6 +67,7 @@ my $INITIAL_SECURITY_DEFAULT = SEC_LEVEL_NONE;
 # situation
 
 require SPOPS::Exception::Security;
+require SPOPS::Secure::Util;
 
 ########################################
 # RETRIEVE SECURITY
@@ -90,8 +90,8 @@ require SPOPS::Exception::Security;
 
 sub check_action_security {
     my ( $self, $p ) = @_;
-
-    DEBUG() && _w( 3, "Trying to check security on: ", ( ref $self ) ? ref $self : $self,
+    DEBUG() && _w( 2, "Trying to check security on: ",
+                      ( ref $self ) ? ref $self : $self,
                       "with params: ", Dumper( $p ) );
 
     # since the assumption outlined above (only saved objects have ids)
@@ -122,9 +122,12 @@ sub check_action_security {
 
         $class = ref $self || $self;
         $id    = ( ref $self ) ? $self->id : $p->{id};
-        return SEC_LEVEL_WRITE unless ( $id );
-        DEBUG() && _w( 1, "Checking action on $class ($id) and required",
-                          "level is ($p->{required})" );
+        unless ( $id ) {
+            DEBUG() && _w( 1, "ID not found, returning WRITE security" );
+            return SEC_LEVEL_WRITE;
+        }
+        DEBUG() && _w( 2, "Checking action on $class [$id] and required",
+                          "level is [$p->{required}]" );
 
         # Calls to SPOPS::Secure->... note that we do not need to
         # explicitly pass in group/user information, since SPOPS::Secure
@@ -144,7 +147,8 @@ sub check_action_security {
 
     if ( $level < $p->{required} ) {
         $class->register_security_error({ class => $class, id => $id,
-                                          level => $level, required => $p->{required} });
+                                          level => $level,
+                                          required => $p->{required} });
     }
     return $level; # Rock and roll
 }
@@ -185,7 +189,7 @@ sub check_security {
     # If a user security level exists, return it
 
     if ( my $user_level = $sec_info->{ SEC_SCOPE_USER() } ) {
-        DEBUG() && _w( 1, "Return level ($user_level) at scope USER." );
+        DEBUG() && _w( 1, "Return level [$user_level] at scope USER." );
         return $user_level;
     }
 
@@ -198,12 +202,12 @@ sub check_security {
         my $group_level = $sec_info->{ SEC_SCOPE_GROUP() }{ $gid };
         next unless ( $group_level );
         $group_max = ( $group_level > $group_max ) ? $group_level : $group_max;
-        DEBUG() && _w( 1, "Level of GROUP ($gid) is ($group_level)" );
+        DEBUG() && _w( 1, "Level of GROUP [$gid] is [$group_level]" );
     }
     return $group_max  if ( $group_max );
 
     my $world_level = $sec_info->{ SEC_SCOPE_WORLD() };
-    DEBUG() && _w( 1,  "Return level ($world_level) at scope WORLD" );
+    DEBUG() && _w( 1,  "Return level [$world_level] at scope WORLD" );
     return $world_level;
 }
 
@@ -215,11 +219,8 @@ sub get_security {
 
     # Since we can pass in the class/oid, those take precedence
 
-    my $object_id = $p->{oid} || $p->{object_id};
-    my ( $class, $oid ) = $item->_get_object_info_for_security(
-                                             $p->{class}, $object_id );
+    my ( $class, $oid ) = SPOPS::Secure::Util->find_class_and_oid( $item, $p );
     DEBUG() && _w( 1, "Checking security for [$class] [$oid] with:\n", Dumper( $p ) );
-
     my ( $user, $group_list ) = $item->get_security_scopes( $p );
 
     if ( my $security_info = $item->_check_superuser( $user, $group_list ) ) {
@@ -229,7 +230,7 @@ sub get_security {
 
     my $sec_obj_class = $p->{security_object_class} ||
                         $item->global_security_object_class;
-    DEBUG() && _w( 1, "Using security object ($sec_obj_class)" );
+    DEBUG() && _w( 1, "Using security object [$sec_obj_class]" );
 
     # TODO: Revisit exception bubble up from here
 
@@ -268,12 +269,13 @@ sub get_security_scopes {
     elsif ( ! $p->{user} and ! $p->{group} ) {
         DEBUG() && _w( 1, "Neither user/group specified, using logins." );
         $user       = $item->global_user_current;
-        $group_list = $item->global_group_current;
+        $group_list = $item->global_group_current || [];
 
-        # If no user or group was passed in, and we cannot retrieve
-        # a user object with the global_user_current call, then
-        # all we want to get is the WORLD security level, which
-        # means we can skip the user/group_list stuff altogether
+        # If no user or group was passed in, and we cannot retrieve a
+        # user object with the global_user_current() or group objects
+        # with global_group_current(), then all we want to get is the
+        # WORLD security level, which means we can skip the
+        # user/group_list stuff altogether
 
         # NOTE: even tho it doesn't appear, there IS a dependency between
         # the next two clauses; that is, you *MUST NOT* check to see if
@@ -282,7 +284,7 @@ sub get_security_scopes {
         # will throw a 800-pound monkey wrench into operations.
         # We really need to look into that, it's quite brittle.
 
-        unless ( $user ) {
+        unless ( $user or scalar @{ $group_list } > 0 ) {
             DEBUG() && _w( 1, "No user or groups found." );
             $user       = undef;
             $group_list = undef;
@@ -320,9 +322,7 @@ sub create_initial_security {
 
     # Since we can pass in the class/oid, those take precedence
 
-    my $object_id = $p->{oid} || $p->{object_id};
-    my ( $class, $oid ) = $item->_get_object_info_for_security(
-                                        $p->{class}, $object_id );
+    my ( $class, $oid ) = SPOPS::Secure::Util->find_class_and_oid( $item, $p );
     DEBUG() && _w( 1, "Setting initial security for $class ($oid)" );
 
     # \%init describes the initial security to create for this object;
@@ -411,9 +411,15 @@ SCOPE:
             # (remember that 'public' is a group, too).
 
             else {
-                $level->{w} = $LEVEL_VERBOSE{ uc $todo }                        if ( $scope eq 'w' );
-                $level->{u} = { $user->id() => $LEVEL_VERBOSE{ uc $todo } }     if ( $scope eq 'u' );
-                $level->{g} = { map { $_ => $LEVEL_VERBOSE{ uc $todo } } @gid } if ( $scope eq 'g' );
+                if ( $scope eq 'w' ) {
+                    $level->{w} = $LEVEL_VERBOSE{ uc $todo };
+                }
+                elsif ( $scope eq 'u' and ref $user ) {
+                    $level->{u} = { $user->id() => $LEVEL_VERBOSE{ uc $todo } };
+                }
+                elsif ( $scope eq 'g' ) {
+                    $level->{g} = { map { $_ => $LEVEL_VERBOSE{ uc $todo } } @gid };
+                }
             }
         }
         DEBUG() && _w( 1, "Level assigned:\n", Dumper( $level ) );
@@ -447,6 +453,7 @@ SCOPE:
     # TODO: Should collect exceptions as we go?
 
     foreach my $scope ( ( SEC_SCOPE_USER, SEC_SCOPE_GROUP ) ) {
+        next unless ( ref $level->{ $scope } eq 'HASH' );
         foreach my $id ( keys %{ $level->{ $scope } } ) {
             $class->set_item_security({
                        class          => $obj_class,
@@ -484,10 +491,8 @@ sub set_security {
 
     # Since we can pass in the class/oid, those take precedence
 
-    my $object_id = $p->{oid} || $p->{object_id};
-    my ( $class, $oid ) = $item->_get_object_info_for_security(
-                                             $p->{class}, $object_id );
-    DEBUG() && _w( 1, "Checking security for $class ($oid)" );
+    my ( $class, $oid ) = SPOPS::Secure::Util->find_class_and_oid( $item, $p );
+    DEBUG() && _w( 1, "Checking security for $class [$oid]" );
 
     # If we were passed a particular scope, just return
     # the results of updating that information
@@ -569,8 +574,10 @@ SCOPE:
                                   scope          => $scope,
                                   security_level => $level->{ $scope } });
         }
-
-        _w( 0, "Cannot set security for scope <$scope> since it is not a WORLD/USER/GROUP" );
+        else {
+            _w( 0, "Cannot set security for scope [$scope] since it is not ",
+                    join( '/', SEC_SCOPE_WORLD, SEC_SCOPE_USER, SEC_SCOPE_GROUP ) );
+        }
     }
     return $count;
 }
@@ -583,9 +590,7 @@ sub set_item_security {
 
     # Since we can pass in the class/oid, those take precedence
 
-    my $object_id = $p->{oid} || $p->{object_id};
-    my ( $class, $oid ) = $item->_get_object_info_for_security(
-                                             $p->{class}, $object_id );
+    my ( $class, $oid ) = SPOPS::Secure::Util->find_class_and_oid( $item, $p );
     DEBUG() && _w( 1, "Modifying scope $p->{scope} ($p->{scope_id}) for ",
                       "$class ($oid) with $level" );
 
@@ -595,6 +600,8 @@ sub set_item_security {
                                            { object_id => $oid,
                                              scope     => $p->{scope},
                                              scope_id  => $p->{scope_id} } );
+    return 1 if ( $obj and $obj->{security_level} == $level );
+
     unless ( $obj ) {
         DEBUG() && _w( 1, "Current object does not exist. Creating one [$oid]" );
         $obj = $sec_obj_class->new({ class     => $class,
@@ -603,9 +610,6 @@ sub set_item_security {
                                      scope_id  => $p->{scope_id} });
     }
 
-    # if there is no change, we're done
-
-    return 1 if ( $obj->{security_level} == $level );
 
     # Otherwise set the level and save, letting any errors from the
     # save bubble up
@@ -620,9 +624,7 @@ sub set_multiple_security {
 
     # Since we can pass in the class/oid, those take precedence
 
-    my $object_id = $p->{oid} || $p->{object_id};
-    my ( $class, $oid ) = $item->_get_object_info_for_security(
-                                             $p->{class}, $object_id );
+    my ( $class, $oid ) = SPOPS::Secure::Util->find_class_and_oid( $item, $p );
     DEBUG() && _w( 1, "Setting multiple security for $class ($oid) and ",
                       "scope $p->{scope}." );
 
@@ -661,9 +663,7 @@ sub remove_item_security {
 
     # Since we can pass in the class/oid, those take precedence
 
-    my $object_id = $p->{oid} || $p->{object_id};
-    my ( $class, $oid ) = $item->_get_object_info_for_security(
-                                             $p->{class}, $object_id );
+    my ( $class, $oid ) = SPOPS::Secure::Util->find_class_and_oid( $item, $p );
     DEBUG() && _w( 1, "Removing security for $class ($oid) with ",
                       "scope $p->{scope} ($p->{scope_id})" );
 
@@ -688,16 +688,6 @@ sub remove_item_security {
     return $obj->remove;
 }
 
-
-# Get the class and object_id for checking
-
-sub _get_object_info_for_security {
-    my ( $item, $class, $id ) = @_;
-    $id ||= '0';
-    return ( $class, $id )          if ( $class );
-    return ( ref $item, $item->id ) if ( ref $item );
-    return ( $item, $id );
-}
 
 
 ########################################
@@ -753,26 +743,9 @@ sub _remove_superuser_level {
 }
 
 
-########################################
-# ETC
-########################################
-
-
-sub _assemble_error_message {
-    my ( $class, $count ) = @_;
-    my $value_list = ( ref $SPOPS::Error::extra->{value} )
-                       ? join( ' // ', @{ $SPOPS::Error::extra->{value} } )
-                       : 'none reported';
-    return qq(Error $count\n$@\n$SPOPS::Error::system_msg\n) .
-           qq(SQL: $SPOPS::Error::extra->{sql}\nValues: $value_list);
-}
-
-
 1;
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -813,8 +786,8 @@ A SPOPS class implementing security objects
 =back
 
 Easy, eh? Fortunately, SPOPS comes with all three, although you are
-free to modify them as you see fit. (As version 0.42, see the 'eg/My'
-directory in the source distribution for the sample classes.)
+free to modify them as you see fit. (As of version 0.42, see the
+'eg/My' directory in the source distribution for the sample classes.)
 
 Most people interested in security should not be reading the docs for
 this class. Instead, look at
@@ -824,17 +797,17 @@ broad view of security as well as how to use, implement and extend it.
 =head1 METHODS
 
 The methods that this class implements can be used by any SPOPS
-class. The variable $item below refers to the fact that you can either
-do an object method call or a class method call. If you do a class
-method call, you must pass in the ID of the object for which you want
-to get or set security.
+class. The variable C<$item> below refers to the fact that you can
+either do an object method call or a class method call. If you do a
+class method call, you must pass in the ID of the object for which you
+want to get or set security.
 
 However, you may also implement security on the class level as
 well. For instance, if your application uses classes to implement
 modules within an application, you might wish to restrict the module
 by security very similar to the security implemented for individual
 objects. In this case, you would have a class name and no object ID
-(object_id) value. (See
+(C<$object_id>) value. (See
 L<SPOPS::Manual::Security|SPOPS::Manual::Security> for more
 information.)
 
@@ -842,8 +815,8 @@ information.)
 
 The method check_security() returns a code corresponding to the LEVEL
 constants exported from this package. This code tells you what
-permissions the logged in user has. You can also pass user and group
-parameters to check security for other items as well.
+permissions the logged in (or passed in) user has. You can pass user
+and group parameters to check security for other items as well.
 
 Note that you can check security for multiple groups but only one user
 at a time. Passing an arrayref of user objects for the 'user'
@@ -1174,5 +1147,3 @@ it under the same terms as Perl itself.
 =head1 AUTHORS
 
 Chris Winters  <chris@cwinters.com>
-
-=cut

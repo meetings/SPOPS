@@ -1,6 +1,15 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.70  Mon Sep 16 16:56:33 EDT 2002
+
+  * Add implementations for security objects
+
+  * Add tests for SPOPS::Secure
+
+  * Small bugfixes
+
+
 0.69  Wed Sep 11 10:59:30 EDT 2002
 
   * Add new date->date object tool
@@ -175,4 +184,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 3.4 2002/09/11 14:48:34 lachoy Exp $
+$Id: RELEASE,v 3.5 2002/09/16 20:49:58 lachoy Exp $

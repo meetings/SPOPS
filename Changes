@@ -1,5 +1,83 @@
 Revision history for Perl extension SPOPS.
 
+0.70  Mon Sep 16 16:56:33 EDT 2002
+
+Individual:
+
+   * Makefile.PL:
+
+     - Added Time::Piece as dependency.
+
+   * doc/Manual/Security.pm:
+
+     - Update with reference to implementation class(es) and other
+     small changes.
+
+   * eg/My/Security.pm:
+
+     - Update to use SPOPS::Secure::DBI implementation.
+
+   * SPOPS.pm:
+
+     - Add check to as_data_only() so we don't return keys beginning
+     with 'tmp' or '_'
+
+   * SPOPS/Loopback.pm:
+
+     - Ensure that fetch_group() always returns objects in the same
+     order (sorted by ID).
+
+     - Modify internals of how objects are stored.
+
+     - Add security checks like other SPOPS implementation classes.
+
+   * SPOPS/Secure.pm:
+
+     - If groups are found from global_group_current() but not a user
+     not found from global_user_current(), go ahead and use the groups
+     to check security. (Previous behavior was to use neither.)
+
+     - Fix bug in set_security() which, when setting security for
+     multiple scopes at once, always issued a false warning.
+
+     - In create_initial_security(), always create at least an entry
+     for WORLD. Default setting for this is NONE, so be sure and
+     specify it in your class.
+
+   * SPOPS/Secure/DBI.pm:
+
+     - Add implementation class for security objects. You should now
+     only need to add 'SPOPS::Secure::DBI' to the 'isa' of your
+     security object.
+
+   * SPOPS/Secure/Hierarchy.pm:
+
+     - Override create_initial_security() so the default security for
+     WORLD will not inadvetently be created.
+
+   * SPOPS/Secure/Loopback.pm:
+
+     - Add testing implementation class for security objects.
+
+   * SPOPS/Secure/Util.pm:
+
+     - Utility class with common functions for security object
+     implementations.
+
+   * t/80_security.t:
+
+     - Add tests for SPOPS security checking.
+
+   * t/81_security_hierarchical.t:
+
+     - Add tests for hierarchical SPOPS security checking.
+
+   * t/SecurityCommon.pm:
+
+     - Add base class for SPOPS testing objects to use if they need to
+     track users, groups, security class, etc.
+
+
 0.69  Wed Sep 11 10:59:30 EDT 2002
 
 Overall:

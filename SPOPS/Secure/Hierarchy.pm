@@ -1,6 +1,6 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 3.0 2002/08/28 01:16:31 lachoy Exp $
+# $Id: Hierarchy.pm,v 3.1 2002/09/16 20:41:33 lachoy Exp $
 
 use strict;
 use base  qw( Exporter SPOPS::Secure );
@@ -10,9 +10,10 @@ use Data::Dumper  qw( Dumper );
 use SPOPS         qw( _w DEBUG );
 use SPOPS::Exception::Security;
 use SPOPS::Secure qw( :scope :level $EMPTY );
+use SPOPS::Secure::Util;
 
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
-$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.0 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 
@@ -26,10 +27,9 @@ sub get_security {
 
     # Find object info for debugging and for passing to the
     # fetch_by_object method later
-    my $object_id = $p->{oid} || $p->{object_id};
-    my ( $class, $oid ) = $item->_get_object_info_for_security(
-                                             $item, $object_id );
-    DEBUG() && _w( 1, "Checking security for $class ($oid)" );
+
+    my ( $class, $oid ) = SPOPS::Secure::Util->find_class_and_oid( $item, $p );
+    DEBUG() && _w( 1, "Checking security for $class [$oid]" );
 
     # Punt the request back to our parent if we're getting security
     # explicitly for the ROOT_OBJECT, which generally only happens when
@@ -102,11 +102,16 @@ sub get_hierarchy_levels {
 
 sub create_root_object_security {
     my ( $item, $p ) = @_;
-    my ( $class, $oid ) = $item->_get_object_info_for_security( $p->{class} );
+    my ( $class, $oid ) = SPOPS::Secure::Util->find_class_and_oid( $item, $p );
     return $class->set_security({ object_id      => $ROOT_OBJECT_NAME,
                                   scope          => $p->{scope},
                                   security_level => $p->{level} });
 }
+
+
+# Override so that the WORLD scope doesn't get any default setting
+
+sub create_initial_security { return 1 }
 
 
 # Retrieve and store a security level for each item in the hierarchy
@@ -127,9 +132,9 @@ sub _fetch_hierarchy_levels {
 
     unless ( $p->{class} ) {
         my $object_id = $p->{oid} || $p->{object_id};
-        ( $p->{class}, $p->{oid} ) = $item->_get_object_info_for_security(
-                                                    $p->{class}, $object_id );
-        DEBUG() && _w( 1, "Checking security for $p->{class} ($p->{oid})" );
+        ( $p->{class}, $p->{oid} ) = SPOPS::Secure::Util->find_class_and_oid(
+                                                                      $item, $p );
+        DEBUG() && _w( 1, "Checking security for [$p->{class}] [$p->{oid}]" );
     }
 
     # Yes, I know, grep in a void context...
@@ -158,7 +163,7 @@ SECVALUE:
     # create security for this class's root object.
 
     unless ( $first_found ) {
-        DEBUG() && _w( 1, "Cannot find ANY security for $p->{class} ($p->{oid}) -- ",
+        DEBUG() && _w( 1, "Cannot find ANY security for [$p->{class}] [$p->{oid}] -- ",
                           "creating extremely stringent root object security" );
         $item->create_root_object_security({ class  => $p->{class},
                                              scope  => SEC_SCOPE_WORLD,
@@ -229,8 +234,6 @@ sub _make_check_list {
 
 
 __END__
-
-=pod
 
 =head1 NAME
 
@@ -445,6 +448,12 @@ information can be used.
 
 =back
 
+B<create_initial_security()>
+
+This is overridden and a no-op, since we do not want
+L<SPOPS::Secure|SPOPS::Secure> to create the default WORLD settings
+for us and mess up our inheritance.
+
 B<create_root_object_security( \%params )>
 
 If you are trying to retrofit this security system into a class with
@@ -512,6 +521,3 @@ it under the same terms as Perl itself.
 Chris Winters <chris@cwinters.com>
 
 Christian Lemburg <lemburg@aixonix.de>
-
-=cut
-

@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: stock_user_group.pl,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: stock_user_group.pl,v 3.1 2002/09/13 16:09:12 lachoy Exp $
 
 # stock_user_group.pl
 #
@@ -12,6 +12,8 @@ use Data::Dumper qw( Dumper );
 
 require My::Security;
 require My::User;
+
+# SPOPS->set_global_debug(1);
 
 my @USER_FIELD  = qw( email last_name first_name password login_name );
 my @USER_DATA   = (
@@ -72,8 +74,7 @@ my @GROUP_DATA  = (
             }
         };
         if ( $@ ) {
-            die "Error creating relationships:\n$@\n",
-                "$SPOPS::Error::system_msg\n";
+            die "Error creating relationships:\n$@\n";
         }
     }
 }
