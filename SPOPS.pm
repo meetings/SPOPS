@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.8 2003/01/06 00:12:46 lachoy Exp $
+# $Id: SPOPS.pm,v 3.9 2003/02/21 05:44:30 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -11,8 +11,8 @@ use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.74';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.8 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.75';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.9 $ =~ /(\d+)\.(\d+)/);
 
 # Note that switching on DEBUG will generate LOTS of messages, since
 # many SPOPS classes import this constant
@@ -375,18 +375,17 @@ sub fetch_determine_limit { return SPOPS::Utility->determine_limit( $_[1] ) }
 sub get_lazy_load_sub { return \&perform_lazy_load }
 sub perform_lazy_load { return undef }
 
-sub is_loaded         { return tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }{ $_[1] } }
+sub is_loaded         { return tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }{ lc $_[1] } }
 
-sub set_loaded        { return tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }{ $_[1] }++ }
+sub set_loaded        { return tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }{ lc $_[1] }++ }
 
 sub set_all_loaded {
     my ( $self ) = @_;
     DEBUG() && _w( 1, "Setting all fields to loaded for object class", ref $self );
-    my %loaded = map { $_ => 1 } @{ $self->field_list };
-    tied( %{ $self } )->{ IDX_LAZY_LOADED() } = \%loaded;
+    $self->set_loaded( $_ ) for ( @{ $self->field_list } );
 }
 
-sub clear_loaded { tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }{ $_[1] } = undef }
+sub clear_loaded { tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }{ lc $_[1] } = undef }
 
 sub clear_all_loaded {
     DEBUG() && _w( 1, "Clearing all fields to unloaded for object class", ref $_[0] );

@@ -1,11 +1,11 @@
 package SPOPS::Exception::DBI;
 
-# $Id: DBI.pm,v 3.1 2003/01/02 06:00:23 lachoy Exp $
+# $Id: DBI.pm,v 3.2 2003/02/16 22:01:58 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
 
-$SPOPS::Exception::DBI::VERSION   = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Exception::DBI::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Exception::DBI::EXPORT_OK = qw( spops_dbi_error );
 
 my @FIELDS = qw( sql bound_value action );
@@ -17,6 +17,24 @@ sub get_fields {
 
 sub spops_dbi_error {
     goto &SPOPS::Exception::throw( 'SPOPS::Exception::DBI', @_ );
+}
+
+sub to_string   {
+    my ( $self ) = @_;
+    my $class = ref $self;
+    return "Invalid -- not called from object."  unless ( $class );
+
+    no strict 'refs';
+    if ( $self->sql ) {
+        return ( ${ $class . '::ShowTrace' } )
+                 ? join( "\n", $self->message, $self->sql, $self->trace->as_string )
+                 : join( "\n", $self->message(), $self->sql );
+    }
+    else {
+        return ( ${ $class . '::ShowTrace' } )
+                 ? join( "\n", $self->message, $self->trace->as_string )
+                 : $self->message();
+    }
 }
 
 1;
@@ -67,7 +85,10 @@ we did not even reach the DBI stage yet.
 
 =head1 METHODS
 
-No extra methods, but you can use a shortcut if you are throwing
+No extra methods, but we override 'to_string' so any SQL executed will
+be part of the error.
+
+Additionally, you can use a shortcut if you are throwing
 errors:
 
  use SPOPS::Exception::DBI qw( spops_dbi_error );

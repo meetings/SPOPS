@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 05_exception.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: 05_exception.t,v 3.1 2003/02/16 22:01:56 lachoy Exp $
 
 use strict;
 use Test::More  tests => 58;
@@ -73,7 +73,7 @@ use Test::More  tests => 58;
     is( $d->bound_value()->[0], $bound->[0], 'DBI bound value 1 set' );
     is( $d->bound_value()->[1], $bound->[1], 'DBI bound value 2 set' );
     is( ref( $d->trace() ), 'Devel::StackTrace', 'Trace set' );
-    is( "$d", $d_message, 'DBI $@ stringified' );
+    is( "$d", join( "\n", $d_message, $sql ), 'DBI $@ stringified' );
     my @stack = $d->get_stack();
     is( scalar @stack, 3, 'Stack set' );
 }

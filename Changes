@@ -1,5 +1,33 @@
 Revision history for Perl extension SPOPS.
 
+0.75  Fri Feb 21 08:41:00 EST 2003
+
+Individual:
+
+   * SPOPS/Exception/DBI.pm:
+
+     - Add SQL to error messages if it's available. (SF Bug #542521)
+
+   * SPOPS/Import/DBI/(Table|TableTransform).pm, SPOPS/Import/DBI/TableTransform/*.pm:
+
+     - Updated to include the 'datetime' datatype.
+
+   * SPOPS/Tie.pm:
+
+     - Updated to deal with problem regarding mixed-case column names
+     and lazy loading.
+
+   * t/05_exception.t:
+
+     - Modify DBI stringification test to match change in module.
+
+   * t/37_dbi_lazy_load.t:
+
+     - Add test for DBI lazy loading. Thanks to David Hugh-Jones
+     <david@zaygo.com> for pointing out a problem with lazy loading
+     and mixed-case column names.
+
+
 0.74  Sun Jan  5 18:38:12 EST 2003
 
 Individual:

@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.7 2003/01/03 05:11:39 lachoy Exp $
+# $Id: DBI.pm,v 3.8 2003/02/21 05:48:44 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -14,7 +14,7 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.7 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.8 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -564,9 +564,24 @@ sub perform_lazy_load {
                         "with a '_' character and is therefore private" );
     }
     DEBUG() && _w( 3, "Performing lazy load for $class -> $use_field->[0]" );
+
+    my $id_field = $class->id_field;
+    my $id = $data->{ $id_field } || $data->{ lc $id_field };
+
+# Use this if we ever need the other data passed in to be normalized
+# to our fieldnames...
+#    my %proper_field_data = ();
+#    foreach my $field ( @{ $class->field_list } ) {
+#        if ( exists $data->{ $field } ) {
+#            $proper_field_data{ $field } = $data->{ $field };
+#        }
+#        elsif ( exists $data->{ lc $field } ) {
+#            $proper_field_data{ $field } = $data->{ lc $field };
+#        }
+#    }
     my %args = ( from   => [ $class->table_name ],
                  select => [ $use_field->[0] ],
-                 where  => $class->id_clause( $data->{ $class->id_field } ),
+                 where  => $class->id_clause( $id ),
                  return => 'single',
                  DEBUG  => DEBUG );
     my $row = $class->db_select( \%args );

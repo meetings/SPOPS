@@ -1,11 +1,11 @@
 package SPOPS::Import::DBI::TableTransform::SQLite;
 
-# $Id: SQLite.pm,v 3.1 2003/01/02 05:57:40 lachoy Exp $
+# $Id: SQLite.pm,v 3.2 2003/01/07 03:23:53 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import::DBI::TableTransform );
 
-$SPOPS::Import::DBI::TableTransform::SQLite::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::SQLite::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 sub increment {
     my ( $self, $sql ) = @_;
@@ -15,6 +15,11 @@ sub increment {
 sub increment_type {
     my ( $self, $sql ) = @_;
     $$sql =~ s/%%INCREMENT_TYPE%%/INTEGER/g;
+}
+
+sub datetime {
+    my ( $self, $sql ) = @_;
+    $$sql =~ s/%%DATETIME%%/TIMESTAMP/g;
 }
 
 1;
@@ -41,7 +46,9 @@ SPOPS::Import::DBI::TableTransform::SQLite - Table transformations for SQLite
 
 =head1 DESCRIPTION
 
-SQLite-specific type conversions for the auto-increment field type.
+SQLite-specific type conversions for the auto-increment and other
+field types. (Since SQLite is typeless this is really for the sake of
+consistency.)
 
 =head1 METHODS
 
@@ -52,6 +59,10 @@ Returns 'INTEGER NOT NULL'
 B<increment_type>
 
 Returns 'INTEGER'
+
+B<datetime>
+
+Returns 'TIMESTAMP'
 
 =head1 BUGS
 

@@ -1,18 +1,19 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 3.2 2003/01/02 06:00:24 lachoy Exp $
+# $Id: Tie.pm,v 3.3 2003/02/21 05:49:20 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
 use vars  qw( $PREFIX_TEMP $PREFIX_INTERNAL );
 
-use Carp         qw( carp );
-use Data::Dumper qw( Dumper );
+use Carp             qw( carp );
+use Data::Dumper     qw( Dumper );
+use SPOPS::Exception qw( spops_error );
 
 @SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_INTERNAL IDX_TEMP
                              IDX_CHECK_FIELDS IDX_LAZY_LOADED
                              $PREFIX_TEMP $PREFIX_INTERNAL );
-$SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 use constant IDX_DATA          => '_dat';
 use constant IDX_CHANGE        => '_chg';
@@ -34,7 +35,6 @@ $PREFIX_INTERNAL   = '_internal';
 require SPOPS;
 *_w    = *SPOPS::_w;
 *DEBUG = *SPOPS::DEBUG;
-
 
 # Tie interface stuff below here; see 'perldoc perltie' for what
 # each method does. (Or better yet, read Damian Conway's discussion
@@ -97,23 +97,23 @@ sub FETCH {
     DEBUG() && _w( 3, " tie: Trying to retrieve value for ($key)\n" );
     return $self->{ IDX_CHANGE() }                 if ( $key eq IDX_CHANGE );
     return $self->{ IDX_SAVE() }                   if ( $key eq IDX_SAVE );
-    return $self->{ IDX_TEMP() }->{ $cmp_key }     if ( $key =~ /^$PREFIX_TEMP/ );
-    return $self->{ IDX_INTERNAL() }->{ $cmp_key } if ( $key =~ /^$PREFIX_INTERNAL/ );
+    return $self->{ IDX_TEMP() }{ $cmp_key }     if ( $key =~ /^$PREFIX_TEMP/ );
+    return $self->{ IDX_INTERNAL() }{ $cmp_key } if ( $key =~ /^$PREFIX_INTERNAL/ );
     return undef unless ( $self->_can_fetch( $key ) );
     if ( $self->{ IDX_IS_FIELD_MAP() } and
-         $self->{ IDX_FIELD_MAP() }->{ $cmp_key } ) {
-        #warn "(FETCH) using field map: old value ($cmp_key) new ($self->{ IDX_FIELD_MAP() }->{ $cmp_key })\n";
-        $cmp_key = $self->{ IDX_FIELD_MAP() }->{ $cmp_key };
+         $self->{ IDX_FIELD_MAP() }{ $cmp_key } ) {
+        #warn "(FETCH) using field map: old value ($cmp_key) new ($self->{ IDX_FIELD_MAP() }{ $cmp_key })\n";
+        $cmp_key = $self->{ IDX_FIELD_MAP() }{ $cmp_key };
     }
     if ( $self->{ IDX_IS_LAZY_LOAD() } and
-         ! $self->{ IDX_LAZY_LOADED() }->{ $cmp_key } ) {
+         ! $self->{ IDX_LAZY_LOADED() }{ $cmp_key } ) {
         $self->_lazy_load( $key );
     }
-    if ( $self->{ IDX_IS_MULTIVALUE() } and $self->{ IDX_MULTIVALUE() }->{ $cmp_key } ) {
+    if ( $self->{ IDX_IS_MULTIVALUE() } and $self->{ IDX_MULTIVALUE() }{ $cmp_key } ) {
         #warn "(FETCH) using multivalue for key $cmp_key\n";
-        return [ keys %{ $self->{ IDX_DATA() }->{ $cmp_key } } ];
+        return [ keys %{ $self->{ IDX_DATA() }{ $cmp_key } } ];
     }
-    return $self->{ IDX_DATA() }->{ $cmp_key };
+    return $self->{ IDX_DATA() }{ $cmp_key };
 }
 
 
@@ -124,15 +124,14 @@ sub _lazy_load {
     my ( $self, $key ) = @_;
     my $cmp_key = lc $key;
     unless ( ref $self->{ IDX_LAZY_LOAD_SUB() } eq 'CODE' ) {
-        SPOPS::Exception->throw( "Lazy loading activated but no load function specified!" );
+        spops_error "Lazy loading activated but no load function specified!";
     }
-    DEBUG() && _w( 1, "Trying to lazy load ($key) since the loaded is:",
-                      $self->{ IDX_LAZY_LOADED() }->{ $cmp_key } );
-    $self->{ IDX_DATA() }->{ $cmp_key } = 
+    DEBUG() && _w( 1, "Lazy loading [$key]; is-loaded marker empty" );
+    $self->{ IDX_DATA() }{ $cmp_key } = 
                     $self->{ IDX_LAZY_LOAD_SUB() }->( $self->{class},
                                                       $self->{ IDX_DATA() },
                                                       $key );
-    $self->{ IDX_LAZY_LOADED() }->{ $cmp_key }++;
+    $self->{ IDX_LAZY_LOADED() }{ $cmp_key }++;
 }
 
 
@@ -141,24 +140,25 @@ sub _lazy_load {
 sub STORE {
     my ( $self, $key, $value ) = @_;
     my $cmp_key = lc $key;
-    DEBUG() && _w( 3,  " tie: Trying to store in ($key) value ($value)\n" );
+    DEBUG() && _w( 3,  " tie: Storing [$key] => [$value]\n" );
     return $self->{ IDX_CHANGE() } = $value                 if ( $key eq IDX_CHANGE );
     return $self->{ IDX_SAVE() } = $value                   if ( $key eq IDX_SAVE );
-    return $self->{ IDX_TEMP() }->{ $cmp_key } = $value     if ( $key =~ /^$PREFIX_TEMP/ );
-    return $self->{ IDX_INTERNAL() }->{ $cmp_key } = $value if ( $key =~ /^$PREFIX_INTERNAL/ );
+    return $self->{ IDX_TEMP() }{ $cmp_key } = $value     if ( $key =~ /^$PREFIX_TEMP/ );
+    return $self->{ IDX_INTERNAL() }{ $cmp_key } = $value if ( $key =~ /^$PREFIX_INTERNAL/ );
     return undef unless ( $self->_can_store( $key, $value ) );
     $self->{ IDX_CHANGE() }++;
 
     if ( $self->{ IDX_IS_FIELD_MAP() } and 
-         $self->{ IDX_FIELD_MAP() }->{ $cmp_key } ) {
-        #warn "(STORE) using field map: old value ($cmp_key) new ($self->{ IDX_FIELD_MAP() }->{ $cmp_key })\n";
-        $cmp_key = $self->{ IDX_FIELD_MAP() }->{ $cmp_key };
+         $self->{ IDX_FIELD_MAP() }{ $cmp_key } ) {
+        #warn "(STORE) using field map: old value ($cmp_key) new ($self->{ IDX_FIELD_MAP() }{ $cmp_key })\n";
+        $cmp_key = $self->{ IDX_FIELD_MAP() }{ $cmp_key };
     }
 
     # Non-multivalue properties just return the newly stored value
 
-    unless ( $self->{ IDX_IS_MULTIVALUE() } and $self->{ IDX_MULTIVALUE() }->{ $cmp_key } ) {
-        return $self->{ IDX_DATA() }->{ $cmp_key } = $value;
+    unless ( $self->{ IDX_IS_MULTIVALUE() } and $self->{ IDX_MULTIVALUE() }{ $cmp_key } ) {
+        $self->{ IDX_IS_LAZY_LOAD() } && $self->{ IDX_LAZY_LOADED() }{ $cmp_key }++;
+        return $self->{ IDX_DATA() }{ $cmp_key } = $value;
     }
 
     #warn "(STORE) using multivalue for key $cmp_key\n";
@@ -169,7 +169,7 @@ sub STORE {
     # If $value is undef, we clear out all values in the object
 
     unless ( defined $value ) {
-        $self->{ IDX_DATA() }->{ $cmp_key } = {};
+        $self->{ IDX_DATA() }{ $cmp_key } = {};
         return undef;
     }
 
@@ -178,7 +178,7 @@ sub STORE {
     # If a scalar, just set it
 
     unless ( $typeof ) {
-        $self->{ IDX_DATA() }->{ $cmp_key }->{ $value } = 1;
+        $self->{ IDX_DATA() }{ $cmp_key }{ $value } = 1;
         return $value;
     }
 
@@ -186,9 +186,9 @@ sub STORE {
     # resetting the values)
 
     if ( $typeof eq 'ARRAY' ) {
-        #warn "(STORE) Current value of ($cmp_key)", Dumper( $self->{ IDX_DATA() }->{ $cmp_key } ), "\n";
-        $self->{ IDX_DATA() }->{ $cmp_key } = { map { $_ => 1 } @{ $value } };
-        #warn "(STORE) Value after set of ($cmp_key)", Dumper( $self->{ IDX_DATA() }->{ $cmp_key } ), "\n";
+        #warn "(STORE) Current value of ($cmp_key)", Dumper( $self->{ IDX_DATA() }{ $cmp_key } ), "\n";
+        $self->{ IDX_DATA() }{ $cmp_key } = { map { $_ => 1 } @{ $value } };
+        #warn "(STORE) Value after set of ($cmp_key)", Dumper( $self->{ IDX_DATA() }{ $cmp_key } ), "\n";
         return undef;
     }
 
@@ -199,21 +199,20 @@ sub STORE {
         my $remove_fields =  ( ref $value->{remove} eq 'ARRAY' ) ? $value->{remove} : [ $value->{remove} ];
         foreach my $rmv ( @{ $remove_fields } ) {
             next unless ( $rmv );
-            delete $self->{ IDX_DATA() }->{ $cmp_key }->{ $rmv };
+            delete $self->{ IDX_DATA() }{ $cmp_key }{ $rmv };
         }
 
         my $modify_fields = $value->{modify} || {};
         foreach my $mdfy ( keys %{ $modify_fields } ) {
-            delete $self->{ IDX_DATA() }->{ $cmp_key }->{ $mdfy };
-            $self->{ IDX_DATA() }->{ $cmp_key }->{ $modify_fields->{ $mdfy } } = 1
+            delete $self->{ IDX_DATA() }{ $cmp_key }{ $mdfy };
+            $self->{ IDX_DATA() }{ $cmp_key }{ $modify_fields->{ $mdfy } } = 1
         }
         return undef;
     }
 
     # We don't know how to handle anything else
 
-    SPOPS::Exception->throw( "I do not know what to do with a value type " .
-                             "of ($typeof) with multivalues" );
+    spops_error "Cannot handle a value type of [$typeof] with multivalues";
 }
 
 sub _can_store { return 1 }
@@ -225,7 +224,7 @@ sub _can_store { return 1 }
 sub EXISTS {
     my ( $self, $key ) = @_;
     DEBUG() && _w( 3, " tie: Checking for existence of ($key)\n" );
-    return exists $self->{ IDX_DATA() }->{ lc $key };
+    return exists $self->{ IDX_DATA() }{ lc $key };
     carp "Cannot check existence for field ($key): it is not a valid field";
 }
 
@@ -233,7 +232,7 @@ sub EXISTS {
 sub DELETE {
     my ( $self, $key ) = @_;
     DEBUG() && _w( 3, " tie: Clearing value for ($key)\n" );
-    $self->{ IDX_DATA() }->{ lc $key } = undef;
+    $self->{ IDX_DATA() }{ lc $key } = undef;
     $self->{ IDX_CHANGE() }++;
 }
 

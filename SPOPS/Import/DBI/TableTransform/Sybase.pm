@@ -1,11 +1,11 @@
 package SPOPS::Import::DBI::TableTransform::Sybase;
 
-# $Id: Sybase.pm,v 3.1 2003/01/02 05:57:40 lachoy Exp $
+# $Id: Sybase.pm,v 3.2 2003/01/07 03:23:53 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import::DBI::TableTransform );
 
-$SPOPS::Import::DBI::TableTransform::Sybase::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::Sybase::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 sub increment {
     my ( $self, $sql ) = @_;
@@ -15,6 +15,11 @@ sub increment {
 sub increment_type {
     my ( $self, $sql ) = @_;
     $$sql =~ s/%%INCREMENT_TYPE%%/NUMERIC( 10, 0 )/g;
+}
+
+sub datetime {
+    my ( $self, $sql ) = @_;
+    $$sql =~ s/%%DATETIME%%/DATETIME/g;
 }
 
 1;
@@ -43,7 +48,7 @@ SPOPS::Import::DBI::TableTransform::Sybase - Table transformations for Sybase/MS
 =head1 DESCRIPTION
 
 Sybase-specific (and Microsoft SQL Server) type conversions for the
-auto-increment field type.
+auto-increment and other field types.
 
 =head1 METHODS
 
@@ -54,6 +59,10 @@ Returns 'NUMERIC(10,0) NOT NULL IDENTITY NOT NULL'
 B<increment_type>
 
 Returns 'NUMERIC(10,0)'
+
+B<datetime>
+
+Returns 'DATETIME'
 
 =head1 BUGS
 

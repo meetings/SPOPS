@@ -1,11 +1,11 @@
 package SPOPS::Import::DBI::TableTransform::Pg;
 
-# $Id: Pg.pm,v 3.1 2003/01/02 05:57:40 lachoy Exp $
+# $Id: Pg.pm,v 3.2 2003/01/07 03:23:53 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import::DBI::TableTransform );
 
-$SPOPS::Import::DBI::TableTransform::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.1 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::Pg::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
 
 sub increment {
     my ( $self, $sql ) = @_;
@@ -15,6 +15,11 @@ sub increment {
 sub increment_type {
     my ( $self, $sql ) = @_;
     $$sql =~ s/%%INCREMENT_TYPE%%/INT/g;
+}
+
+sub datetime {
+    my ( $self, $sql ) = @_;
+    $$sql =~ s/%%DATETIME%%/TIMESTAMP/g;
 }
 
 1;
@@ -42,8 +47,8 @@ SPOPS::Import::DBI::TableTransform::Pg - Table transformations for PostgreSQL
 
 =head1 DESCRIPTION
 
-PostgreSQL-specific type conversions for the auto-increment field
-type.
+PostgreSQL-specific type conversions for the auto-increment and other
+field types.
 
 =head1 METHODS
 
@@ -54,6 +59,10 @@ Returns 'SERIAL'
 B<increment_type>
 
 Returns 'INT'
+
+B<datetime>
+
+Returns 'TIMESTAMP'
 
 =head1 BUGS
 

@@ -1,6 +1,13 @@
 RELEASE NOTES: SPOPS
 =========================
 
+0.75  Fri Feb 21 08:41:00 EST 2003
+
+ * Fix bug with mixed-case ID field and lazy loading
+
+ * Use 'datetime' datatype in conversion methods
+
+
 0.74  Sun Jan  5 18:38:12 EST 2003
 
  * Small bugfixes
@@ -210,4 +217,4 @@ RELEASE NOTES: SPOPS
     then you won't be able to use the Storable functionality.
 
 =========================
-$Id: RELEASE,v 3.9 2003/01/06 00:13:08 lachoy Exp $
+$Id: RELEASE,v 3.10 2003/02/21 13:47:18 lachoy Exp $

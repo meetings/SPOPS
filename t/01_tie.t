@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 01_tie.t,v 3.0 2002/08/28 01:16:32 lachoy Exp $
+# $Id: 01_tie.t,v 3.1 2003/02/21 05:41:07 lachoy Exp $
 
 use strict;
 use Test::More  tests => 21;
@@ -69,7 +69,6 @@ use Test::More  tests => 21;
                                   field         => [ qw/ fee fi fum / ],
                                   lazy_load_sub => \&get_lazy_field });
     $data->{fee} = 'manual - fee';
-    $obj->{ IDX_LAZY_LOADED() }->{fee}++;
     is( $obj->{ IDX_LAZY_LOADED() }->{fee}, 1, 'Lazy load status (normal set)' );
     ok( ! $obj->{ IDX_LAZY_LOADED() }->{fum}, 'Lazy load status (lazy unset)' );
     is( $data->{fum}, 'muf', 'Lazy load (field value loaded)' );

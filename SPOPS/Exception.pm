@@ -1,6 +1,6 @@
 package SPOPS::Exception;
 
-# $Id: Exception.pm,v 3.2 2003/01/02 06:00:25 lachoy Exp $
+# $Id: Exception.pm,v 3.3 2003/02/21 05:44:59 lachoy Exp $
 
 use strict;
 use base qw( Class::Accessor Exporter );
@@ -8,7 +8,7 @@ use overload '""' => \&stringify;
 use Devel::StackTrace;
 use SPOPS::Error;
 
-$SPOPS::Exception::VERSION   = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Exception::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Exception::EXPORT_OK = qw( spops_error );
 
 use constant DEBUG => 0;
@@ -100,14 +100,15 @@ sub creation_location {
 }
 
 sub stringify   { return $_[0]->to_string() }
+
 sub to_string   {
     my ( $self ) = @_;
     my $class = ref $self;
     return "Invalid -- not called from object."  unless ( $class );
 
     no strict 'refs';
-    return $_[0]->message()                      unless ( ${ $class . '::ShowTrace' } );
-    return join( "\n", $_[0]->message, $_[0]->trace->as_string );
+    return $self->message()                      unless ( ${ $class . '::ShowTrace' } );
+    return join( "\n", $self->message, $self->trace->as_string );
 }
 
 # BACKWARDS COMPATIBILITY (will remove before 1.0)

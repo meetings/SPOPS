@@ -1,6 +1,6 @@
 package SPOPS::Import::DBI::Table;
 
-# $Id: Table.pm,v 3.2 2003/01/02 06:00:23 lachoy Exp $
+# $Id: Table.pm,v 3.3 2003/01/07 03:23:54 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Import );
@@ -8,7 +8,7 @@ use Data::Dumper qw( Dumper );
 use SPOPS::Exception;
 use SPOPS::Import::DBI::TableTransform;
 
-$SPOPS::Import::DBI::Table::VERSION  = sprintf("%d.%02d", q$Revision: 3.2 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::Table::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
 
 my @FIELDS = qw( database_type transforms print_only );
 SPOPS::Import::DBI::Table->mk_accessors( @FIELDS );
@@ -155,7 +155,7 @@ SPOPS::Import::DBI::Table - Import a DBI table structure
   email         varchar(100) not null,
   language      char(2) default 'en',
   notes         text null,
-  removal_date  datetime null,
+  removal_date  %%DATETIME%% null,
   primary key   ( user_id ),
   unique        ( login_name )
  )
@@ -238,7 +238,7 @@ of:
 
 =head1 BUILT-IN TRANSFORMATIONS
 
-There are two built-in transformations:
+These are the built-in transformations:
 
 B<increment>
 
@@ -255,6 +255,14 @@ Key: %%INCREMENT_TYPE%%
 Datatype of the increment field specified by %%INCREMENT%%. This is
 necessary when you are creating foreign keys (logical or enforced) and
 need to know the datatype of the ID you are referencing.
+
+B<datetime>
+
+Key: %%DATETIME%%
+
+Datatype of the field that holds a date and time value. This should
+B<not> be automatically set with every insert/update (as it is with
+MySQL).
 
 =head1 BUGS
 

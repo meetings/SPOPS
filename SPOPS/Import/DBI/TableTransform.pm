@@ -1,12 +1,12 @@
 package SPOPS::Import::DBI::TableTransform;
 
-# $Id: TableTransform.pm,v 3.3 2003/01/02 06:00:23 lachoy Exp $
+# $Id: TableTransform.pm,v 3.4 2003/01/07 03:23:54 lachoy Exp $
 
 use strict;
 use base qw( Class::Factory );
 use SPOPS::Exception;
 
-$SPOPS::Import::DBI::TableTransform::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Import::DBI::TableTransform::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 my %TYPES = (
  mysql     => 'SPOPS::Import::DBI::TableTransform::MySQL',
@@ -113,6 +113,11 @@ subclass for a made-up database:
  sub increment_type {
     my ( $self, $sql ) = @_;
     $$sql =~ s/%%INCREMENT_TYPE%%/INT/g;
+ }
+
+ sub datetime {
+    my ( $self, $sql ) = @_;
+    $$sql =~ s/%%DATETIME%%/timestamp/g;
  }
 
  1;
