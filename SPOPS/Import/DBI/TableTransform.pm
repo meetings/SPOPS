@@ -1,12 +1,12 @@
 package SPOPS::Import::DBI::TableTransform;
 
-# $Id: TableTransform.pm,v 2.0 2002/03/19 04:00:02 lachoy Exp $
+# $Id: TableTransform.pm,v 2.1 2002/04/27 19:06:09 lachoy Exp $
 
 use strict;
 use base qw( Class::Factory );
 use SPOPS::Exception;
 
-$SPOPS::Import::DBI::TableTransform::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Import::DBI::TableTransform::VERSION  = substr(q$Revision: 2.1 $, 10);
 
 my %INCLUDED   = ();
 sub get_factory_map  { return \%INCLUDED }
@@ -14,14 +14,16 @@ my %REGISTERED = ();
 sub get_register_map { return \%REGISTERED }
 
 my %TYPES = (
- mysql    => 'SPOPS::Import::DBI::TableTransform::MySQL',
- oracle   => 'SPOPS::Import::DBI::TableTransform::Oracle',
- pg       => 'SPOPS::Import::DBI::TableTransform::Pg' ,
- postgres => 'SPOPS::Import::DBI::TableTransform::Pg',
- asany    => 'SPOPS::Import::DBI::TableTransform::Sybase',
- mssql    => 'SPOPS::Import::DBI::TableTransform::Sybase',
- sybase   => 'SPOPS::Import::DBI::TableTransform::Sybase',
- sqlite   => 'SPOPS::Import::DBI::TableTransform::SQLite',
+ mysql     => 'SPOPS::Import::DBI::TableTransform::MySQL',
+ oracle    => 'SPOPS::Import::DBI::TableTransform::Oracle',
+ pg        => 'SPOPS::Import::DBI::TableTransform::Pg' ,
+ postgres  => 'SPOPS::Import::DBI::TableTransform::Pg',
+ asany     => 'SPOPS::Import::DBI::TableTransform::Sybase',
+ mssql     => 'SPOPS::Import::DBI::TableTransform::Sybase',
+ sybase    => 'SPOPS::Import::DBI::TableTransform::Sybase',
+ sqlite    => 'SPOPS::Import::DBI::TableTransform::SQLite',
+ interbase => 'SPOPS::Import::DBI::TableTransform::InterBase',
+ firebird  => 'SPOPS::Import::DBI::TableTransform::InterBase',
 );
 
 sub class_initialize {
@@ -69,17 +71,19 @@ Available database types are:
 
 =over 4
 
-=item sybase: Sybase SQL Server/ASE
-
 =item asany: Sybase Adaptive Server Anywhere
 
-=item mssql: Microsoft SQL Server
+=item interbase: InterBase family (also: 'firebird')
 
-=item postgres: PostgreSQL
+=item mssql: Microsoft SQL Server
 
 =item mysql: MySQL
 
 =item oracle: Oracle
+
+=item postgres: PostgreSQL (also: 'pg')
+
+=item sybase: Sybase SQL Server/ASE
 
 =back
 
@@ -101,7 +105,7 @@ L<SPOPS::Import::DBI::Table|SPOPS::Import::DBI::Table>.
 
 Each transformation takes two arguments: C<$self> and a scalar
 reference to the SQL to be transformed. For example, here is a
-subclass for a made up database:
+subclass for a made-up database:
 
  package SPOPS::Import::DBI::TableTransform::SavMor;
 

@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
+# $Id: DBI.pm,v 2.7 2002/05/06 12:26:32 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -13,7 +13,7 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure qw( :level );
 use SPOPS::Tie    qw( $PREFIX_INTERNAL );
 
-$SPOPS::DBI::VERSION = substr(q$Revision: 2.0 $, 10);
+$SPOPS::DBI::VERSION = substr(q$Revision: 2.7 $, 10);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -28,7 +28,8 @@ use constant DEBUG_SAVE   => 0;
 # can override with hardcoded values if desired
 
 sub no_insert_id  { return 0; } # used anymore??
-sub field_alter   { return $_[0]->CONFIG->{field_alter} || {}  }
+sub field_alter   { return $_[0]->CONFIG->{field_alter}        }
+sub insert_alter  { return $_[0]->CONFIG->{insert_alter}       }
 sub base_table    { return $_[0]->CONFIG->{base_table}         }
 sub key_table     { return $_[0]->CONFIG->{key_table}   || $_[0]->CONFIG->{base_table} }
 sub table_name    { return $_[0]->CONFIG->{table_name}  || $_[0]->CONFIG->{base_table} }
@@ -103,7 +104,7 @@ sub class_initialize {
     #
     # Types can be: int, num, float, char, date
     #
-    # Currently known offenders: none! (DBD::ASAny was fixed -- hooray
+    # Currently known offenders: DBD::SQLite (DBD::ASAny was fixed -- hooray
     # for open source!)
 
     if ( ref $C->{dbi_type_info} eq 'HASH' ) {
@@ -172,6 +173,17 @@ sub id_clause {
 }
 
 
+# Should return: ( 'myid' )         if 'noqualify' param is true
+#                ( 'mytable.myid' ) if not true
+
+sub id_field_select {
+    my ( $class, $p ) = @_;
+    return ( $p->{noqualify} )
+             ? $class->id_field
+             : join( '.', $class->table_name, $class->id_field );
+}
+
+
 ########################################
 # FETCHING
 ########################################
@@ -189,7 +201,7 @@ sub format_select {
         SPOPS::Exception->throw( $error );
     }
     my @return_fields;
-    my $altered = $class->field_alter();
+    my $altered = $class->field_alter() || {};
     foreach my $field ( @{ $fields } ) {
         push @return_fields, $conf->{ $field } || $altered->{ $field } || $field;
     }
@@ -213,7 +225,8 @@ sub fetch {
 
     my $level = $p->{security_level};
     unless ( $p->{skip_security} ) {
-        $level ||= $class->check_action_security({ id       => $id, DEBUG => $p->{DEBUG},
+        $level ||= $class->check_action_security({ id       => $id,
+                                                   DEBUG    => $p->{DEBUG},
                                                    required => SEC_LEVEL_READ });
     }
 
@@ -369,7 +382,7 @@ sub _construct_group_select {
 
 sub fetch_count {
     my ( $class, $p ) = @_;
-    $p->{select} = [ $class->id_field ];
+    $p->{select} = [ $class->id_field_select( $p ) ];
     my $sth = $class->_execute_multiple_record_query( $p );
     my $row_count = 0;
     while ( my $row = $sth->fetch ) {
@@ -438,7 +451,9 @@ sub _fetch_select_fields {
         push @alter_field_list, ( ref $p->{field_extra} eq 'ARRAY' )
                                   ? @{ $p->{field_extra} } : $p->{field_extra};
     }
-    return ( $field_list, $class->format_select( \@alter_field_list, $p->{field_alter} ) );
+    return ( $field_list,
+             $class->format_select( \@alter_field_list,
+                                    $p->{field_alter} ) );
 }
 
 
@@ -514,6 +529,14 @@ sub perform_lazy_load {
     }
     unless ( $field ) {
         SPOPS::Exception->throw( 'No field given -- cannot lazy load!' );
+    }
+    if ( $field =~ /^_/ ) {
+        DEBUG && _w( 0, "Cannot lazy load field [$field] -- it begins ",
+                        "with a '_' character and is therefore private" );
+    }
+    if ( my $actual_field = $class->CONFIG->{field_map}{ $field } ) {
+        DEBUG() && _w( 1, "Lazy loaded field [$field] is mapped to [$actual_field]" );
+        $field = $actual_field;
     }
     my %args = ( from   => [ $class->table_name ],
                  select => [ $field ],
@@ -636,6 +659,8 @@ sub _save_insert {
         $p->{DEBUG} && _wm( 1, $p->{DEBUG}, "Retrieved ID before insert: $pre_id" );
     }
 
+    $self->apply_insert_alter( $p );
+
     # Do the insert; ask DB to return the statement handle
     # if we need it for getting the just-inserted ID; note that
     # both 'field' and 'value' are in $p, so we do not need to
@@ -712,6 +737,30 @@ sub _save_insert {
         $self->create_initial_security({ object_id => scalar $self->id });
     }
     return 1;
+}
+
+
+# See if we're supposed to modify any of the given values with the
+# 'insert_alter' configuration
+
+sub apply_insert_alter {
+    my ( $self, $p ) = @_;
+
+    my $insert_alter = $self->insert_alter || $p->{insert_alter};
+    return unless ( ref $insert_alter eq 'HASH' and keys %{ $insert_alter } );
+
+    my $num_fields = scalar @{ $p->{value} };
+    for ( my $i = 0; $i < $num_fields; $i++ ) {
+        my $field_name = $p->{field}[ $i ];
+        next unless ( $insert_alter->{ lc $field_name } );
+        $p->{DEBUG} && _wm( 1, $p->{DEBUG},
+                               "Setting 'insert_alter' for [$field_name]",
+                               "defined as [", $insert_alter->{ lc $field_name }, "]",
+                               "with value [$p->{value}[ $i ]]" );
+        $p->{value}[ $i ] = sprintf( $insert_alter->{ lc $field_name },
+                                     $p->{value}[ $i ] );
+        $p->{no_quote}{ $field_name } = 1;
+    }
 }
 
 
@@ -969,8 +1018,41 @@ is key, value is true)
 
 B<field_alter> (Returns: \%)
 
-Hashref of data-formatting instructions (field is key, instruction is
-value)
+Hashref of data-formatting instructions that get used with C<fetch()>
+and C<fetch_group()> (field is key, instruction is value)
+
+B<insert_alter> (Returns: \%)
+
+Hashref of data-formatting instructions that get used with C<save()>
+on a new object. The field is the key, the value is a
+L<sprintf|sprintf> format that should contain one C<%s> sequence into
+which the actual value of the object will be plugged.
+
+For instance, your database may use a non-standard format for
+inserting dates. You can specify:
+
+ insert_alter => { last_login =>
+                        "to_date('%s','YYYY-MM-DD HH24:MI:SS')" },
+
+So when the object value is set:
+
+ $object->{last_login} = '2002-04-22 14:47:32';
+
+What actually gets put into the database is:
+
+ INSERT INTO table
+ ( ... last_login ... )
+ VALUES 
+ ( ... to_date( '2002-04-22 14:47:32', 'YYYY-MM-DD HH24:MI:SS' ) ... )
+
+Note that the resulting value is passed unquoted to the database.
+
+If you need more complicated processing than this allows, you can
+override the method C<apply_insert_alter( \%params )> in your class.
+
+B<NOTE>: Fieldnames in the 'insert_alter' configuration must be in
+lower-case, even if the fields in your datasource are mixed- or
+upper-case.
 
 =head1 OBJECT METHODS
 
@@ -1018,6 +1100,18 @@ the second argument. To use the example from above:
  >> SQL:
       DELETE FROM this_table
        WHERE this_id = 35
+
+B<id_field_select( $id, \%params )>
+
+Generates a list of fieldnames suitable for passing in the 'select'
+parameter to L<SPOPS::SQLInterface|SPOPS::SQLInterface>.
+
+If you pass a true value for the 'noqualify' parameter, SPOPS will not
+prefix the fieldnames with the table name.
+
+This method is aware of objects using multiple primary keys.
+
+Returns: list of fields.
 
 B<fetch( $id, \%params )>
 
@@ -1295,6 +1389,73 @@ fetches the value of C<@@IDENTITY>, and
 L<SPOPS::DBI::MySQL|SPOPS::DBI::MySQL> gets the value of the
 auto-incremented field from the database handle.
 
+B<apply_insert_alter( \%params )>
+
+This method is called when C<save()> is applied to an unsaved
+object. It uses configuration information to alter how the value for a
+particular field gets passed to the database. (See entry under L<DATA
+ACCESS METHODS> for C<insert_alter> above.)
+
+If you override this, your method should modify the parameters passed
+in. (Peek-a-boo logic, sorry.)
+
+Parameters:
+
+=over 4
+
+=item *
+
+B<field> (\@)
+
+Column names for the insert.
+
+=item *
+
+B<value> (\@)
+
+Values for the insert, matched in order to the C<field> parameter.
+
+=item *
+
+B<no_quote> (\%)
+
+If you make a modification for a particular field you should set the
+value in this hash for the field you changed to a true
+value. Otherwise L<SPOPS::SQLInterface|SPOPS::SQLInterface> will quote
+the value using the normal DBI rules and the insert will likely fail.
+
+=item *
+
+B<insert_alter> (\%) (optional)
+
+In addition to defining alterations via the configuration, the user
+can also pass in alterations directly to the C<save()> method via its
+parameters.
+
+=item *
+
+B<DEBUG> (int) (optional)
+
+Debugging value as passed into C<save()>
+
+=back
+
+Here is a simple example where we modify the value for the field
+'tochange' to use some 'CustomSQLFunction'. Note that we explicitly do
+not check whether other fields need to be altered since in the first
+step we call the method in the parent class.
+
+ sub apply_insert_alter {
+     my ( $self, $params ) = @_;
+     $self->SUPER::apply_insert_alter( $params );
+     for ( my $i = 0; $i < @{ $params->{value} }; $i++ ) {
+          next unless ( $params->{field}[ $i ] eq 'tochange' );
+          my ( $type, $insert_value ) = split /=/, $params->{value}[ $i ], 2;
+          $params->{value}[ $i ] = qq/CustomSQLFunction( $type, "$insert_value" )/;
+          $params->{no_quote}{ 'tochange' };
+     }
+ }
+
 B<remove( [ \%params ] )>
 
 Note that you can only remove a saved object (duh). Also tries to
@@ -1329,7 +1490,33 @@ in the configuration of your object and L<SPOPS|SPOPS> will do the rest.
 If you are interested: the method C<perform_lazy_load()> does the
 actual fetch of the field value.
 
-B<Important Note>: If you use lazy loading, you B<must> define a
+B<Important Note #1>: If you define one or more 'column_group' entries
+in your object configuration, then lazy loading is active for this
+class. If you store additional information in your object then SPOPS
+will try to lazy-load it even if it is not a valid field. If you want
+to store information like this, prefix the key with a '_' and SPOPS
+will ignore it as a lazy loaded field.
+
+For instance, say you are producing a list of objects and want to
+display the user name and email. Instead of looking up the information
+every time, you can create a temporary local cache. (Assume that the
+C<$object> class uses lazy-loading.)
+
+ my %user_cache = ();
+ foreach my $object ( @{ $object_list } ) {
+     unless ( $user_cache{ $object->{user_id} } ) {
+         $user_cache{ $object->{user_id} } = $object->user;
+     }
+     $object->{_user_name}  = $user_cache->{ $object->{user_id} }->full_name();
+     $object->{_user_email} = $user_cache->{ $object->{user_id} }->email();
+ }
+
+Note how we use the keys '_user_name' and '_user_email' here. If we
+used 'user_name' and 'user_email' then C<$object> would try to
+lazy-load these value and throw an error when the column was not found
+in the table.
+
+B<Important Note #2>: If you use lazy loading, you B<must> define a
 method C<global_datasource_handle()> (see L<DATABASE HANDLE> above)
 for your object -- otherwise the C<perform_lazy_load()> method will
 not be able to get it.

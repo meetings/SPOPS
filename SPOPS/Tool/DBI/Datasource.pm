@@ -1,6 +1,6 @@
-package My::DBI::DatasourceConfigure;
+package SPOPS::Tool::DBI::Datasource;
 
-# $Id: DatasourceConfigure.pm,v 2.0 2002/03/19 04:00:07 lachoy Exp $
+# $Id: Datasource.pm,v 1.2 2002/04/27 19:07:34 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
@@ -24,7 +24,8 @@ sub %%CLASS%%::global_datasource_handle {
         $%%CLASS%%::DBH->{RaiseError} = 1;
         $%%CLASS%%::DBH->{PrintError} = 0;
         $%%CLASS%%::DBH->{ChopBlanks} = 1;
-        $%%CLASS%%::DBH->{AutoCommit}  = 1;
+        $%%CLASS%%::DBH->{AutoCommit} = 1;
+        $%%CLASS%%::DBH->trace( %%TRACE%% );
     }
     return $%%CLASS%%::DBH;
 }
@@ -42,11 +43,13 @@ sub datasource_access {
                        "'dbi_config->username' and 'dbi_config->username' defined" );
     }
 
+    my $trace_level = $dbi_config->{trace} || 0;
     my $ds_code = $generic_ds_sub;
     $ds_code =~ s/%%CLASS%%/$class/g;
     $ds_code =~ s/%%DSN%%/$dbi_config->{dsn}/g;
     $ds_code =~ s/%%USER%%/$dbi_config->{username}/g;
     $ds_code =~ s/%%PASS%%/$dbi_config->{password}/g;
+    $ds_code =~ s/%%TRACE%%/$trace_level/g;
     {
         local $SIG{__WARN__} = sub { return undef };
         eval $ds_code;
@@ -64,14 +67,14 @@ sub datasource_access {
 
 =head1 NAME
 
-My::DBI::DatasourceConfigure -- Embed the parameters for a DBI handle in object configuration
+SPOPS::Tool::DBI::Datasource -- Embed the parameters for a DBI handle in object configuration
 
 =head1 SYNOPSIS
 
  my $spops = {
    myobject => {
      class      => 'My::Object',
-     rules_from => [ 'My::DBI::DatasourceConfigure' ],
+     rules_from => [ 'SPOPS::Tool::DBI::Datasource' ],
      dbi_config => { dsn => 'DBI:mysql:test',
                      username => 'kool',
                      password => 'andthegang' },
@@ -89,6 +92,29 @@ very handy for creating simple, one-off scripts, but you should still
 use the subclassing strategy from
 L<SPOPS::Manual::Cookbook|SPOPS::Manual::Cookbook> if you will have
 multiple objects using the same datasource.
+
+You can specify the following items in the configuration:
+
+=over 4
+
+=item *
+
+C<dsn>: The DBI DSN, or the first entry in the normal DBI C<connect> call.
+
+=item *
+
+C<username>: Username to connect with
+
+=item *
+
+C<password>: Password to connect with
+
+=item *
+
+C<trace>: Trace level to use (0-5, see L<DBI|DBI> for what the levels
+mean)
+
+=back
 
 =head1 METHODS
 

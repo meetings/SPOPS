@@ -1,6 +1,6 @@
-package My::DBI::FindDefaults;
+package SPOPS::Tool::DBI::FindDefaults;
 
-# $Id: FindDefaults.pm,v 2.0 2002/03/19 04:00:07 lachoy Exp $
+# $Id: FindDefaults.pm,v 1.1 2002/04/26 15:37:15 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
@@ -64,7 +64,7 @@ __END__
 
 =head1 NAME
 
-My::DBI::FindDefaults - Load default values from a particular record
+SPOPS::Tool::DBI::FindDefaults - Load default values from a particular record
 
 =head1 SYNOPSIS
 
@@ -76,7 +76,7 @@ My::DBI::FindDefaults - Load default values from a particular record
     field               => [ 'email', 'language', 'country' ],
     id_field            => 'email',
     base_table          => 'test_table',
-    rules_from          => [ 'My::DBI::FindDefaults' ],
+    rules_from          => [ 'SPOPS::Tool::DBI::FindDefaults' ],
     find_default_id     => 4,
     find_default_fields => [ 'language', 'country' ],
  };

@@ -1,6 +1,6 @@
 package SPOPS::ClassFactory;
 
-# $Id: ClassFactory.pm,v 2.0 2002/03/19 04:00:00 lachoy Exp $
+# $Id: ClassFactory.pm,v 2.1 2002/04/30 03:56:35 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -10,7 +10,7 @@ use Data::Dumper  qw( Dumper );
 use SPOPS         qw( _w DEBUG );
 use SPOPS::Exception;
 
-$SPOPS::ClassFactory::VERSION   = substr(q$Revision: 2.0 $, 10);
+$SPOPS::ClassFactory::VERSION   = substr(q$Revision: 2.1 $, 10);
 @SPOPS::ClassFactory::EXPORT_OK = qw( OK DONE NOTIFY ERROR RESTART
                                       FACTORY_METHOD RULESET_METHOD );
 
@@ -174,7 +174,8 @@ sub create_stub {
         local $SIG{__WARN__} = sub { return undef };
         eval $module;
         if ( $@ ) {
-            return ( ERROR, "Error creating stub class: $@ with code\n" . $module );
+            return ( ERROR, "Error creating stub class [$this_class] with " .
+                            "code\n$module\nError: $@" );
         }
     }
     return $class->require_config_classes( $config );
@@ -193,9 +194,10 @@ sub require_config_classes {
         next if ( $REQ_CLASSES{ $req_class } );
         eval "require $req_class";
         if ( $@ ) {
-            return ( ERROR, "Error requiring class ($req_class) from ISA in ($this_class): $@" );
+            return ( ERROR, "Error requiring class [$req_class] from ISA " .
+                            "or 'rules_from' in [$this_class]: $@" );
         }
-        DEBUG() && _w( 3, "Class ($req_class) require'd by ($this_class) ok." );
+        DEBUG() && _w( 3, "Class [$req_class] require'd by [$this_class] ok." );
         $REQ_CLASSES{ $req_class }++;
     }
     return ( OK, undef );

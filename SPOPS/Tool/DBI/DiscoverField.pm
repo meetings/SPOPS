@@ -1,6 +1,6 @@
-package My::DiscoverField;
+package SPOPS::Tool::DBI::DiscoverField;
 
-# $Id: DiscoverField.pm,v 2.0 2002/03/19 04:00:06 lachoy Exp $
+# $Id: DiscoverField.pm,v 1.1 2002/04/30 02:40:12 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
@@ -42,7 +42,7 @@ __END__
 
 =head1 NAME
 
-My::DiscoverField - Sample rule for SPOPS::ClassFactory implementing autofield discovery
+SPOPS::Tool::DBI::DiscoverField - SPOPS::ClassFactory rule implementing autofield discovery
 
 =head1 SYNOPSIS
 

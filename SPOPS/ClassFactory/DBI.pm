@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DBI;
 
-# $Id: DBI.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: DBI.pm,v 2.3 2002/04/30 03:57:37 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK ERROR DONE );
 
-$SPOPS::ClassFactory::DBI::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::ClassFactory::DBI::VERSION  = substr(q$Revision: 2.3 $, 10);
 
 # NOTE: The behavior is installed in SPOPS::DBI
 
@@ -48,13 +48,15 @@ sub conf_multi_field_key_id {
     my $id_sub = $generic_multifield_id;
     $id_sub =~ s/%%CLASS%%/$class/g;
     $id_sub =~ s/%%ID_FIELD_OBJECT_LIST%%/$id_object_reference/g;
+    DEBUG() && _w( 5, "Evaluation method 'id' for class [$class]\n$id_sub" );
     {
         local $SIG{__WARN__} = sub { return undef };
         eval $id_sub;
-    }
-    if ( $@ ) {
-        warn "Code: $id_sub\n";
-        return ( ERROR, "Cannot create 'id()' method for ($class): $@" );
+        if ( $@ ) {
+            warn "Code: $id_sub\n";
+            return ( ERROR, "Cannot create multifield 'id()' method for " .
+                            "class [$class]: $@" );
+        }
     }
     return ( DONE, undef );
 }
@@ -131,6 +133,16 @@ my $generic_multifield_etc = <<'MFETC';
 	    }
         return join( ' AND ', @clause );
     }
+
+    # should return something like:
+    # ( 'mytable.id1', 'mytable.id2' )
+    sub %%CLASS%%::id_field_select {
+        my ( $class, $p ) = @_;
+        return ( $p->{noqualify} )
+                 ? %%ID_FIELD_NAME_LIST%%
+                 : map { join( '.', $class->table_name, $_ ) } %%ID_FIELD_NAME_LIST%%;
+    }
+
 MFETC
 
 
@@ -151,20 +163,22 @@ sub conf_multi_field_key_other {
     my $id_variable_reference  = join( ', ', map { "\$val{$_}" } @{ $id_field } );
     my $id_boolean_reference   = join( ' and ', map { "\$val{$_}" } @{ $id_field } );
     my $id_field_reference     = 'qw( ' . join( ' ', @{ $id_field } ) . ' )';
-    my $id_sub = $generic_multifield_etc;
-    $id_sub =~ s/%%CLASS%%/$class/g;
-    $id_sub =~ s/%%ID_FIELD_OBJECT_LIST%%/$id_object_reference/g;
-    $id_sub =~ s/%%ID_FIELD_VARIABLE_LIST%%/$id_variable_reference/g;
-    $id_sub =~ s/%%ID_FIELD_BOOLEAN_LIST%%/$id_boolean_reference/g;
-    $id_sub =~ s/%%ID_FIELD_NAME_LIST%%/$id_field_reference/g;
+    my $other_sub = $generic_multifield_etc;
+    $other_sub =~ s/%%CLASS%%/$class/g;
+    $other_sub =~ s/%%ID_FIELD_OBJECT_LIST%%/$id_object_reference/g;
+    $other_sub =~ s/%%ID_FIELD_VARIABLE_LIST%%/$id_variable_reference/g;
+    $other_sub =~ s/%%ID_FIELD_BOOLEAN_LIST%%/$id_boolean_reference/g;
+    $other_sub =~ s/%%ID_FIELD_NAME_LIST%%/$id_field_reference/g;
+    DEBUG() && _w( 5, "Evaluating other multifield key methods:\n$other_sub" );
     {
         local $SIG{__WARN__} = sub { return undef };
-        eval $id_sub;
-    }
-    if ( $@ ) {
-        warn "Code: $id_sub\n";
-        return ( ERROR, "Cannot create 'id_clause() and id_fields()'" .
-                        "methods for ($class): $@" );
+        eval $other_sub;
+        if ( $@ ) {
+            return ( ERROR, "Cannot create multifield key 'clone()', " .
+                            "'id_field(), 'id_clause()', and " .
+                            "'id_field_select()' methods for [$class]. " .
+                            "Error: $@" );
+        }
     }
     return ( OK, undef );
 }
@@ -208,14 +222,17 @@ my $generic_linksto = <<'LINKSTO';
 
     sub %%CLASS%%::%%LINKSTO_ALIAS%%_add {
         my ( $self, $link_id_list, $p ) = @_;
+        return 0 unless ( defined $link_id_list );
 
-        # Allow user to pass only one ID to add (scalar) or an arrayref (ref)
+        # Allow user to pass only one ID to add (scalar) or an
+        # arrayref (ref)
 
-        $link_id_list = ( ref $link_id_list ) ? $link_id_list : [ $link_id_list ];
+        $link_id_list = ( ref $link_id_list eq 'ARRAY' )
+                          ? $link_id_list : [ $link_id_list ];
         my $added = 0;
         $p->{db} ||= %%LINKSTO_CLASS%%->global_datasource_handle;
         foreach my $link_id ( @{ $link_id_list } ) {
-            SPOPS::_wm( 1, $p->{DEBUG}, "Trying to add link to ID ($link_id)" );
+            SPOPS::_wm( 1, $p->{DEBUG}, "Trying to add link to ID [$link_id]" );
             %%LINKSTO_CLASS%%->db_insert({ table => '%%LINKSTO_TABLE%%',
                                            field => [ '%%ID_FIELD%%', '%%LINKSTO_ID_FIELD%%' ],
                                            value => [ $self->{%%ID_FIELD%%}, $link_id ],
@@ -279,15 +296,19 @@ sub conf_relate_links_to {
             $linksto_sub =~ s/%%LINKSTO_ALIAS%%/$linksto_alias/g;
             $linksto_sub =~ s/%%LINKSTO_ID_FIELD%%/$linksto_id_field/g;
             $linksto_sub =~ s/%%LINKSTO_TABLE%%/$table/g;
-            DEBUG() && _w( 2, "Trying to create links_to routines with ($class) links_to",
-                              "($linksto_class) using table ($table)" );
+            DEBUG() && _w( 2, "Trying to create links_to routines with ",
+                              "[$class] links_to [$linksto_class] using ",
+                              "table [$table]" );
             DEBUG() && _w( 5, "Now going to eval the routine:\n$linksto_sub" );
             {
                 local $SIG{__WARN__} = sub { return undef };
                 eval $linksto_sub;
-            }
-            if ( $@ ) {
-                return ( ERROR, "Cannot create 'links_to' methods for ($class): $@" );
+                if ( $@ ) {
+                    return ( ERROR, "Cannot create 'links_to' methods for " .
+                                    "class [$class] linking to class ",
+                                    "[$linksto_class] via table [$table]. " .
+                                    "Error: $@" );
+                }
             }
         }
     }

@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 31_dbi_multifield.t,v 2.0 2002/03/19 04:00:07 lachoy Exp $
+# $Id: 31_dbi_multifield.t,v 2.2 2002/04/11 04:14:56 lachoy Exp $
 
 # Almost exactly the same as 30_dbi.t, but here we're testing whether
 # multiple-field primary keys work ok
@@ -8,7 +8,7 @@
 use strict;
 use Data::Dumper qw( Dumper );
 
-use constant NUM_TESTS       => 18;
+use constant NUM_TESTS       => 22;
 use constant TEST_TABLE_NAME => 'spops_multi_test';
 
 my $SPOPS_CLASS = 'DBIMultiTest';
@@ -35,7 +35,7 @@ END {
 
     my $driver_name = $config->{DBI_driver};
 
-    my $spops_dbi_driver = check_dbd_compliance( $config, $driver_name, $SPOPS_CLASS );
+    my $spops_dbi_driver = get_spops_driver( $config, $driver_name );
 
     # Ensure we can get to SPOPS::Initialize
     # TEST: 1
@@ -59,17 +59,32 @@ END {
     ok( ! $@, 'Initialize process run' );
     ok( $class_init_list->[0] eq $SPOPS_CLASS, 'Initialize class' );
 
+    check_dbd_compliance( $config, $driver_name, $SPOPS_CLASS );
 
     # Create a database handle and create our testing table
 
     $db = get_db_handle( $config );
     create_table( $db, 'multi', TEST_TABLE_NAME );
 
+    # See whether we get back the right information for various
+    # configuration items
+    # TEST 4-7
+
+    {
+        my ( $base_id_field1, $base_id_field2 ) = $SPOPS_CLASS->id_field;
+        my ( $id_field1, $id_field2 ) = $SPOPS_CLASS->id_field_select;
+        is( $id_field1, TEST_TABLE_NAME . ".$base_id_field1", "ID field (1) for SELECT" );
+        is( $id_field2, TEST_TABLE_NAME . ".$base_id_field2", "ID field (2) for SELECT" );
+        my ( $nq_id_field1, $nq_id_field2 ) = $SPOPS_CLASS->id_field_select({ noqualify => 1 });
+        is( $nq_id_field1, $base_id_field1, "ID field for SELECT (not qualified)" );
+        is( $nq_id_field2, $base_id_field2, "ID field for SELECT (not qualified)" );
+    }
+
     my $obj_time = 1004897158;
     my $obj_user = 5;
 
     # Create an object
-    # TEST: 4-5
+    # TEST: 7-8
     {
         my $obj = eval { $SPOPS_CLASS->new({ spops_name => 'MyProject',
                                              spops_goop => 'oopie doop',
@@ -88,7 +103,7 @@ END {
     }
 
     # Fetch an object, then update it
-    # TEST: 6-9
+    # TEST: 9-12
     {
         my $obj = eval { $SPOPS_CLASS->fetch( "$obj_time,$obj_user", { db => $db, skip_cache => 1 } ) };
         ok( ! $@, 'Fetch object (perform)' );
@@ -111,7 +126,7 @@ END {
     }
 
     # Fetch an object then clone it and save it
-    # TEST: 10-12
+    # TEST: 13-16
     {
         my $obj     = eval { $SPOPS_CLASS->fetch( "$obj_time,$obj_user", { db => $db, skip_cache => 1 } ) };
         my $new_obj = eval { $obj->clone({ spops_name => 'YourProject',
@@ -130,7 +145,7 @@ END {
 
     # Create another object, but this time don't define the spops_num
     # field and see if the default comes through
-    # TEST: 13
+    # TEST: 17
     {
         my $obj = $SPOPS_CLASS->new({ spops_time => 1004897292,
                                       spops_user => 5,
@@ -141,7 +156,7 @@ END {
     }
 
     # Fetch the three objects in the db and be sure we got them all
-    # TEST: 14-15
+    # TEST: 18-19
     {
         my $obj_list = eval { $SPOPS_CLASS->fetch_group({ db => $db, skip_cache => 1 } ) };
         ok( ! $@, 'Fetch group' );
@@ -153,14 +168,14 @@ END {
     }
 
     # Fetch a count of the objects in the database
-    # TEST: 16
+    # TEST: 20
     {
         my $obj_count = eval { $SPOPS_CLASS->fetch_count({ db => $db }) };
         ok( $obj_count == 3, 'Fetch count' );
     }
 
     # Create an iterator and run through the objects
-    # TEST: 17-18
+    # TEST: 21-22
     {
         my $iter = eval { $SPOPS_CLASS->fetch_iterator({ db => $db, skip_cache => 1 }) };
         ok( $iter->isa( 'SPOPS::Iterator' ), 'Iterator returned' );

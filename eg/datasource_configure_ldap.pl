@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: datasource_configure_ldap.pl,v 2.0 2002/03/19 04:00:06 lachoy Exp $
+# $Id: datasource_configure_ldap.pl,v 2.1 2002/04/26 15:35:37 lachoy Exp $
 
 use strict;
 use Data::Dumper qw( Dumper );
@@ -14,7 +14,7 @@ my $LDAP_BASE_DN = 'ou=People,dc=yourcompany,dc=com';
           user => {
              class          => 'My::User',
              isa            => [ 'SPOPS::LDAP' ],
-             rules_from     => [ 'My::LDAP::DatasourceConfigure' ],
+             rules_from     => [ 'SPOPS::Tool::LDAP::Datasource' ],
              id_field       => 'uid',
              field          => [ qw/ cn sn givenname displayname mail
                                      telephonenumber objectclass uid ou / ],

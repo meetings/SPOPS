@@ -1,9 +1,10 @@
-package My::UTFConvert;
+package SPOPS::Tool::UTFConvert;
 
-# $Id: UTFConvert.pm,v 2.0 2002/03/19 04:00:07 lachoy Exp $
+# $Id: UTFConvert.pm,v 1.1 2002/04/26 15:37:15 lachoy Exp $
 
-# WARNING: This currently only works in 5.6.0 and earlier versions of
-# Perl. It will barf with a syntax error on later versions.
+# ***************WARNING***************
+# This currently only works in 5.6.0 and earlier versions of Perl. It
+# will barf with a syntax error on later versions.
 
 use strict;
 use utf8;
@@ -47,13 +48,15 @@ __END__
 
 =head1 NAME
 
-My::UTFConvert -- Provide automatic UTF-8 conversion
+SPOPS::Tool::UTFConvert -- Provide automatic UTF-8 conversion
 
 =head1 SYNOPSIS
 
+ # Only use this in 5.6.0 and earlier versions of Perl!
+
  # In object configuration
  object => {
-    rules_from => [ 'My::UTFConvert' ],
+    rules_from => [ 'SPOPS::Tool::UTFConvert' ],
     utf_fields => [ 'field1', 'field2' ],
  },
 
@@ -71,9 +74,20 @@ saved we do a translation on those same fields.
 
 =head1 METHODS
 
+B<ruleset_factory( $class, $ruleset )>
+
+Installs C<post_fetch_action> and C<pre_save_action> rules for the
+given class.
+
 B<from_utf>
 
+Installed as C<post_fetch_action>. Translates all fields in the
+configuration key C<utf_fields> from UTF.
+
 B<to_utf>
+
+Installed as C<pre_save_action>. Translates all fields in the
+configuration key C<utf_fields> to UTF.
 
 =head1 BUGS
 

@@ -1,6 +1,6 @@
 # -*-perl-*-
 
-# $Id: 30_dbi.t,v 2.0 2002/03/19 04:00:07 lachoy Exp $
+# $Id: 30_dbi.t,v 2.4 2002/04/27 19:08:09 lachoy Exp $
 
 # Note that this is a good way to see if certain databases support the
 # type checking methods of the DBI -- in fact, we might want to add
@@ -9,7 +9,7 @@
 use strict;
 use Data::Dumper qw( Dumper );
 
-use constant NUM_TESTS       => 20;
+use constant NUM_TESTS       => 28;
 use constant TEST_TABLE_NAME => 'spops_test';
 
 my $SPOPS_CLASS = 'DBITest';
@@ -38,7 +38,7 @@ END {
 
     my $driver_name = $config->{DBI_driver};
 
-    my $spops_dbi_driver = check_dbd_compliance( $config, $driver_name, $SPOPS_CLASS );
+    my $spops_dbi_driver = get_spops_driver( $config, $driver_name );
 
     # Ensure we can get to SPOPS::Initialize
 
@@ -63,13 +63,46 @@ END {
     ok( ! $@, 'Initialize process run' );
     ok( $class_init_list->[0] eq $SPOPS_CLASS, 'Initialize class' );
 
+    check_dbd_compliance( $config, $driver_name, $SPOPS_CLASS );
+
+    # Check that class was initialized ok
+
+    is( scalar @{ $SPOPS_CLASS->field_list },
+        scalar @{ $spops_config->{tester}{field} },
+        "Class initialize set 'field_list' property" );
+    is( $SPOPS_CLASS->table_name, TEST_TABLE_NAME,
+        "Class initialize set 'table_name' property" );
 
     # Create a database handle and create our testing table
 
     $db = get_db_handle( $config );
     create_table( $db, 'simple', TEST_TABLE_NAME );
+    my $sql_data_types = get_sql_types( $db, TEST_TABLE_NAME, $driver_name );
+
+    # See whether we get back the right information for various
+    # configuration items
+
+    {
+        my $base_id_field = $SPOPS_CLASS->id_field;
+        my ( $id_field ) = $SPOPS_CLASS->id_field_select;
+        is( $id_field, TEST_TABLE_NAME . ".$base_id_field", "ID field for SELECT" );
+        my ( $nq_id_field ) = $SPOPS_CLASS->id_field_select({ noqualify => 1 });
+        is( $nq_id_field, $base_id_field, "ID field for SELECT (not qualified)" );
+
+        my $id_for_clause = 45;
+        my $data_type = $sql_data_types->{ $base_id_field };
+        my $quoted = $db->quote( $id_for_clause, $data_type );
+        my $id_clause = $SPOPS_CLASS->id_clause( $id_for_clause, undef,
+                                                 { db => $db } );
+        is( $id_clause, TEST_TABLE_NAME . ".$base_id_field = $quoted", "ID clause" );
+        my $nq_id_clause = $SPOPS_CLASS->id_clause( $id_for_clause, 'noqualify',
+                                                    { db => $db } );
+        #warn "Datatype: [$data_type]; Clauses: [$id_clause] [$nq_id_clause]\n";
+        is( $nq_id_clause, "$base_id_field = $quoted", "ID clause" );
+    }
 
     # Create an object
+
     {
         my $obj = eval { $SPOPS_CLASS->new({ spops_name => 'MyProject',
                                              spops_goop => 'oopie doop',
@@ -87,6 +120,7 @@ END {
     }
 
     # Fetch an object, then update it
+
     {
         my $obj = eval { $SPOPS_CLASS->fetch( 42, { db => $db, skip_cache => 1 } ) };
         ok( ! $@, 'Fetch object (perform)' );
@@ -109,6 +143,7 @@ END {
     }
 
     # Fetch an object then clone it and save it
+
     {
         my $obj     = eval { $SPOPS_CLASS->fetch( 42, { db => $db, skip_cache => 1 } ) };
         my $new_obj = eval { $obj->clone({ spops_name => 'YourProject',
@@ -126,16 +161,25 @@ END {
     }
 
     # Create another object, but this time don't define the spops_num
-    # field and see if the default comes through
+    # field and see if the default comes through. Also pass along an
+    # 'insert_alter' statement and see if it worked.
+
     {
         my $obj = $SPOPS_CLASS->new({ spops_id   => 1588,
                                       spops_goop => 'here we go!',
                                       spops_name => 'AnotherProject' });
-        eval { $obj->save({ is_add => 1, db => $db, skip_cache => 1 }) };
-        ok( $obj->{spops_num} == 2, 'Fetch object (correct data with default' );
+        eval { $obj->save({ is_add => 1, db => $db, skip_cache => 1,
+                            insert_alter => { spops_goop => "'added -- %s'" } }) };
+        ok( ! $@, 'Insert object with default data unspecified' );
+        ok( $obj->{spops_num} == 2, 'Fetch object (correct data with default)' );
+
+        my $redo_obj = eval { $SPOPS_CLASS->fetch( $obj->id,
+                                                   { db => $db, skip_cache => 1 } ) };
+        is( $redo_obj->{spops_goop}, "added -- here we go!", 'Insert alter' );
     }
 
     # Fetch the three objects in the db and be sure we got them all
+
     {
         my $obj_list = eval { $SPOPS_CLASS->fetch_group({ db => $db, skip_cache => 1 } ) };
         ok( ! $@, 'Fetch group' );
@@ -147,12 +191,14 @@ END {
     }
 
     # Fetch a count of the objects in the database
+
     {
         my $obj_count = eval { $SPOPS_CLASS->fetch_count({ db => $db }) };
         ok( $obj_count == 3, 'Fetch count' );
     }
 
     # Create an iterator and run through the objects
+
     {
         my $iter = eval { $SPOPS_CLASS->fetch_iterator({ db         => $db,
                                                          skip_cache => 1 }) };
@@ -163,6 +209,7 @@ END {
     }
 
     # Create an iterator from the object IDs then run through them
+
     {
         my $iter = SPOPS::Iterator::DBI->new({ id_list => \@ID_LIST,
                                                class   => $SPOPS_CLASS,

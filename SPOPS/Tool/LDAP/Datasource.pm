@@ -1,6 +1,6 @@
-package My::LDAP::DatasourceConfigure;
+package SPOPS::Tool::LDAP::Datasource;
 
-# $Id: DatasourceConfigure.pm,v 2.0 2002/03/19 04:00:07 lachoy Exp $
+# $Id: Datasource.pm,v 1.1 2002/04/26 15:37:15 lachoy Exp $
 
 use strict;
 use SPOPS               qw( DEBUG _w );
@@ -64,7 +64,7 @@ sub datasource_access {
 
 =head1 NAME
 
-My::LDAP::DatasourceConfigure -- Embed the parameters for a LDAP handle in object configuration
+SPOPS::Tool::LDAP::Datasource -- Embed the parameters for a LDAP handle in object configuration
 
 =head1 SYNOPSIS
 
@@ -74,7 +74,7 @@ My::LDAP::DatasourceConfigure -- Embed the parameters for a LDAP handle in objec
  my $spops = {
    myobject => {
      class      => 'My::Object',
-     rules_from => [ 'My::LDAP::DatasourceConfigure' ]
+     rules_from => [ 'SPOPS::Tool::LDAP::Datasource' ]
      field      => [ qw/ cn sn givenname displayname mail
                          telephonenumber objectclass uid ou / ],
      id_field   => 'uid',

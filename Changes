@@ -1,5 +1,159 @@
 Revision history for Perl extension SPOPS.
 
+0.60  Mon May  6 08:45:34 EDT 2002
+
+Overall:
+
+   * New feature: Initial support for InterBase family of databases
+     (InterBase and FirebirdSQL), using the DBD::InterBase
+     driver. There is one major caveat: if you're using security with
+     your objects, you cannot use the same database handle for
+     security as other objects. (See other notes below.)
+
+   * New feature: SPOPS::DBI classes can modify the value inserted
+     into the database when calling save() on a new object. See
+     'insert_alter' documentation in SPOPS::DBI.
+
+   * Added tools previously in 'eg/' to the main distribution, now
+     found in SPOPS::Tool
+
+   * Small bugfixes and enhancements.
+
+Individual:
+
+   * Makefile.PL:
+
+     - Registered InterBase as a valid DBD
+
+   * doc/Manual/Configuration.pod:
+
+     - Document new 'insert_alter' configuration item for SPOPS::DBI
+     objects.
+
+   * doc/Manual/Exceptions.pod:
+
+     - Document exception shortcuts.
+
+   * SPOPS/DBI.pm:
+
+     - Fix bug in perform_lazy_load() so we allow field-mapped fields
+     to be lazy-loaded as well. (Thanks to Bill Heckel
+     <bill@billheckel.com> for the bug report.)
+
+     - Fix fetch_count() so it uses a fully-qualified column to select
+     the count. (Thanks to Ray Zimmerman for patch.)
+
+     - Add id_field_select() to provide a list of fields suitable for
+     a SELECT statement.
+
+     - Add configuration callback for 'insert_alter' that holds
+     information to transform values on a save() for a new object.
+
+     - Add apply_insert_alter() that is called on an insert to process
+     the new 'insert_alter' directive. Note that the fieldname entries
+     in the configuration must be in lower-case.
+
+     - If lazy-loading is turned on, don't try to lazy-load fields
+     beginning with a '_'. Add note and example about this in docs.
+
+   * SPOPS/ClassFactory.pm:
+
+     - Fixed error messages (SF Bug #533134)
+
+   * SPOPS/ClassFactory/DBI.pm:
+
+     - Add id_field_select() to be generated for multifield primary
+     keys.
+
+     - Fixed error messages (SF Bug #533134)
+
+   * SPOPS/DBI/InterBase.pm:
+
+     - Add support for InterBase family of databases. This was only
+     tested using FirebirdSQL 1.0 running in SuperServer mode on Linux
+     using DBD::InterBase 0.30. This seems to work but is still
+     considered experimental until I learn more about this database or
+     someone who is knowledgable can set me straight. (If you're one
+     of those people, email me at chris@cwinters.com.)
+
+   * SPOPS/Exception.pm:
+
+     - In shortcut 'spops_error' changed normal subroutine call to a
+     goto &sub to keep caller stack intact.
+
+   * SPOPS/Exception/DBI.pm:
+
+     - Added shortcut 'spops_dbi_error'
+
+   * SPOPS/Exception/LDAP.pm:
+
+     - Added shortcut 'spops_ldap_error'
+
+   * SPOPS/Exception/Security.pm:
+
+     - Added shortcut 'spops_security_error'
+
+   * SPOPS/Import/DBI/TableTransform.pm:
+
+     - Add mappings for 'interbase' and 'firebird'
+
+   * SPOPS/Import/DBI/TableTransform/InterBase.pm:
+
+     - Add table transformation strings for InterBase family
+
+   * SPOPS/SQLInterface.pm:
+
+     - Modify db_discover_types() to try both $dbh->{Name} and
+     $dbh->{name} for the database name. Thanks to Florian Hellberg
+     <fh@fastnetworx.de> for the bug report.
+
+     - Use 'spops_error' and 'spops_dbi_error' shortcuts for all
+     exceptions
+
+   * SPOPS/Tool/ReadOnly.pm:
+
+     - Add tool to make objects read-only.
+
+   * SPOPS/Tool/UTFConvert.pm:
+
+     - Add tool to do UTF8 translation to-from a datasource. (See
+     warnings.)
+
+   * SPOPS/Tool/DBI/DisoverField.pm:
+
+     - Add tool to do automatic field discovery for DBI-based objects.
+
+   * SPOPS/Tool/DBI/Datasource.pm:
+
+     - Add tool to embed DBI datasource connection information in
+     the object configuration.
+
+   * SPOPS/Tool/DBI/FindDefaults.pm:
+
+     - Add tool to get field defaults from a particular record.
+
+   * SPOPS/Tool/LDAP/Datasource.pm:
+
+     - Add tool to embed LDAP datasource connection information in
+     the object configuration.
+
+   * t/dbi_config.t:
+
+     - Registered InterBase type
+
+   * t/30_dbi.t, t/31_dbi_multifield.t:
+
+     - Add test for output of new methods id_field_select()
+
+     - Add more tests (id_clause)
+
+     - Add test for 'insert_alter'
+
+   * t/06_ruleset.t, t/SampleRuleset.pm:
+
+     - Add files for testing rulesets -- very sparse for the moment.
+
+
 0.59  Mon Mar 18 23:33:06 EST 2002
 
 Overall:
@@ -1600,4 +1754,3 @@ Specifics:
         but a lot of work is needed to extricate them from their
         previous application and to make everything work together and
         feel cohesive.
-

@@ -1,15 +1,23 @@
 package SPOPS::Exception::LDAP;
 
-# $Id: LDAP.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: LDAP.pm,v 2.1 2002/04/29 12:51:19 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
 
-$SPOPS::Exception::LDAP::VERSION   = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Exception::LDAP::VERSION   = substr(q$Revision: 2.1 $, 10);
+@SPOPS::Exception::LDAP::EXPORT_OK = qw( spops_ldap_error );
 
 my @FIELDS = qw( code action filter error_text error_name );
 SPOPS::Exception::LDAP->mk_accessors( @FIELDS );
-sub get_fields { return ( $_[0]->SUPER::get_fields, @FIELDS ) }
+
+sub get_fields {
+    return ( $_[0]->SUPER::get_fields, @FIELDS );
+}
+
+sub spops_ldap_error {
+    goto &SPOPS::Exception::throw( 'SPOPS::Exception::LDAP', @_ );
+}
 
 1;
 
@@ -58,7 +66,13 @@ error message, but not necessarily.
 
 =head1 METHODS
 
-No extra.
+No extra methods, but you can use a shortcut if you are throwing
+errors:
+
+ use SPOPS::Exception::LDAP qw( spops_ldap_error );
+
+ ...
+ spops_ldap_error "I found an LDAP error with code ", $ldap->code, "...";
 
 =head1 BUGS
 

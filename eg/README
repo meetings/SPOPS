@@ -3,36 +3,7 @@ README: SPOPS/eg
 
 This directory contains sample SPOPS code and classes you can use for
 users, groups and security, along with sample scripts to test them
-out. Plus two classes that are useful anywhere.
-
-
-For the classes that are useful anywhere:
-
- My/DiscoverField.pm
-
-     - class that implements an SPOPS::ClassFactory rule so that you
-     do not need to specify fields in your object configuration if
-     you're using all fields in the table. (Extremely handy!)
-
- My/DBI/FieldDefaults.pm
-
-     - class that retrieves the information for a particular record to
-     use as defaults.
-
- My/ReadOnly.pm
-
-     - put this in your 'rules_from' key in the configuration and
-     suddenly 'save()' and 'remove()' don't work anymore. Cool!
-
- My/UTFConvert.pm
-
-     - for datasources that store data in unicode format, do automatic
-     translation whenever the data are fetched and saved. WARNING:
-     THIS CURRENTLY ONLY WORKS FOR 5.6.0 AND EARLIER, AND IS ONLY A
-     DEMONSTRATION.
-
-The remainder of the files are to demonstrate user, group and security
-objects. You can use these as you like. It will run without any
+out. You can use these as you like. It will run without any
 modifications if you use DBD::SQLite.
 
 Note that if you create a database, run the data stocking script and
@@ -177,4 +148,4 @@ Object classes:
      - sample user object
 
 ========================================
-$Id: README,v 2.0 2002/03/19 04:00:06 lachoy Exp $
+$Id: README,v 2.1 2002/04/26 15:35:37 lachoy Exp $

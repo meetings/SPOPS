@@ -1,12 +1,12 @@
 package SPOPS::ClassFactory::DefaultBehavior;
 
-# $Id: DefaultBehavior.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: DefaultBehavior.pm,v 2.1 2002/04/29 12:51:04 lachoy Exp $
 
 use strict;
 use SPOPS               qw( _w DEBUG );
 use SPOPS::ClassFactory qw( OK DONE ERROR RULESET_METHOD );
 
-$SPOPS::ClassFactory::DefaultBehavior::VERSION   = substr(q$Revision: 2.0 $, 10);
+$SPOPS::ClassFactory::DefaultBehavior::VERSION   = substr(q$Revision: 2.1 $, 10);
 
 my @PARSE_INTO_HASH = qw( field no_insert no_update skip_undef multivalue );
 
@@ -52,9 +52,10 @@ my $ID_TEMPLATE = <<'IDTMPL';
        sub %%CLASS%%::id {
           my ( $self, $new_id ) = @_;
           my $id_field = $self->id_field ||
-                             SPOPS::Exception->throw(
-                                "Cannot find ID for object since no ID field " .
-                                "specified for class [". ref( $self ) . ']' );
+                         SPOPS::Exception->throw(
+                             "Cannot find ID for object since no ID ",
+                             "field specified for class [",
+                             "ref( $self ) . ']' " );
           return $self->{ $id_field } unless ( $new_id );
           return $self->{ $id_field } = $new_id;
        }
@@ -67,9 +68,14 @@ sub conf_id_method {
     my ( $class ) = @_;
     my $id_method = $ID_TEMPLATE;
     $id_method =~ s/%%CLASS%%/$class/g;
-    eval $id_method;
-    if ( $@ ) {
-        return ( ERROR, "Cannot create method 'id': $@" );
+    DEBUG() && _w( 5, "ID method being created\n$id_method" );
+    {
+        local $SIG{__WARN__} = sub { return undef };
+        eval $id_method;
+        if ( $@ ) {
+            return ( ERROR, "Cannot generate method 'id' in class " .
+                            "[$class]. Error: $@" );
+        }
     }
     return ( DONE, undef );
 }
@@ -92,7 +98,8 @@ sub conf_read_code {
     my @files_used = ();
     $code_class = [ $code_class ] unless ( ref $code_class eq 'ARRAY' );
     foreach my $read_code_class ( @{ $code_class } ) {
-        DEBUG() && _w( 2, "Trying to read code from ($read_code_class) to ($class)" );
+        DEBUG() && _w( 2, "Trying to read code from [$read_code_class]",
+                          "into [$class]" );
         my $filename = $read_code_class;
         $filename =~ s|::|/|g;
         my $final_filename = undef;
@@ -100,54 +107,62 @@ sub conf_read_code {
 PREFIX:
         foreach my $prefix ( @INC ) {
             my $full_filename = "$prefix/$filename.pm";
-            DEBUG() && _w( 3, "Try file: ($full_filename)" );
+            DEBUG() && _w( 3, "Try file: [$full_filename]" );
             if ( -f $full_filename ) {
                 $final_filename = $full_filename;
                 last PREFIX;
             }
         }
 
-        DEBUG() && _w( 2, "File ($final_filename) will be used for $read_code_class" );
-        if ( -f $final_filename ) {
-            eval { open( PKG, $final_filename ) || die $! };
-            if ( $@ ) {
-                return ( ERROR, "Error opening code file to be read in: $@" );
-            }
-            my $code_pkg = undef;
-            push @files_used, $final_filename;
+        unless ( $final_filename and -f $final_filename ) {
+            return ( ERROR, "Class [$read_code_class] specified in " .
+                            "'code_class' configuration defintion " .
+                            "for class [$class] was not found in \@INC" );
+        }
+
+        DEBUG() && _w( 2, "File [$final_filename] will be used for ",
+                          "[$read_code_class]" );
+
+        eval { open( PKG, $final_filename ) || die $! };
+        if ( $@ ) {
+            return ( ERROR, "Cannot read [$final_filename] specified in " .
+                            "'code_class' configuration definition for " .
+                            "class [$class]. Error: $@" );
+        }
+        my $code_pkg = undef;
+        push @files_used, $final_filename;
 
 CODEPKG:
-            while ( <PKG> ) {
-                if ( s/^\s*package $read_code_class\s*;\s*$/package $class;/ ) {
-                    $code_pkg .= $_;
-                    DEBUG() && _w( 1, " Package $read_code_class will be ",
-                                      "read in as $class" );
-                    last CODEPKG;
-                }
+        while ( <PKG> ) {
+            if ( s/^\s*package $read_code_class\s*;\s*$/package $class;/ ) {
                 $code_pkg .= $_;
+                DEBUG() && _w( 1, "Package [$read_code_class] will be ",
+                                  "read in as [$class]" );
+                last CODEPKG;
             }
-
-            # Use a block here because we want the $/ setting to
-            # NOT be localized in the while loop -- that would be bad, since
-            # the 'package' substitution would never work after the first one...
-
-            {
-                local $/ = undef;
-                $code_pkg .= <PKG>;
-            }
-            close( PKG );
-            DEBUG() && _w( 5, "Going to eval code:\n\n$code_pkg" );
-            {
-                local $SIG{__WARN__} = sub { return undef };
-                eval $code_pkg;
-                if ( $@ ) {
-                    return ( ERROR, "Error reading ($code_class) into ($class): $@" );
-                }
-            }
+            $code_pkg .= $_;
         }
-        else {
-            warn " **Filename not found for code to be read in for specified",
-                 "class ($read_code_class)\n";
+
+        # Use a block here because we want the $/ setting to NOT be
+        # localized in the while loop -- that would be bad, since the
+        # 'package' substitution would never work after the first
+        # one...
+
+        {
+            local $/ = undef;
+            $code_pkg .= <PKG>;
+        }
+        close( PKG );
+        DEBUG() && _w( 5, "Going to eval code:\n\n$code_pkg" );
+        {
+            local $SIG{__WARN__} = sub { return undef };
+            eval $code_pkg;
+            if ( $@ ) {
+                return ( ERROR, "Error running 'eval' on code read from " .
+                                "[$final_filename] as specified in " .
+                                "'code_class' configuration defintion for " .
+                                "class [$class]. Error: $@" );
+            }
         }
     }
     return ( OK, undef );
@@ -178,7 +193,7 @@ sub conf_relate_hasa {
     my $CONFIG = $class->CONFIG;
     $CONFIG->{has_a} ||= {};
     foreach my $hasa_class ( keys %{ $CONFIG->{has_a} } ) {
-        DEBUG() && _w( 1, "Try to alias $class hasa $hasa_class" );
+        DEBUG() && _w( 1, "Try to alias [$class] hasa [$hasa_class]" );
         my $hasa_config   = $hasa_class->CONFIG;
         my $hasa_id_field = $hasa_config->{id_field};
         my $hasa_sub = $GENERIC_HASA;
@@ -201,9 +216,9 @@ sub conf_relate_hasa {
 
         #   has_a => { 'MySPOPS::User' => 'created_by', ... }
 
-        my $id_fields = ( ref $CONFIG->{has_a}->{ $hasa_class } eq 'ARRAY' )
-                        ? $CONFIG->{has_a}->{ $hasa_class } 
-                        : [ $CONFIG->{has_a}->{ $hasa_class } ];
+        my $id_fields = ( ref $CONFIG->{has_a}{ $hasa_class } eq 'ARRAY' )
+                        ? $CONFIG->{has_a}{ $hasa_class } 
+                        : [ $CONFIG->{has_a}{ $hasa_class } ];
         my $num_id_fields = scalar @{ $id_fields };
         foreach my $usea_id_info ( @{ $id_fields } ) {
             my ( $hasa_alias, $usea_id_field ) = '';
@@ -233,15 +248,17 @@ sub conf_relate_hasa {
             my $this_hasa_sub = $hasa_sub;
             $this_hasa_sub =~ s/%%HASA_ALIAS%%/$hasa_alias/g;
             $this_hasa_sub =~ s/%%HASA_ID_FIELD%%/$usea_id_field/g;
-            DEBUG() && _w( 2, "Aliasing ($hasa_class) with field ($usea_id_field) ",
-                              "using alias ($hasa_alias) within ($class)" );
+            DEBUG() && _w( 2, "Aliasing [$hasa_class] with field [$usea_id_field] ",
+                              "using alias [$hasa_alias] within [$class]" );
             DEBUG() && _w( 5, "Now going to eval the routine:\n$this_hasa_sub" );
             {
                 local $SIG{__WARN__} = sub { return undef };
                 eval $this_hasa_sub;
-            }
-            if ( $@ ) {
-                return ( ERROR, "Error reading 'has_a' code into ($class): $@\n" );
+                if ( $@ ) {
+                    return ( ERROR, "Error reading 'has_a' code for alias " .
+                                    "[$hasa_alias] mapped to class " .
+                                    "[$hasa_class] into [$class]. Error: $@\n" );
+                }
             }
         }
     }
@@ -284,9 +301,10 @@ sub conf_relate_fetchby {
         {
             local $SIG{__WARN__} = sub { return undef };
             eval $fetch_by_sub;
-        }
-        if ( $@ ) {
-            return ( ERROR, "Cannot read 'fetch_by' code for field ($fetch_by_field) into ($class): $@" );
+            if ( $@ ) {
+                return ( ERROR, "Cannot eval 'fetch_by' code for field " .
+                                "[$fetch_by_field] into [$class]. Error: $@" );
+            }
         }
     }
     return ( OK, undef );
@@ -315,7 +333,7 @@ sub conf_add_rules {
     $ruleset_info   =~ s/%%CLASS%%/$class/g;
     eval $ruleset_info;
     if ( $@ ) {
-        return ( ERROR, "Could not eval ruleset info into $class: $@" );
+        return ( ERROR, "Could not eval ruleset info into [$class]. Error: $@" );
     }
 
     # Now find all the classes that have the method RULESET_METHOD
@@ -324,8 +342,9 @@ sub conf_add_rules {
     my $rule_classes = $CONFIG->{rules_from} || [];
     my $subs = SPOPS::ClassFactory->find_parent_methods( $class, $rule_classes, RULESET_METHOD, 'ruleset_add' );
     foreach my $sub_info ( @{ $subs } ) {
+        DEBUG() && _w( 2, "Calling ruleset generation for [$class] ",
+                          "from [$sub_info->[0]]" );
         $sub_info->[1]->( $class, $class->RULESET );
-        DEBUG() && _w( 2, "Calling ruleset generation for ($class) from ($sub_info->[0])" );
     }
     return ( OK, undef );
 }

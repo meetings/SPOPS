@@ -1,23 +1,24 @@
 #!/usr/bin/perl
 
-# $Id: dbi_config.pl,v 2.0 2002/03/19 04:00:07 lachoy Exp $
+# $Id: dbi_config.pl,v 2.2 2002/04/27 19:08:49 lachoy Exp $
 
 use strict;
-use DBI;
+use DBI qw( SQL_VARCHAR SQL_INTEGER );
 
 my %DRIVERS = (
-   ASAny  => 'SPOPS::DBI::Sybase',
-   mysql  => 'SPOPS::DBI::MySQL',
-   Oracle => 'SPOPS::DBI::Oracle',
-   Pg     => 'SPOPS::DBI::Pg',
-   SQLite => 'SPOPS::DBI::SQLite',
-   Sybase => 'SPOPS::DBI::Sybase',
+   ASAny     => 'SPOPS::DBI::Sybase',
+   InterBase => 'SPOPS::DBI::InterBase',
+   mysql     => 'SPOPS::DBI::MySQL',
+   Oracle    => 'SPOPS::DBI::Oracle',
+   Pg        => 'SPOPS::DBI::Pg',
+   SQLite    => 'SPOPS::DBI::SQLite',
+   Sybase    => 'SPOPS::DBI::Sybase',
 );
 
 my %DRIVER_ACTIONS = ( Sybase => \&sybase_setup,
                        Oracle => \&oracle_setup, );
 
-my %DRIVER_NO_TYPE = map { $_ => 1 } qw();
+my %DRIVER_NO_TYPE = map { $_ => 1 } qw( SQLite );
 
 my $SIMPLE_TABLE = <<'SIMPLESQL';
 CREATE TABLE %s (
@@ -89,6 +90,23 @@ sub create_table {
 }
 
 
+sub get_sql_types {
+    my ( $db, $table, $driver ) = @_;
+    if ( $DRIVER_NO_TYPE{ $driver } ) {
+        return { spops_id   => SQL_INTEGER,
+                 spops_name => SQL_VARCHAR,
+                 spops_goop => SQL_VARCHAR,
+                 spops_num  => SQL_INTEGER };
+    }
+    my $sql = qq/ SELECT * FROM $table WHERE 1 = 0 /;
+    my $sth = $db->prepare( $sql );
+    $sth->execute;
+    my $num_fields = scalar( @{ $sth->{NAME} } ) - 1;
+    return { map { lc $sth->{NAME}->[ $_ ] => $sth->{TYPE}->[ $_ ] }
+                 ( 0 .. $num_fields ) };
+}
+
+
 sub cleanup {
     my ( $db, $table_name ) = @_;
     my $clean_sql = "DROP TABLE $table_name";
@@ -125,12 +143,19 @@ sub assign_manual_types {
 }
 
 
+sub get_spops_driver {
+    my ( $config, $driver_name ) = @_;
+    if ( ref $DRIVER_ACTIONS{ $driver_name } eq 'CODE' ) {
+        $DRIVER_ACTIONS{ $driver_name }->( $config );
+    }
+    return $DRIVERS{ $config->{DBI_driver} };
+}
+
 # Ensure we can use the installed version of the DBD picked. Currently
 # we only need to test for DBD::ASAny
 
 sub check_dbd_compliance {
     my ( $config, $driver_name, $spops_class ) = @_;
-
     if ( $driver_name eq 'ASAny' ) {
         eval { require DBD::ASAny };
         if ( $@ ) {
@@ -165,10 +190,6 @@ ASANY
         warn "\nDBD Driver $driver_name does not support {TYPE} information\n",
              "Installing manual types for test.\n";
         assign_manual_types( $spops_class );
-    }
-
-    if ( ref $DRIVER_ACTIONS{ $driver_name } eq 'CODE' ) {
-        $DRIVER_ACTIONS{ $driver_name }->( $config );
     }
     return $DRIVERS{ $config->{DBI_driver} };
 }

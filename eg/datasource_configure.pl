@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# $Id: datasource_configure.pl,v 2.0 2002/03/19 04:00:06 lachoy Exp $
+# $Id: datasource_configure.pl,v 2.1 2002/04/26 15:35:37 lachoy Exp $
 
 use strict;
 use SPOPS::Initialize;
@@ -13,7 +13,8 @@ use SPOPS::Initialize;
           user => {
              class          => 'My::User',
              isa            => [ 'SPOPS::DBI' ],
-             rules_from     => [ 'My::DBI::DatasourceConfigure', 'My::DiscoverField' ],
+             rules_from     => [ 'SPOPS::Tool::DBI::Datasource',
+                                 'SPOPS::Tool::DBI::DiscoverField' ],
              field_discover => 'yes',
              id_field       => 'user_id',
              base_table     => 'spops_user',

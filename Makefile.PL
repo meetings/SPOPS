@@ -1,4 +1,4 @@
-# $Id: Makefile.PL,v 2.0 2002/03/19 04:00:00 lachoy Exp $
+# $Id: Makefile.PL,v 2.1 2002/04/27 19:09:15 lachoy Exp $
 
 use strict;
 use ExtUtils::MakeMaker;
@@ -11,13 +11,10 @@ my ( $EXTRA_INFO );
  # Available SPOPS DBI drivers (when we start testing with more
  # databases, we add them here)
 
-my %SUPPORTED_DBD_DRIVERS = ( ASAny  => 1,
-                              mysql  => 1,
-                              ODBC   => 1,
-                              Oracle => \&set_oracle_env,
-                              Pg     => 1,
-                              SQLite => 1,
-                              Sybase => \&set_sybase_env );
+my %SUPPORTED_DBD_DRIVERS = map { $_ => 1 }
+                                qw( ASAny mysql ODBC Pg SQLite InterBase );
+$SUPPORTED_DBD_DRIVERS{Oracle} = \&set_oracle_env;
+$SUPPORTED_DBD_DRIVERS{Sybase} = \&set_sybase_env;
 
  # File we write the configuration info to
 
@@ -35,7 +32,7 @@ my $CONFIG_FILE = 'spops_test.conf';
 
     if ( -f $CONFIG_FILE ) {
         my $use_existing = ( $OPT{AUTO} )
-                           ? 'y' 
+                           ? 'y'
                            : lc get_response( 'You appear to have an existing configuration ' .
                                               'file. Re-use it? (Y/n)', 'Y' );
         if ( $use_existing eq 'y' ) {

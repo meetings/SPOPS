@@ -1,12 +1,13 @@
 package SPOPS::Exception::Security;
 
-# $Id: Security.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: Security.pm,v 2.1 2002/04/29 12:51:19 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
 use SPOPS::Secure qw( :verbose :level );
 
-$SPOPS::Exception::Security::VERSION   = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Exception::Security::VERSION   = substr(q$Revision: 2.1 $, 10);
+$SPOPS::Exception::Security::EXPORT_OK = qw( spops_security_error );
 
 my @FIELDS = qw( security_required security_found );
 SPOPS::Exception::Security->mk_accessors( @FIELDS );
@@ -18,7 +19,13 @@ my %LEVELS = (
    SEC_LEVEL_WRITE()   => SEC_LEVEL_WRITE_VERBOSE,
 );
 
-sub get_fields { return ( $_[0]->SUPER::get_fields, @FIELDS ) }
+sub get_fields {
+    return ( $_[0]->SUPER::get_fields, @FIELDS );
+}
+
+sub spops_security_error {
+    goto &SPOPS::Exception( 'SPOPS::Exception::Security', @_ );
+}
 
 sub to_string {
     my ( $self ) = @_;
@@ -69,6 +76,15 @@ B<to_string()>
 
 We override the exception stringification to include the requested and
 found security levels (in human-readable format).
+
+You can also use a shortcut if you are throwing errors:
+
+ use SPOPS::Exception::Security qw( spops_security_error );
+
+ ...
+ spops_security_error "Security error trying to fetch foo ",
+                      { security_required => SEC_LEVEL_WRITE,
+                        security_found    => SEC_LEVEL_READ };
 
 =head1 BUGS
 

@@ -1,6 +1,6 @@
 package My::Common;
 
-# $Id: Common.pm,v 2.0 2002/03/19 04:00:06 lachoy Exp $
+# $Id: Common.pm,v 2.1 2002/04/30 04:00:17 lachoy Exp $
 
 # Common routines for the My:: classes.
 
@@ -13,11 +13,12 @@ use SPOPS::Utility;
 #
 # Modify $SPOPS_DB below to:
 #
-#     SPOPS::DBI::MySQL  if you're using MySQL
-#     SPOPS::DBI::Sybase if you're using Sybase ASA/ASE or MS SQL
-#     SPOPS::DBI::Pg     if you're using PostgreSQL
-#     SPOPS::DBI::Oracle if you're using Oracle
-#     SPOPS::DBI::SQLite if you're using SQLite
+#     SPOPS::DBI::MySQL     if you're using MySQL
+#     SPOPS::DBI::Sybase    if you're using Sybase ASA/ASE or MS SQL
+#     SPOPS::DBI::Pg        if you're using PostgreSQL
+#     SPOPS::DBI::Oracle    if you're using Oracle
+#     SPOPS::DBI::SQLite    if you're using SQLite
+#     SPOPS::DBI::InterBase if you're using InterBase/FirebirdSQL
 
 my $SPOPS_DB = 'SPOPS::DBI::SQLite';
 eval "require $SPOPS_DB";

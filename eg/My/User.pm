@@ -1,12 +1,12 @@
 package My::User;
 
-# $Id: User.pm,v 2.0 2002/03/19 04:00:07 lachoy Exp $
+# $Id: User.pm,v 2.2 2002/04/30 04:01:29 lachoy Exp $
 
 use strict;
 use SPOPS::Initialize;
 use SPOPS::Secure qw( :level :scope );
 
-$My::User::VERSION = sprintf("%d.%02d", q$Revision: 2.0 $ =~ /(\d+)\.(\d+)/);
+$My::User::VERSION = sprintf("%d.%02d", q$Revision: 2.2 $ =~ /(\d+)\.(\d+)/);
 $My::User::crypt_password = undef;
 
 sub _base_config {
@@ -14,11 +14,13 @@ sub _base_config {
          user => {
              class        => 'My::User',
              isa          => [ 'SPOPS::Secure', 'My::Common' ],
-             rules_from   => [ 'My::DiscoverField' ],
+             rules_from   => [ 'SPOPS::Tool::DBI::DiscoverField' ],
              field_discover => 'yes',
              field        => [],
              id_field     => 'user_id',
              increment_field => 1,
+# Uncomment this for InterBase
+#            field_map     => { 'password' => 'user_password' },
              sequence_name => 'sp_user_seq',
              no_insert    => [ 'user_id' ],
              skip_undef   => [ 'password' ],
@@ -46,10 +48,9 @@ sub _base_config {
 
 sub config_class {
     require My::Group;
-    SPOPS::Initialize->process({ config => [ _base_config(), 
+    SPOPS::Initialize->process({ config => [ _base_config(),
                                              My::Group->_base_config ] });
 }
-
 
 &config_class;
 

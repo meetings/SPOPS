@@ -1,18 +1,18 @@
 package SPOPS::DBI::Pg;
 
-# $Id: Pg.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: Pg.pm,v 2.2 2002/04/27 19:27:55 lachoy Exp $
 
 use strict;
 use SPOPS qw( _w DEBUG );
 
-$SPOPS::DBI::Pg::VERSION  = substr(q$Revision: 2.0 $, 10);
+$SPOPS::DBI::Pg::VERSION  = substr(q$Revision: 2.2 $, 10);
 
 use constant PG_SEQUENCE_NEXT    => "NEXTVAL( '%s' )";
 use constant PG_SEQUENCE_CURRENT => "SELECT CURRVAL( '%s' )";
 
 sub sql_quote {
     my ( $class, $value, $type, $db ) = @_;
-    $db ||= $class->global_db_handle;
+    $db ||= $class->global_datasource_handle;
     unless ( ref $db ) {
         SPOPS::Exception->throw( "No database handle could be found!" );
     }
@@ -145,15 +145,15 @@ for right now.
 
 B<sql_quote( $value, $data_type, [ $db_handle ] )>
 
-C<DBD::Pg> depends on the type of a field if you are quoting values to
-put into a statement, so we override the default 'sql_quote' from
-C<SPOPS::SQLInterface> to ensure the type of the field is used in the
-DBI-E<gt>quote call.
+L<DBD::Pg|DBD::Pg> depends on the type of a field if you are quoting
+values to put into a statement, so we override the default 'sql_quote'
+from L<SPOPS::SQLInterface|SPOPS::SQLInterface> to ensure the type of
+the field is used in the DBI-E<gt>quote call.
 
 The C<$data_type> should correspond to one of the DBI datatypes (see
 the file 'dbi_sql.h' in your Perl library tree for more info). If the
 DBI database handle C<$db_handle> is not passed in, we try to find it
-with the class method C<global_db_handle()>.
+with the class method C<global_datasource_handle()>.
 
 B<pre_fetch_id( \%params )>
 

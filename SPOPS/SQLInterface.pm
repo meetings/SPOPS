@@ -1,14 +1,15 @@
 package SPOPS::SQLInterface;
 
-# $Id: SQLInterface.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: SQLInterface.pm,v 2.2 2002/04/29 12:50:46 lachoy Exp $
 
 use strict;
-use Data::Dumper qw( Dumper );
-use DBI          ();
-use SPOPS        qw( _w _wm DEBUG );
-use SPOPS::Exception::DBI;
+use Data::Dumper          qw( Dumper );
+use DBI;
+use SPOPS                 qw( _w _wm DEBUG );
+use SPOPS::Exception      qw( spops_error );
+use SPOPS::Exception::DBI qw( spops_dbi_error );
 
-$SPOPS::SQLInterface::VERSION = substr(q$Revision: 2.0 $, 10);
+$SPOPS::SQLInterface::VERSION = substr(q$Revision: 2.2 $, 10);
 
 use constant DEBUG_SELECT     => 0;
 use constant DEBUG_INSERT     => 0;
@@ -28,9 +29,9 @@ my %FAKE_TYPES = (
 sub throw_no_database_handle_error {
     my ( $item ) = @_;
     my $class = ref $item || $item;
-    my $error = "No database handle available; pass using the 'db' parameter or " .
-                "define $class->global_datasource_handle to return a valid DBI handle.";
-    SPOPS::Exception->throw( $error );
+    spops_error "No database handle available; pass using the 'db' ",
+                "parameter or define ${class}->global_datasource_handle ",
+                "to return a valid DBI handle.";
 }
 
 # This can get overridden to use the $type of the field to give the
@@ -75,7 +76,7 @@ sub db_select {
   # either a list of fields to select or a table to select them from
 
     unless ( $p->{sql} or ( $p->{select} and $p->{from} ) ) {
-        SPOPS::Exception->throw( 'Cannot run without select/from statements!' );
+        spops_error 'Cannot run without select/from statements!';
     }
 
     $DEBUG && _wm( 2, $DEBUG, "Entering db_select with ", Dumper( $p ) );
@@ -113,7 +114,7 @@ sub db_select {
 
     my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
-        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'prepare' } );
+        spops_dbi_error $@, { sql => $sql, action => 'prepare' };
     }
 
     # Execute with any bound parameters; note that for Sybase you do
@@ -122,8 +123,9 @@ sub db_select {
     $DEBUG && _wm( 1, $DEBUG, "Values bound: ", join( '//', @{ $p->{value} } ) );
     eval { $sth->execute( @{ $p->{value} } ) };
     if ( $@ ) {
-        SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
-                                            action => 'execute' } );
+        spops_dbi_error $@, { sql         => $sql,
+                              bound_value => $p->{value},
+                              action      => 'execute' };
     }
 
     # If they asked for the handle back, give it to them
@@ -140,8 +142,9 @@ sub db_select {
         $DEBUG && _wm( 1, $DEBUG, "Returning single row." );
         my $row =  eval { $sth->fetchrow_arrayref; };
         if ( $@ ) {
-            SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
-                                                action => 'fetchrow_arrayref' } );
+            spops_dbi_error $@, { sql         => $sql,
+                                  bound_value => $p->{value},
+                                  action      => 'fetchrow_arrayref' };
         }
         return $row;
     }
@@ -152,8 +155,9 @@ sub db_select {
         $DEBUG && _wm( 1, $DEBUG, "Returning list of lists." );
         my $rows = eval { $sth->fetchall_arrayref; };
         if ( $@ ) {
-            SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
-                                                action => 'fetchall_arrayref' } );
+            spops_dbi_error $@, { sql         => $sql,
+                                  bound_value => $p->{value},
+                                  action      => 'fetchall_arrayref' };
         }
         return $rows;
     }
@@ -164,8 +168,9 @@ sub db_select {
         $DEBUG && _wm( 1, $DEBUG, "Returning list of single items." );
         my $rows = eval { $sth->fetchall_arrayref };
         if ( $@ ) {
-            SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
-                                                action => 'fetchall_arrayref' } );
+            spops_dbi_error $@, { sql         => $sql,
+                                  bound_value => $p->{value},
+                                  action      => 'fetchall_arrayref' };
         }
         return [ map { $_->[0] } @{ $rows } ];
     }
@@ -185,8 +190,9 @@ sub db_select {
             }
         };
         if ( $@ ) {
-            SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
-                                                action => 'fetchall_arrayref' } );
+            spops_dbi_error $@, { sql         => $sql,
+                                  bound_value => $p->{value},
+                                  action      => 'fetchall_arrayref' };
         }
         return \@rows;
     }
@@ -211,7 +217,7 @@ sub db_insert {
     # If we weren't given direct sql or a list of values or table, bail
 
     unless ( $p->{sql} or ( $p->{value} and $p->{table} ) ) {
-        SPOPS::Exception->throw( 'Cannot continue with no SQL, values or table name' );
+        spops_error 'Cannot continue with no SQL, values or table name';
     }
 
     # Find the types for all fields in this table (we don't have to use
@@ -276,12 +282,12 @@ sub db_insert {
     $DEBUG && _wm( 1, $DEBUG, "Preparing\n$sql" );
     my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
-        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'prepare' } );
+        spops_dbi_error $@, { sql => $sql, action => 'prepare' };
     }
 
     my $rv = eval { $sth->execute };
     if ( $@ ) {
-        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'execute' } );
+        spops_dbi_error $@, { sql => $sql, action => 'execute' };
     }
     $DEBUG && _wm( 1, $DEBUG, "Prepare/execute went ok." );
 
@@ -309,7 +315,7 @@ sub db_update {
   # If we weren't given direct sql or a list of values or table, bail
 
     unless ( $p->{sql} or ( $p->{value} and $p->{table} ) ) {
-        SPOPS::Exception->throw( 'Cannot continue with no SQL, values or table name' );
+        spops_error 'Cannot continue with no SQL, values or table name';
     }
     my $sql = $p->{sql};
 
@@ -356,12 +362,12 @@ sub db_update {
     $DEBUG && _wm( 1, $DEBUG, "Prepare/execute\n$sql" );
     my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
-        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'prepare' } );
+        spops_dbi_error $@, { sql => $sql, action => 'prepare' };
     }
 
     my $rv = eval { $sth->execute };
     if ( $@ ) {
-        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'execute' } );
+        spops_dbi_error $@, { sql => $sql, action => 'execute' };
     }
     return $rv;
 }
@@ -381,7 +387,7 @@ sub db_delete {
     # Gotta have a table to delete from
 
     unless ( $p->{table} or $p->{sql} ) {
-        SPOPS::Exception->throw( 'Cannot delete records without SQL or a table name' );
+        spops_error 'Cannot delete records without SQL or a table name';
     }
 
     # If we weren't given SQL, build it.
@@ -400,13 +406,14 @@ sub db_delete {
     $p->{value} ||= [];
     my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
-        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'prepare' } );
+        spops_dbi_error $@, { sql => $sql, action => 'prepare' };
     }
 
     my $rv = eval { $sth->execute( @{ $p->{value} } ) };
     if ( $@ ) {
-        SPOPS::Exception::DBI->throw( $@, { sql => $sql, bound_value => $p->{value},
-                                            action => 'execute' } );
+        spops_dbi_error $@, { sql         => $sql,
+                              bound_value => $p->{value},
+                              action      => 'execute' };
     }
     return $rv;
 }
@@ -422,7 +429,8 @@ sub db_discover_types {
     my $db       = $p->{db} || $class->global_datasource_handle;
     $class->throw_no_database_handle_error unless ( $db );
 
-    my $type_idx = join( '-', lc $db->{Name}, lc $table );
+    my $db_name = eval { $db->{Name} } || eval { $db->{name} };
+    my $type_idx = join( '-', lc $db_name , lc $table );
     $DEBUG && _wm( 2, $DEBUG, "Type index used to discover data types: ($type_idx)" );
 
     # If we've already discovered the types, get the cached copy
@@ -457,12 +465,12 @@ sub db_discover_types {
     my $sql = $class->sql_fetch_types( $table );
     my $sth = eval { $db->prepare( $sql ) };
     if ( $@ ) {
-        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'prepare' } );
+        spops_dbi_error $@, { sql => $sql, action => 'prepare' };
     }
 
     my $rv = eval { $sth->execute };
     if ( $@ ) {
-        SPOPS::Exception::DBI->throw( $@, { sql => $sql, action => 'execute' } );
+        spops_dbi_error $@, { sql => $sql, action => 'execute' };
     }
 
     # Go through the fields and match them up to types; note that

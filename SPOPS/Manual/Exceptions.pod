@@ -145,6 +145,31 @@ error returned to see if it's a security error:
  14:     print "$news->{title}\n$news->{posted_on}\n$news->{content}\n";
  15: }
 
+=head2 Shortcuts
+
+Every SPOPS exception module exports a shortcut. Instead of using the
+format:
+
+ use SPOPS::Exception;
+ ...
+ SPOPS::Exception->throw( $msg, \%params );
+
+You can use:
+
+ use SPOPS::Exception qw( spops_error );
+ ...
+ spops_error $msg, \%params;
+
+The shortcuts exported are:
+
+B<SPOPS::Exception>: C<spops_error>
+
+B<SPOPS::Exception::DBI>: C<spops_dbi_error>
+
+B<SPOPS::Exception::LDAP>: C<spops_ldap_error>
+
+B<SPOPS::Exception::Security>: C<spops_security_error>
+
 =head1 COPYRIGHT
 
 Copyright (c) 2001-2002 Chris Winters. All rights reserved.

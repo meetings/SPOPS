@@ -1,15 +1,23 @@
 package SPOPS::Exception::DBI;
 
-# $Id: DBI.pm,v 2.0 2002/03/19 04:00:01 lachoy Exp $
+# $Id: DBI.pm,v 2.1 2002/04/29 12:51:19 lachoy Exp $
 
 use strict;
 use base qw( SPOPS::Exception );
 
-$SPOPS::Exception::DBI::VERSION   = substr(q$Revision: 2.0 $, 10);
+$SPOPS::Exception::DBI::VERSION   = substr(q$Revision: 2.1 $, 10);
+@SPOPS::Exception::DBI::EXPORT_OK = qw( spops_dbi_error );
 
 my @FIELDS = qw( sql bound_value action );
 SPOPS::Exception::DBI->mk_accessors( @FIELDS );
-sub get_fields { return ( $_[0]->SUPER::get_fields, @FIELDS ) }
+
+sub get_fields {
+    return ( $_[0]->SUPER::get_fields, @FIELDS );
+}
+
+sub spops_dbi_error {
+    goto &SPOPS::Exception::throw( 'SPOPS::Exception::DBI', @_ );
+}
 
 1;
 
@@ -59,7 +67,14 @@ we did not even reach the DBI stage yet.
 
 =head1 METHODS
 
-No extra.
+No extra methods, but you can use a shortcut if you are throwing
+errors:
+
+ use SPOPS::Exception::DBI qw( spops_dbi_error );
+
+ ...
+ spops_dbi_error "I found a DBI error: $@ ",
+                 { sql => $sql, action => 'prepare' };
 
 =head1 BUGS
 
@@ -73,7 +88,7 @@ Nothing known.
 
 L<SPOPS::Exception|SPOPS::Exception>
 
-L<DBI>
+L<DBI|DBI>
 
 =head1 COPYRIGHT
 

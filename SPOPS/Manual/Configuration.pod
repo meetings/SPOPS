@@ -247,6 +247,7 @@ After L<SPOPS::DBI|SPOPS::DBI> fetches a record, it then checks to see
 if there are any defaults for the record and if so it refetches the
 object to ensure that the data in the object and the data in the
 database are synced.
+
 B<field_alter> (\%) (optional)
 
 Allows you to define different formatting behaviors for retrieving
@@ -266,6 +267,38 @@ will if you're using MySQL return something like:
  September 26, 2000 (10:29 AM)
 
 These are typically database-specific.
+
+B<insert_alter> (\%) (optional)
+
+Allows you to define different formatting behaviors for the values of
+inserted fields. The field is the key, the value is a
+L<sprintf|sprintf> format that should contain one C<%s> sequence into
+which the actual value of the object will be plugged.
+
+For instance, your database may use a non-standard format for
+inserting dates. You can specify:
+
+ insert_alter => {
+    last_login => "to_date('%s','YYYY-MM-DD HH24:MI:SS')"
+ }
+
+So when the object value is set:
+
+ $object->{last_login} = '2002-04-22 14:47:32';
+
+What actually gets put into the database is:
+
+ INSERT INTO table
+ ( ... last_login ... )
+ VALUES 
+ ( ... to_date( '2002-04-22 14:47:32', 'YYYY-MM-DD HH24:MI:SS' ) ... )
+
+Note that the resulting value is passed unquoted to the database. Also
+note that the configured field name must be in lower-case, even if the
+field in the database is in mixed- or upper-case.
+
+You can override a L<SPOPS::DBI|SPOPS::DBI> method If you need more
+complicated processing than this allows, see the docs for details.
 
 =head2 General Relationship Fields
 
