@@ -1,6 +1,6 @@
 package SPOPS::Secure::Hierarchy;
 
-# $Id: Hierarchy.pm,v 3.3 2004/01/10 02:21:39 lachoy Exp $
+# $Id: Hierarchy.pm,v 3.4 2004/05/11 02:09:39 lachoy Exp $
 
 use strict;
 use base  qw( Exporter SPOPS::Secure );
@@ -16,7 +16,7 @@ use SPOPS::Secure::Util;
 my $log = get_logger();
 
 @SPOPS::Secure::Hierarchy::EXPORT_OK = qw( $ROOT_OBJECT_NAME );
-$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::Hierarchy::VERSION   = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 $ROOT_OBJECT_NAME = 'ROOT_OBJECT';
 
@@ -83,12 +83,12 @@ sub get_hierarchy_levels {
 
     unless ( $h_info->{hierarchy_value} ) {
         $log->warn( "No value available to split into hierarchy! Returning ",
-               "empty security." );
+                    "empty security." );
         return ();
     }
     unless ( ref $h_info->{hierarchy_manip} eq 'CODE' ) {
         $log->warn( "Cannot split hierarchy into pieces without either a ",
-               "separator or processing code. Returning empty security." );
+                    "separator or processing code. Returning empty security." );
         return ();
     }
 
@@ -96,7 +96,8 @@ sub get_hierarchy_levels {
     # followed by all the parents. Note that we can either use the
     # default generated list (splitting the value by the separator) or
     # create a subroutine to do it for us, passing it in via
-    # 'hierarchy_manip' in the toutine arameters or in our object config.
+    # 'hierarchy_manip' in the routine parameters or in our object
+    # config.
 
     my $check_list = $h_info->{hierarchy_manip}->( $h_info->{hierarchy_sep},
                                                    $h_info->{hierarchy_value} );
@@ -219,10 +220,12 @@ sub _get_hierarchy_parameters {
     # If this is an object, find the hierarchy value from the object
 
     $h_info->{hierarchy_value} = $p->{hierarchy_value};
-    if ( ref $item ) {
+    my $object = ( ref $item ) ? $item : $p->{object}; # this is a nasty hack
+    if ( $object ) {
         $log->is_info &&
-            $log->info( "Getting value from object" );
-        $h_info->{hierarchy_value} ||= $item->{ $h_info->{hierarchy_field} };
+            $log->info( "Getting value from object, overriding previously ",
+                        "set value of '$h_info->{hierarchy_value}'" );
+        $h_info->{hierarchy_value} = $object->{ $h_info->{hierarchy_field} };
     }
 
     $log->is_info &&

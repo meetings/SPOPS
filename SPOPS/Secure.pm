@@ -1,6 +1,6 @@
 package SPOPS::Secure;
 
-# $Id: Secure.pm,v 3.12 2004/02/18 02:54:55 lachoy Exp $
+# $Id: Secure.pm,v 3.13 2004/05/11 02:09:39 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -8,7 +8,7 @@ use vars  qw( $EMPTY );
 use Data::Dumper  qw( Dumper );
 use Log::Log4perl qw( get_logger );
 
-$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.12 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Secure::VERSION  = sprintf("%d.%02d", q$Revision: 3.13 $ =~ /(\d+)\.(\d+)/);
 
 # Stuff for security constants and exporting
 
@@ -92,8 +92,8 @@ sub check_action_security {
     my ( $item, $p ) = @_;
     $log->is_debug &&
         $log->debug( "Trying to check security on: ",
-                      ( ref $item ) ? ref $item : $item,
-                      "with params: ", Dumper( $p ) );
+                      ( ref $item ) ? ref( $item ) . " " . $item->id : $item,
+                      " with params: ", Dumper( $p ) );
 
     # since the assumption outlined above (only saved objects have ids)
     # might not be true in all cases, provide an escape route for classes
@@ -129,7 +129,7 @@ sub check_action_security {
             return SEC_LEVEL_WRITE;
         }
         $log->is_debug &&
-            $log->debug( "Checking action on $class [$id] and required",
+            $log->debug( "Checking action on $class [$id] and required ",
                           "level is [$p->{required}]" );
 
         # Calls to SPOPS::Secure->... note that we do not need to
@@ -139,7 +139,8 @@ sub check_action_security {
         # TODO: Revisit that we allow exceptions to bubble up
 
         $level = $class->check_security({ class     => $class,
-                                          object_id => $id });
+                                          object_id => $id,
+                                          object    => ( ref $item ) ? $item : undef });
 
     }
     $log->is_info &&

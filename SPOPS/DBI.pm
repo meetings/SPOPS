@@ -1,6 +1,6 @@
 package SPOPS::DBI;
 
-# $Id: DBI.pm,v 3.20 2004/03/16 03:55:58 lachoy Exp $
+# $Id: DBI.pm,v 3.21 2004/05/11 02:08:26 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS SPOPS::SQLInterface );
@@ -15,7 +15,7 @@ use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
 my $log = get_logger();
 
-$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.20 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.21 $ =~ /(\d+)\.(\d+)/);
 
 $SPOPS::DBI::GUESS_ID_FIELD_TYPE = DBI::SQL_INTEGER();
 
@@ -338,7 +338,8 @@ ROW:
     while ( my $row = $sth->fetchrow_arrayref ) {
         my $obj = $class->new({ skip_default_values => 1 });
         $obj->_fetch_assign_row( $p->{raw_fields}, $row, $p );
-        next ROW unless ( $obj );
+
+        next ROW unless ( $obj ); # How could this ever be true?
 
         # Check security on the row unless overridden by
         # 'skip_security'. If the security check fails that's ok, just
@@ -346,12 +347,15 @@ ROW:
 
         my $sec_level = SEC_LEVEL_WRITE;
         unless ( $p->{skip_security} ) {
-            $sec_level = eval { $obj->check_action_security({
-                                          required => SEC_LEVEL_READ }) };
+            $log->is_debug &&
+                $log->debug( "Checking security for [", ref( $obj ), ": ", $obj->id, "]" );
+            $sec_level = eval {
+                $obj->check_action_security({ required => SEC_LEVEL_READ })
+            };
             if ( $@ ) {
                 $log->is_info &&
                     $log->info( "Security check for object in ",
-                                          "fetch_group() failed, skipping." );
+                                "fetch_group() failed, skipping." );
                 next ROW;
             }
         }
@@ -514,16 +518,18 @@ sub _fetch_select_fields {
 sub _fetch_assign_row {
     my ( $self, $fields, $row, $p ) = @_;
     $log->is_info &&
-        $log->info( "Setting data from row into", ref $self );
+        $log->info( "Setting data from row into ", ref( $self ) );
     $self->clear_all_loaded();
     foreach my $i ( 0 .. ( scalar @{ $row } - 1 ) ) {
-        $log->is_info &&
-            $log->info( sprintf( " %-20s --> %s",
+        $log->is_debug &&
+            $log->debug( sprintf( " %-20s --> %s",
                                  $fields->[ $i ],
                                  ( defined $row->[ $i ] ) ? substr( $row->[ $i ], 0, 10 ) : '' ) );
         $self->{ $fields->[ $i ] } = $row->[ $i ];
         $self->set_loaded( $fields->[ $i ] );
     }
+    $log->is_info &&
+        $log->info( "Finished setting data into ", ref( $self ), ": ", $self->id );
 }
 
 

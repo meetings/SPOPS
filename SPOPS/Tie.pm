@@ -1,6 +1,6 @@
 package SPOPS::Tie;
 
-# $Id: Tie.pm,v 3.6 2004/03/12 14:51:56 lachoy Exp $
+# $Id: Tie.pm,v 3.7 2004/05/01 19:45:27 lachoy Exp $
 
 use strict;
 use base  qw( Exporter );
@@ -12,7 +12,7 @@ use SPOPS::Exception qw( spops_error );
 @SPOPS::Tie::EXPORT_OK = qw( IDX_DATA IDX_CHANGE IDX_SAVE IDX_INTERNAL IDX_TEMP
                              IDX_CHECK_FIELDS IDX_LAZY_LOADED
                              $PREFIX_TEMP $PREFIX_INTERNAL );
-$SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 3.6 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tie::VERSION   = sprintf("%d.%02d", q$Revision: 3.7 $ =~ /(\d+)\.(\d+)/);
 
 use constant IDX_DATA          => '_dat';
 use constant IDX_CHANGE        => '_chg';
@@ -234,7 +234,7 @@ sub DELETE {
     my ( $self, $key ) = @_;
     $log->is_debug &&
         $log->debug( " tie: Clearing value for ($key)" );
-    $self->{ IDX_DATA() }{ lc $key } = undef;
+    delete $self->{ IDX_DATA() }{ lc $key };
     $self->{ IDX_CHANGE() }++;
 }
 

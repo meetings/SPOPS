@@ -1,6 +1,6 @@
 package SPOPS::Tie::StrictField;
 
-# $Id: StrictField.pm,v 3.3 2004/03/12 14:39:32 lachoy Exp $
+# $Id: StrictField.pm,v 3.4 2004/05/11 02:07:34 lachoy Exp $
 
 use strict;
 use base  qw( SPOPS::Tie );
@@ -8,7 +8,7 @@ use Log::Log4perl qw( get_logger );
 use SPOPS::Tie    qw( IDX_DATA IDX_CHANGE IDX_INTERNAL IDX_TEMP
                       IDX_CHECK_FIELDS $PREFIX_TEMP $PREFIX_INTERNAL );
 
-$SPOPS::Tie::StrictField::VERSION  = sprintf("%d.%02d", q$Revision: 3.3 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::Tie::StrictField::VERSION  = sprintf("%d.%02d", q$Revision: 3.4 $ =~ /(\d+)\.(\d+)/);
 
 my $log = get_logger();
 
@@ -38,6 +38,7 @@ sub _field_check {
 
 sub _can_fetch {
     my ( $self, $key ) = @_;
+    $self->_storable_field_check unless ( $FIELDS{ $self->{class} } );
     return 1 unless ( $self->{ IDX_CHECK_FIELDS() } );
     return 1 if ( $FIELDS{ $self->{class} }->{ lc $key } );
     my ( $call_package, $call_line ) = (caller(1))[0,2];
@@ -51,13 +52,21 @@ sub _can_fetch {
 
 sub _can_store {
     my ( $self, $key, $value ) = @_;
+    $self->_storable_field_check unless ( $FIELDS{ $self->{class} } );
     return 1 unless ( $self->{ IDX_CHECK_FIELDS() } );
     return 1 if ( $FIELDS{ $self->{class} }->{ lc $key } );
     my ( $call_package, $call_line ) = (caller(1))[0,2];
     $log->error( "[$call_package @ $call_line]: Field '$key' is ",
                  "not valid, cannot set value" );
     return undef;
+}
 
+sub _storable_field_check {
+    my ( $self ) = @_;
+    my $object_class = $self->{class};
+    return if ( $FIELDS{ $object_class } );
+    my $fields = $object_class->field;
+    $FIELDS{ $object_class } = { %{ $fields } };
 }
 
 # For EXISTS and DELETE, We can only do these actions on the actual

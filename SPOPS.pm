@@ -1,6 +1,6 @@
 package SPOPS;
 
-# $Id: SPOPS.pm,v 3.32 2004/03/19 02:50:15 lachoy Exp $
+# $Id: SPOPS.pm,v 3.35 2004/05/11 02:10:41 lachoy Exp $
 
 use strict;
 use base  qw( Exporter ); # Class::Observable
@@ -9,13 +9,14 @@ use Log::Log4perl   qw( get_logger );
 use SPOPS::ClassFactory::DefaultBehavior;
 use SPOPS::Exception;
 use SPOPS::Tie      qw( IDX_CHANGE IDX_SAVE IDX_CHECK_FIELDS IDX_LAZY_LOADED );
+use SPOPS::Tie::StrictField;
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 my $log = get_logger();
 
 $SPOPS::AUTOLOAD  = '';
-$SPOPS::VERSION   = '0.83';
-$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.32 $ =~ /(\d+)\.(\d+)/);
+$SPOPS::VERSION   = '0.84';
+$SPOPS::Revision  = sprintf("%d.%02d", q$Revision: 3.35 $ =~ /(\d+)\.(\d+)/);
 
 # DEPRECATED
 
@@ -88,7 +89,6 @@ sub new {
         my $fields = $class->field;
         if ( keys %{ $fields } ) {
             $params->{field} = [ keys %{ $fields } ];
-            require SPOPS::Tie::StrictField;
             $tie_class = 'SPOPS::Tie::StrictField'
         }
     }
@@ -176,9 +176,15 @@ sub new {
 
 sub DESTROY {
     my ( $self ) = @_;
-    $log->is_debug &&
-        $log->debug( "Destroying SPOPS object '", ref( $self ), "' ID: " .
-                      "'", $self->id, "' at time: ", scalar localtime );
+
+    # Need to check that $log exists because sometimes it gets
+    # destroyed before our SPOPS objects do
+
+    if ( $log ) {
+        $log->is_debug &&
+            $log->debug( "Destroying SPOPS object '", ref( $self ), "' ID: " .
+                         "'", $self->id, "' at time: ", scalar localtime );
+    }
 }
 
 
@@ -734,7 +740,7 @@ sub _internal_create_field_methods {
     # Now the mutator to clear the field value
     *{ $class . '::' . $field_name . '_clear' } = sub {
         my ( $self ) = @_;
-        $self->{ $field_name } = undef;
+        delete $self->{ $field_name };
         return undef;
     };
 
@@ -1729,6 +1735,9 @@ openinteract-dev list) are at:
 
 Also see the 'Changes' file in the source distribution for comments
 about how the module has evolved.
+
+L<SPOPSx::Ginsu> - Generalized Inheritance Support for SPOPS + MySQL
+-- store inherited data in separate tables.
 
 =head1 AUTHORS
 

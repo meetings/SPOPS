@@ -1,5 +1,60 @@
 Revision history for Perl extension SPOPS.
 
+NOTE: All items with a leading 'SP-###' are issues in the JIRA issue
+tracking system. Learn more at http://jira.openinteract.org/
+
+
+0.84  Mon May 10 21:53:04 EDT 2004
+
+Overall:
+
+* Bunch of bugfixes
+
+Individual:
+
+ * SPOPS.pm:
+
+   - SP-1: Check that the $log is defined before using it in
+   DESTROY. (Thanks to Ray Zimmerman)
+
+   - SP-2: Update AUTOLOADed '{prop}_clear' method to delete the
+   property rather than set it to undef. (Thanks to Lee Revell)
+
+   - SP-3: Add 'SPOPS::Tie::StrictField' to imports after weird
+   storable behavior (complained about not finding the necessary tie
+   methods because it doesn't call new() which was dynamically loading
+   the necessary class) (Thanks to Nick Sutterer)
+
+   - Add note about SPOPSx::Ginsu to SEE ALSO
+
+ * SPOPS/Secure.pm:
+
+   - (hack) since we call 'get_security()' explicitly as a class
+   method, pass along the possible object as parameter 'object' so
+   subclasses (like SPOPS::Secure::Hierarchy) can use it
+
+ * SPOPS/Secure/Hierarchy.pm:
+
+   - (hack) Allow hierarchy value of non ID field to be used by
+   overriding the ID as the hierarchy value in
+   _get_hierarchy_parameters() and also pull the object from the
+   parameters passed in (earlier SPOPS::Secure hack)
+
+ * SPOPS/Tie.pm:
+
+   - SP-2: Modify DELETE to actually delete the property out of the
+   object rather than just setting it to undef.
+
+ * SPOPS/Tie/StrictField.pm:
+
+   - SP-3: For efficiency we were storing the fields for each object
+   class as class data in SPOPS::Tie::StrictField; since the script
+   restarted this data was wiped out and the object thought none of
+   its fields were valid, so everything was undef. We now check to see
+   the data are there before doing any fetch/store operations on the
+   tied object.
+
+
 0.83  Thu Mar 18 21:37:13 EST 2004
 
 Overall:

@@ -1,21 +1,21 @@
 #XXXXXXX This is a prototype!!!  It will change in the future!!! XXXXX#
 name:         SPOPS
-version:      0.83
+version:      0.84
 version_from: SPOPS.pm
 installdirs:  site
 requires:
+    Devel::StackTrace:             0.9
+    Log::Log4perl:                 0.35
+    Class::Accessor:               0.17
+    Class::Date:                   1
+    Test::More:                    0.41
+    Storable:                      1
     Carp::Assert:                  0.17
     Class::Fields:                 0.14
-    Time::Piece:                   1.07
-    Log::Log4perl:                 0.35
-    Devel::StackTrace:             0.9
     Data::Dumper:                  2
-    Test::More:                    0.41
     Log::Dispatch:                 2
-    Storable:                      1
-    Class::Date:                   1
+    Time::Piece:                   1.07
     Class::Factory:                1
-    Class::Accessor:               0.17
     Class::ISA:                    0.32
 
 distribution_type: module
