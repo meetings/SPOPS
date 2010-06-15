@@ -59,10 +59,10 @@ SKIP: {
     my $today = SPOPS::Utility->today();
     is( $today, "$year-$mon-$mday", 'Format for today()' );
     ok( SPOPS::Utility->now_between_dates({ begin => '2000-01-01',
-                                            end   => '2010-01-01' }),
+                                            end   => '2020-01-01' }),
         'Today is between date 1 and date 2' );
-    ok( ! SPOPS::Utility->now_between_dates({ begin => '2010-01-01',
-                                              end   => '2011-01-01' }),
+    ok( ! SPOPS::Utility->now_between_dates({ begin => '2020-01-01',
+                                              end   => '2031-01-01' }),
         'Today is not between date 1 and date 2' );
     my $date = Class::Date->new( $base_time );
 }
