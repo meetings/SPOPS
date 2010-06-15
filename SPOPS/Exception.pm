@@ -3,10 +3,11 @@ package SPOPS::Exception;
 # $Id: Exception.pm,v 3.5 2004/06/02 00:48:21 lachoy Exp $
 
 use strict;
-use base qw( Class::Accessor Exporter );
+use base qw( Class::Accessor );
 use overload '""' => \&stringify;
 use Devel::StackTrace;
 use SPOPS::Error;
+use Exporter qw(import);
 
 $SPOPS::Exception::VERSION   = sprintf("%d.%02d", q$Revision: 3.5 $ =~ /(\d+)\.(\d+)/);
 @SPOPS::Exception::EXPORT_OK = qw( spops_error );
