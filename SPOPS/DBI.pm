@@ -521,10 +521,11 @@ sub _fetch_assign_row {
         $log->info( "Setting data from row into ", ref( $self ) );
     $self->clear_all_loaded();
     foreach my $i ( 0 .. ( scalar @{ $row } - 1 ) ) {
-        $log->is_debug &&
-            $log->debug( sprintf( " %-20s --> %s",
-                                 $fields->[ $i ],
-                                 ( defined $row->[ $i ] ) ? substr( $row->[ $i ], 0, 10 ) : '' ) );
+# Removed logging because this is run so many times that is slows things down considerably
+#        $log->is_debug &&
+#            $log->debug( sprintf( " %-20s --> %s",
+#                                 $fields->[ $i ],
+#                                 ( defined $row->[ $i ] ) ? substr( $row->[ $i ], 0, 10 ) : '' ) );
         $self->{ $fields->[ $i ] } = $row->[ $i ];
         $self->set_loaded( $fields->[ $i ] );
     }

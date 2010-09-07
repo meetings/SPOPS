@@ -139,8 +139,9 @@ sub _lazy_load {
 sub STORE {
     my ( $self, $key, $value ) = @_;
     my $cmp_key = lc $key;
-    $log->is_debug &&
-        $log->debug( " tie: Storing [$key] => [", ( defined $value ) ? $value : 'undef', "]" );
+# Removed logging because this is run so many times that is slows things down considerably
+#    $log->is_debug &&
+#        $log->debug( " tie: Storing [$key] => [", ( defined $value ) ? $value : 'undef', "]" );
     return $self->{ IDX_CHANGE() } = $value                 if ( $key eq IDX_CHANGE );
     return $self->{ IDX_SAVE() } = $value                   if ( $key eq IDX_SAVE );
     return $self->{ IDX_TEMP() }{ $cmp_key } = $value     if ( $key =~ /^$PREFIX_TEMP/ );
