@@ -13,6 +13,7 @@ use SPOPS::Tie::StrictField;
 use SPOPS::Secure   qw( SEC_LEVEL_WRITE );
 
 my $log = get_logger();
+my $logging_disabled = 1;
 
 $SPOPS::AUTOLOAD  = '';
 $SPOPS::VERSION   = '0.87';
@@ -42,7 +43,7 @@ require SPOPS::Utility;
 sub behavior_factory {
     my ( $class ) = @_;
 
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Installing SPOPS default behaviors for ($class)" );
     return { manipulate_configuration =>
                     \&SPOPS::ClassFactory::DefaultBehavior::conf_modify_config,
@@ -127,14 +128,14 @@ sub new {
     $params->{is_lazy_load} ||= 0;
     $params->{is_field_map} ||= 0;
 
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Creating new object of class ($class) with tie class ",
                     "($tie_class); lazy loading ($params->{is_lazy_load});",
                     "field mapping ($params->{is_field_map})" );
 
     my ( %data );
     my $internal = tie %data, $tie_class, $class, $params;
-    $log->is_debug &&
+    ! $logging_disabled && $log->is_debug &&
         $log->debug( "Internal tie structure of new object: ", Dumper( $internal ) );
     my $self = bless( \%data, $class );
 
@@ -181,7 +182,7 @@ sub DESTROY {
     # destroyed before our SPOPS objects do
 
     if ( $log ) {
-        $log->is_debug &&
+        ! $logging_disabled && $log->is_debug &&
             $log->debug( "Destroying SPOPS object '", ref( $self ), "' ID: " .
                          "'", $self->id, "' at time: ", scalar localtime );
     }
@@ -194,7 +195,7 @@ sub DESTROY {
 sub clone {
     my ( $self, $p ) = @_;
     my $class = $p->{_class} || ref $self;
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Cloning new object of class '$class' from old ",
                     "object of class '", ref( $self ), "'" );
     my %initial_data = ();
@@ -353,7 +354,7 @@ sub ruleset_process_action {
     my $class = ref $item || $item;
 
     $action = lc $action;
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Trying to process $action for a '$class' object" );
 
     # Grab the ruleset table for this class and immediately
@@ -362,11 +363,11 @@ sub ruleset_process_action {
     my $rs_table = $item->RULESET;
     unless ( ref $rs_table->{ $action } eq 'ARRAY'
                  and scalar @{ $rs_table->{ $action } } > 0 ) {
-        $log->is_debug &&
+        ! $logging_disabled && $log->is_debug &&
             $log->debug( "No rules to process for [$action]" );
         return 1;
     }
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Ruleset exists in class." );
 
     # Cycle through the rules -- the only return value can be true or false,
@@ -380,7 +381,7 @@ sub ruleset_process_action {
             return undef;
         }
     }
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "$action processed ($count_rules rules successful) without error" );
     return 1;
 }
@@ -425,7 +426,8 @@ sub set_loaded        { return tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }{ lc $_[
 
 sub set_all_loaded {
     my ( $self ) = @_;
-    $log->is_info &&
+
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Setting all fields to loaded for object class", ref $self );
     $self->set_loaded( $_ ) for ( @{ $self->field_list } );
 }
@@ -433,7 +435,7 @@ sub set_all_loaded {
 sub clear_loaded { tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }{ lc $_[1] } = undef }
 
 sub clear_all_loaded {
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Clearing all fields to unloaded for object class", ref $_[0] );
     tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() } = {};
 }
@@ -598,11 +600,11 @@ sub get_cached_object {
     my $item_data = $class->global_cache->get({ class     => $class,
                                                 object_id => $p->{id} });
     if ( $item_data ) {
-        $log->is_info &&
+        ! $logging_disabled && $log->is_info &&
             $log->info( "Retrieving from cache..." );
         return $class->new( $item_data );
     }
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Cached data not found." );
     return undef;
 }
@@ -667,38 +669,38 @@ sub AUTOLOAD {
         return undef;
     }
 
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "AUTOLOAD caught '$request' from '$class'" );
 
     if ( ref $item and $item->is_checking_fields ) {
         my $fields = $item->field_all_map || {};
         my ( $field_name ) = $request =~ /^(\w+)_clear/;
         if ( exists $fields->{ $request } ) {
-            $log->is_debug &&
+            ! $logging_disabled && $log->is_debug &&
                 $log->debug( "$class to fill param '$request'; returning data." );
             # TODO: make these internal methods inheritable?
             $item->_internal_create_field_methods( $class, $request );
             return $item->$request( @params );
         }
         elsif ( $field_name and exists $fields->{ $field_name } ) {
-            $log->is_debug &&
+            ! $logging_disabled && $log->is_debug &&
                 $log->debug( "$class to fill param clear '$request'; ",
                               "creating '$field_name' methods" );
             $item->_internal_create_field_methods( $class, $field_name );
             return $item->$request( @params );
         }
         elsif ( my $value = $item->{ $request } ) {
-            $log->is_debug &&
+            ! $logging_disabled && $log->is_debug &&
                 $log->debug( " $request must be a temp or something, returning value." );
             return $value;
         }
         elsif ( $request =~ /^tmp_/ ) {
-            $log->is_debug &&
+            ! $logging_disabled && $log->is_debug &&
                 $log->debug( "$request is a temp var, but no value saved. Returning undef." );
             return undef;
         }
         elsif ( $request =~ /^_internal/ ) {
-            $log->is_debug &&
+            ! $logging_disabled && $log->is_debug &&
                 $log->debug( "$request is an internal request, but no value",
                               "saved. Returning undef." );
             return undef;
@@ -709,13 +711,13 @@ sub AUTOLOAD {
     }
     my ( $field_name ) = $request =~ /^(\w+)_clear/;
     if ( $field_name ) {
-        $log->is_debug &&
+        ! $logging_disabled && $log->is_debug &&
             $log->debug( "$class is not checking fields, so create sub and return ",
                          "data for '$field_name'" );
         $item->_internal_create_field_methods( $class, $field_name );
     }
     else {
-        $log->is_debug &&
+        ! $logging_disabled && $log->is_debug &&
             $log->debug( "$class is not checking fields, so create sub and return ",
                          "data for '$request'" );
         $item->_internal_create_field_methods( $class, $request );
@@ -759,11 +761,11 @@ sub _w {
         $log->warn( @_ );
     }
     elsif ( $lev == 1 ) {
-        $log->is_info &&
+        ! $logging_disabled && $log->is_info &&
             $log->info( @_ );
     }
     else {
-        $log->is_debug &&
+        ! $logging_disabled && $log->is_debug &&
             $log->debug( @_ );
     }
 }

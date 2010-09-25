@@ -14,6 +14,7 @@ use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
 my $log = get_logger();
+my $logging_disabled = 1;
 
 $SPOPS::DBI::VERSION = sprintf("%d.%02d", q$Revision: 3.23 $ =~ /(\d+)\.(\d+)/);
 
@@ -46,7 +47,7 @@ sub no_save_sync  { return $_[0]->CONFIG->{no_save_sync}       }
 sub behavior_factory {
     my ( $class ) = @_;
     require SPOPS::ClassFactory::DBI;
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Installing SPOPS::DBI behaviors for ($class)" );
     return { links_to  => \&SPOPS::ClassFactory::DBI::conf_relate_links_to,
              id_method => \&SPOPS::ClassFactory::DBI::conf_multi_field_key_id,
@@ -235,7 +236,7 @@ sub fetch {
     my ( $class, $id, $p ) = @_;
     $p ||= {};
 
-    $log->is_debug &&
+    ! $logging_disabled && $log->is_debug &&
         $log->debug( "Trying to fetch an item of $class with ID $id and params ",
                      join( " // ", map { sprintf( "%s -> %s", $_, defined $p->{$_} ? $p->{$_} : '' )  }
                                         grep { defined $_ } keys %{ $p } ) );
@@ -272,7 +273,7 @@ sub fetch {
 
     unless ( ref $obj eq $class ) {
         my ( $raw_fields, $select_fields ) = $class->_fetch_select_fields( $p );
-        $log->is_info &&
+        ! $logging_disabled && $log->is_info &&
             $log->info( "SELECTing: ", join( "//", @{ $select_fields } ) );
 
         # Put all the arguments into a hash (so we can reuse them simply
@@ -312,7 +313,7 @@ sub fetch {
 
 sub fetch_iterator {
     my ( $class, $p ) = @_;
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Trying to create an Iterator with: ", Dumper( $p ) );
     ( $p->{fields}, $p->{select} ) = $class->_construct_group_select( $p );
     $p->{class}                    = $class;
@@ -347,13 +348,13 @@ ROW:
 
         my $sec_level = SEC_LEVEL_WRITE;
         unless ( $p->{skip_security} ) {
-            $log->is_debug &&
+            ! $logging_disabled && $log->is_debug &&
                 $log->debug( "Checking security for [", ref( $obj ), ": ", $obj->id, "]" );
             $sec_level = eval {
                 $obj->check_action_security({ required => SEC_LEVEL_READ })
             };
             if ( $@ ) {
-                $log->is_info &&
+                ! $logging_disabled && $log->is_info &&
                     $log->info( "Security check for object in ",
                                 "fetch_group() failed, skipping." );
                 next ROW;
@@ -475,7 +476,7 @@ sub _fetch_select_fields {
     # filled with all the fields below.
 
     if ( ! $field_list and $p->{column_group} ) {
-        $log->is_info &&
+        ! $logging_disabled && $log->is_info &&
             $log->info( "Trying to retrieve fields for column group ($p->{column_group})" );
         if ( $p->{column_group} eq '_id_field' ) {
             $field_list = [ scalar $class->id_field ];
@@ -488,7 +489,7 @@ sub _fetch_select_fields {
                 $field_list = [ keys %field_hash ];
             }
         }
-        $log->is_debug &&
+        ! $logging_disabled && $log->is_debug &&
             $log->debug( "Found field list from column group: ", Dumper( $field_list ) );
     }
 
@@ -517,7 +518,7 @@ sub _fetch_select_fields {
 
 sub _fetch_assign_row {
     my ( $self, $fields, $row, $p ) = @_;
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Setting data from row into ", ref( $self ) );
     $self->clear_all_loaded();
     foreach my $i ( 0 .. ( scalar @{ $row } - 1 ) ) {
@@ -529,7 +530,7 @@ sub _fetch_assign_row {
         $self->{ $fields->[ $i ] } = $row->[ $i ];
         $self->set_loaded( $fields->[ $i ] );
     }
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Finished setting data into ", ref( $self ), ": ", $self->id );
 }
 
@@ -561,7 +562,7 @@ sub _fetch_post_process {
     # we retrieve a cached copy or not
 
     $self->{tmp_security_level} = $level;
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( 
                     ref $self, "(", $self->id, ") : cache set (if available),",
                     "post_fetch_action() done, change flag cleared and save ",
@@ -597,7 +598,7 @@ sub perform_lazy_load {
                         "with a '_' character and is therefore private" );
         return undef;
     }
-    $log->is_debug &&
+    ! $logging_disabled && $log->is_debug &&
         $log->debug( "Performing lazy load for $class -> $use_field->[0]" );
 
     my $id_field = $class->id_field;
@@ -653,7 +654,7 @@ sub refetch {
 
 sub save {
     my ( $self, $p ) = @_;
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Trying to save a (", ref $self, ")" );
 
     # We can force save() to be an INSERT by passing in a true value
@@ -666,7 +667,7 @@ sub save {
     # anything.
 
     unless ( $is_add or $self->changed ) {
-        $log->is_info &&
+        ! $logging_disabled && $log->is_info &&
             $log->info( "This object exists and has not changed. Exiting." );
         return $self;
     }
@@ -679,7 +680,7 @@ sub save {
         $level = $self->check_action_security({ required => SEC_LEVEL_WRITE,
                                                 is_add   => $is_add });
     }
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Security check passed ok. Continuing." );
 
     # Callback for objects to do something before they're saved
@@ -772,7 +773,7 @@ sub post_fetch_id { return undef }
 sub _save_insert {
     my ( $self, $p, $not_inserted ) = @_;
     $p ||= {};
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Treating the save as an INSERT ",
                         "with fields [", join( ', ', @{ $p->{field} } ), "]" );
 
@@ -790,7 +791,7 @@ sub _save_insert {
         push @{ $p->{field} }, $self->id_field;
         push @{ $p->{value} }, $self->id;
         $p->{no_quote}{ $self->id_field } = 1 unless ( $do_quote );
-        $log->is_info &&
+        ! $logging_disabled && $log->is_info &&
             $log->info( "Retrieved ID before insert: $pre_id, using object ID $use_id" );
     }
 
@@ -824,7 +825,7 @@ sub _save_insert {
                                           statement => $sth } );
     if ( $post_id ) {	
         $self->id( $post_id );
-        $log->is_info &&
+        ! $logging_disabled && $log->is_info &&
         $log->info( "ID fetched after insert: $post_id" );
     }
 
@@ -849,7 +850,7 @@ sub _save_insert {
 
         my @fill_in_fields = grep { $_ } sort keys %fill_in_uniq;
         if ( scalar @fill_in_fields ) {
-            $log->is_info &&
+            ! $logging_disabled && $log->is_info &&
                 $log->info( "Fetching defaults for fields ",
                               join( ' // ', @fill_in_fields ), " after insert." );
             my $row = eval { $self->db_select({
@@ -866,7 +867,7 @@ sub _save_insert {
             }
             else {
                 for ( my $i = 0; $i < scalar @fill_in_fields; $i++ ) {
-                    $log->is_debug &&
+                    ! $logging_disabled && $log->is_debug &&
                         $log->debug( "Setting $fill_in_fields[$i] to ",
                                      ( defined $row->[$i] ) ? $row->[$i] : '' );
                     $self->{ $fill_in_fields[ $i ] } = $row->[ $i ];
@@ -906,7 +907,7 @@ sub apply_insert_alter {
     for ( my $i = 0; $i < $num_fields; $i++ ) {
         my $field_name = $p->{field}[ $i ];
         next unless ( $insert_alter->{ lc $field_name } );
-        $log->is_info &&
+        ! $logging_disabled && $log->is_info &&
             $log->info( 
                                "Setting 'insert_alter' for [$field_name]",
                                "defined as [", $insert_alter->{ lc $field_name }, "]",
@@ -928,7 +929,7 @@ sub _save_update {
     my $id_clause = ( $p->{use_id} )
                       ? $self->id_clause( $p->{use_id}, undef, $p )
                       : $self->id_clause( undef, undef, $p );
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Processing save as UPDATE with ",
                         "clause [$id_clause] and fields [",
                         join( ', ', @{ $p->{field} } ), "]" );
@@ -1059,7 +1060,7 @@ sub remove {
         $level = $self->check_action_security({ required => SEC_LEVEL_WRITE });
     }
 
-    $log->is_info &&
+    ! $logging_disabled && $log->is_info &&
         $log->info( "Security check passed ok. Continuing." );
 
     # Allow members to perform an action before getting removed
