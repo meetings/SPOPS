@@ -91,8 +91,9 @@ sub FETCH {
     my ( $self, $key ) = @_;
     return unless ( $key );
     my $cmp_key = lc $key;
-    $log->is_debug &&
-        $log->debug( " tie: Trying to retrieve value for ($key)" );
+# Removed logging because this is run so many times that is slows things down considerably
+#    $log->is_debug &&
+#        $log->debug( " tie: Trying to retrieve value for ($key)" );
     return $self->{ IDX_CHANGE() }                 if ( $key eq IDX_CHANGE );
     return $self->{ IDX_SAVE() }                   if ( $key eq IDX_SAVE );
     return $self->{ IDX_TEMP() }{ $cmp_key }     if ( $key =~ /^$PREFIX_TEMP/ );
