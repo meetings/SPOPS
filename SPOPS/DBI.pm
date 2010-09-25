@@ -528,7 +528,11 @@ sub _fetch_assign_row {
 #                                 $fields->[ $i ],
 #                                 ( defined $row->[ $i ] ) ? substr( $row->[ $i ], 0, 10 ) : '' ) );
         $self->{ $fields->[ $i ] } = $row->[ $i ];
-        $self->set_loaded( $fields->[ $i ] );
+    }
+    if ( tied( %$self )->{_ill} ) {
+        foreach my $i ( 0 .. ( scalar @{ $row } - 1 ) ) {
+            $self->set_loaded( $fields->[ $i ] );
+        }
     }
     ! $logging_disabled && $log->is_info &&
         $log->info( "Finished setting data into ", ref( $self ), ": ", $self->id );

@@ -86,9 +86,23 @@ sub _field_check { return undef; }
 
 # Just go through each of the possible things that could be
 # set and do the appropriate action.
+#
+my %high_count_exceptions = ( _chg => 1, _svd => 1 );
 
 sub FETCH {
+# HAZARDOUS OPTIMIZATION: This is called so many times it's crucial to make it fast
+# Most of the hits go to non-change/save/temp/internal/multivalued/field_map_lazyloaded so let's check it first
+    unless (
+        $high_count_exceptions{ $_[1] } ||
+        $_[1] =~ /^(?:tmp_|_internal)/ ||
+        $_[0]->{_ifm} || $_[0]->{_mv} || $_[0]->{_ill}
+    ) {
+        $_[0]->{_chg}++;
+        return $_[0]->{_dat}{ lc( $_[1] ) };
+    }
+
     my ( $self, $key ) = @_;
+
     return unless ( $key );
     my $cmp_key = lc $key;
 # Removed logging because this is run so many times that is slows things down considerably
@@ -137,7 +151,20 @@ sub _lazy_load {
 
 # Similar to FETCH
 
+# HAZARDOUS OPTIMIZATION: these are the most probable causes for the unnormal behaviour
+
 sub STORE {
+# HAZARDOUS OPTIMIZATION: This is called so many times it's crucial to make it fast
+# Most of the hits go to non-change/save/temp/internal/multivalued/field_map_lazyloaded so let's check it first
+    unless (
+        $high_count_exceptions{ $_[1] } ||
+        $_[1] =~ /^(?:tmp_|_internal)/ ||
+        $_[0]->{_ifm} || $_[0]->{_mv} || $_[0]->{_ill}
+    ) {
+        $_[0]->{_chg}++;
+        return $_[0]->{_dat}{ lc( $_[1] ) } = $_[2];
+    }
+
     my ( $self, $key, $value ) = @_;
     my $cmp_key = lc $key;
 # Removed logging because this is run so many times that is slows things down considerably

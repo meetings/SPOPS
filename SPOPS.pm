@@ -426,6 +426,7 @@ sub set_loaded        { return tied( %{ $_[0] } )->{ IDX_LAZY_LOADED() }{ lc $_[
 
 sub set_all_loaded {
     my ( $self ) = @_;
+    return unless tied( %$self )->{_ill};
 
     ! $logging_disabled && $log->is_info &&
         $log->info( "Setting all fields to loaded for object class", ref $self );
@@ -613,8 +614,8 @@ sub get_cached_object {
 sub set_cached_object {
     my ( $self, $p ) = @_;
     return undef unless ( ref $self );
-    return undef unless ( $self->id );
     return undef unless ( $self->use_cache( $p ) );
+    return undef unless ( $self->id );
     return $self->global_cache->set({ data => $self });
 }
 
