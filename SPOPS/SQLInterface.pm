@@ -35,10 +35,7 @@ sub sql_quote {
         spops_error "No database handle could be found!";
     }
 
-    # This issues a warning when '$type' is unknown; need to figure
-    # out how to set '$type' to a known value
-
-    return $db->quote( $value, $type );
+    return $db->quote( $value );
 }
 
 # Note: not sure how to integrate the fieldtype discovery
