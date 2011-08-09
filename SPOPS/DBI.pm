@@ -238,7 +238,7 @@ sub fetch {
     my $trace;
     $trace = CTX->response->start_trace("fetch " . Dumper($_[2])) if CTX->response;
     my $result = original_fetch( @_ );
-    CTX->response_end_trace( $trace ) if $trace;
+    CTX->response->end_trace( $trace ) if $trace;
     return $result;
 }
 
