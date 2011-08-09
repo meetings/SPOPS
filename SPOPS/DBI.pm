@@ -13,6 +13,9 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
+# DICOLE HACK
+use OpenInteract2::Context   qw( CTX );
+
 my $log = get_logger();
 my $logging_disabled = 1;
 
@@ -329,8 +332,21 @@ sub fetch_iterator {
 
 sub fetch_group {
     my ( $class, $p ) = @_;
+
+    my ($outer_trace, $trace);
+
+    $outer_trace = CTX->response->start_trace("fetch_group") if CTX->response;
+
     ( $p->{raw_fields}, $p->{select} ) = $class->_construct_group_select( $p );
+
+    $trace = CTX->response->start_trace("execute query " . Dumper($p)) if CTX->response;
+
     my $sth              = $class->_execute_multiple_record_query( $p );
+
+    CTX->response->end_trace($trace);
+
+    $trace = CTX->response->start_trace("fetch data") if CTX->response;
+
     my ( $offset, $max ) = SPOPS::Utility->determine_limit( $p->{limit} );
     my @obj_list = ();
 
@@ -378,6 +394,11 @@ ROW:
         push @obj_list, $obj;
     }
     $sth->finish;
+
+    if ($trace) { CTX->response->end_trace($trace) }
+
+    if ($outer_trace) { CTX->response->end_trace($outer_trace) }
+
     return \@obj_list;
 }
 
