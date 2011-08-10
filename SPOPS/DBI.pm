@@ -13,8 +13,8 @@ use SPOPS::Iterator::DBI;
 use SPOPS::Secure    qw( :level );
 use SPOPS::Tie       qw( $PREFIX_INTERNAL );
 
-# DICOLE HACK
-use OpenInteract2::Context   qw( CTX );
+# Dicole
+use Dicole::Utils::Trace;
 
 my $log = get_logger();
 my $logging_disabled = 1;
@@ -236,9 +236,9 @@ sub format_select {
 
 sub fetch {
     my $trace;
-    $trace = CTX->response->start_trace("fetch " . scalar($_[0]) . " = " . $_[1]) if CTX->response;
+    $trace = Dicole::Utils::Trace->start_trace("fetch $_[0] = $_[1]");
     my $result = original_fetch( @_ );
-    CTX->response->end_trace( $trace ) if $trace and CTX->response;
+    Dicole::Utils::Trace->end_trace( $trace );
     return $result;
 }
 
@@ -342,17 +342,17 @@ sub fetch_group {
 
     my ($outer_trace, $trace);
 
-    $outer_trace = CTX->response->start_trace("fetch_group") if CTX->response;
+    $outer_trace = Dicole::Utils::Trace->start_trace("fetch_group");
 
     ( $p->{raw_fields}, $p->{select} ) = $class->_construct_group_select( $p );
 
-    $trace = CTX->response->start_trace("execute query " . Dumper($p)) if CTX->response;
+    $trace = Dicole::Utils::Trace->start_trace("execute query " . Dumper($p));
 
     my $sth              = $class->_execute_multiple_record_query( $p );
 
-    CTX->response->end_trace($trace) if $trace and CTX->response;
+    Dicole::Utils::Trace->end_trace($trace);
 
-    $trace = CTX->response->start_trace("fetch data") if CTX->response;
+    $trace = Dicole::Utils::Trace->start_trace("fetch data");
 
     my ( $offset, $max ) = SPOPS::Utility->determine_limit( $p->{limit} );
     my @obj_list = ();
@@ -402,9 +402,9 @@ ROW:
     }
     $sth->finish;
 
-    if ($trace) { CTX->response->end_trace($trace) }
+    Dicole::Utils::Trace->end_trace($trace);
 
-    if ($outer_trace) { CTX->response->end_trace($outer_trace) }
+    Dicole::Utils::Trace->end_trace($outer_trace);
 
     return \@obj_list;
 }
