@@ -238,7 +238,7 @@ sub fetch {
     my $trace;
     $trace = CTX->response->start_trace("fetch " . scalar($_[0]) . " = " . $_[1]) if CTX->response;
     my $result = original_fetch( @_ );
-    CTX->response->end_trace( $trace ) if $trace;
+    CTX->response->end_trace( $trace ) if $trace and CTX->response;
     return $result;
 }
 
@@ -350,7 +350,7 @@ sub fetch_group {
 
     my $sth              = $class->_execute_multiple_record_query( $p );
 
-    CTX->response->end_trace($trace);
+    CTX->response->end_trace($trace) if $trace and CTX->response;
 
     $trace = CTX->response->start_trace("fetch data") if CTX->response;
 
