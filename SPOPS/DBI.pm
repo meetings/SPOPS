@@ -556,6 +556,7 @@ sub _fetch_assign_row {
 #                                 $fields->[ $i ],
 #                                 ( defined $row->[ $i ] ) ? substr( $row->[ $i ], 0, 10 ) : '' ) );
         $self->{ $fields->[ $i ] } = $row->[ $i ];
+        $self->{__original_values}->{ $fields->[ $i ] } = $row->[ $i ];
     }
     if ( tied( %$self )->{_ill} ) {
         foreach my $i ( 0 .. ( scalar @{ $row } - 1 ) ) {
@@ -754,6 +755,11 @@ sub save {
     my $skip_undef = $self->skip_undef || {};
     $skip_undef->{ $_ }++ for ( @{ $p->{skip_undef} } );
 
+    my $db_object = undef;
+    if ( $p->{merge_with_db_object} ) {
+        $db_object = $self->fetch( $self->id, { skip_cache => 1 } );
+    }
+
     $p->{field} = [];
     $p->{value} = [];
 
@@ -763,6 +769,48 @@ FIELD:
         my $value = $self->{ $field };
         next FIELD if ( ! defined $value and $skip_undef->{ $field } );
         push @{ $p->{field} }, $field;
+
+        if ( $db_object ) {
+            my $class = ref( $self );
+            if ( $field eq 'data_update_hash' ) {
+                $value = $db_object->get( $field );
+            }
+            else {
+                my $db_value = $db_object->get( $field ) // '';
+                my $original_value = $self->{__original_values}->{ $field } // '';
+                if ( $db_value ne $original_value ) {
+                    my $new_value = $value // '';
+                    if ( $db_value ne $new_value ) {
+                        my $success = 0;
+                        if ( $original_value eq $new_value ) {
+                            $log->error("Ignored $class revert update for field '$field': value kept as '$db_value' instead of '$new_value'");
+                            $value = $db_object->get( $field );
+                            $success = 1;
+                        }
+                        elsif ( $new_value =~ /^\s*\{/ && $db_value =~ /^\s*\{/ ) {
+                            eval {
+                                use Dicole::Utils::JSON;
+                                use Dicole::Utils::Data;
+                                my $db_data = eval { Dicole::Utils::JSON->decode( $db_value || {} )};
+                                my $original_data = eval { Dicole::Utils::JSON->decode( $original_value || {} )};
+                                my $new_data = eval { Dicole::Utils::JSON->decode( $new_value || {} )};
+                                if ( ref( $db_data ) eq 'HASH' && ref( $original_data ) eq 'HASH' && ref( $new_data ) eq 'HASH' ) {
+                                    my $merged_hash = Dicole::Utils::Data->merge_notes_hashes_three_way( $new_data, $db_data, $original_data );
+                                    $value = Dicole::Utils::JSON->encode( $merged_hash );
+                                    $log->error("Performed merge update for $class field '$field': '$db_value' and '$new_value' were merged to '$value'");
+                                    $success = 1;
+                                }
+                            };
+                        }
+
+                        if ( ! $success ) {
+                            $log->error("Overwrited simple $class update for field '$field': '$original_value' stored as '$new_value' instead of '$db_value'");
+                        }
+                    }
+                }
+            }
+        }
+
         push @{ $p->{value} }, $value;
     }
 
@@ -971,12 +1019,18 @@ sub _save_update {
 
     my %args = ( where => $id_clause,
                  table => $self->table_name,
+                 allow_data_update_hash_error => 1,
                  %{ $p } );
     my $rv =  eval { $self->db_update( \%args ); };
-    if ( $@ ) {
-        $log->warn( "Update failed! Args: ", Dumper( \%args ), $@ );
+    if ( my $err = $@ ) {
+        if ( $err =~ /^data_update_hash_error/ ) {
+            $p->{merge_with_db_object} = 1;
+            return $self->save( $p );
+        }
+
+        $log->warn( "Update failed! Args: ", Dumper( \%args ), $err );
         $self->fail_save( \%args );
-        die $@;
+        die $err;
     }
     return 1;
 }

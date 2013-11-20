@@ -9,6 +9,8 @@ use Log::Log4perl         qw( get_logger );
 use SPOPS::DBI::TypeInfo;
 use SPOPS::Exception      qw( spops_error );
 use SPOPS::Exception::DBI qw( spops_dbi_error );
+use Digest::SHA;
+use Storable;
 
 my $log = get_logger();
 
@@ -358,9 +360,14 @@ sub db_update {
         # value onto the stack, but values that cannot be bound push
         # the direct information onto the stack.
 
+        my $data_update_hash = '';
         $p->{no_quote} ||= {};
         foreach my $field ( @{ $p->{field} } ) {
             my $rawval = shift @values;
+            if ( $field eq 'data_update_hash' ) {
+                $data_update_hash = $rawval;
+                next;
+            }
             $log->is_info &&
                 $log->info( "Trying to add value [", defined $rawval ? $rawval : '', "] ",
                                       "with field [$field] and type ",
@@ -375,8 +382,18 @@ sub db_update {
                                                $db );
             push @update, "$field = $value";
         }
+
+        my @where = ( $p->{where} || () );
+        if ( $data_update_hash ) {
+            push @where, "data_update_hash = '$data_update_hash'" if $p->{allow_data_update_hash_error};
+            local $Storable::canonical = 1;
+            my $new_data_update_hash = Digest::SHA::sha1_base64( Storable::freeze( $p->{value} ) );
+            push @update, "data_update_hash = '$new_data_update_hash'";
+        }
+
         my $update = join ', ', @update;
-        my $where  = ( $p->{where} ) ? "WHERE $p->{where}" : '';
+        my $where = scalar( @where ) ? 'WHERE ((' . join( ') AND (', @where ) . '))' : '';
+
         $sql = qq/
            UPDATE $p->{table}
               SET $update
@@ -396,6 +413,9 @@ sub db_update {
     my $rv = eval { $sth->execute( @values ) };
     if ( $@ ) {
         spops_dbi_error $@, { sql => $sql, action => 'execute' };
+    }
+    if ( $p->{allow_data_update_hash_error} && $rv eq '0E0' ) {
+        die "data_update_hash_error";
     }
     return $rv;
 }
